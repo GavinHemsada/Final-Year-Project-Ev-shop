@@ -4,14 +4,14 @@ import { CloseIcon } from "@/assets/icons/icons";
 import { buyerService } from "../buyerService";
 import { Loader } from "@/components/Loader";
 import { useNavigate } from "react-router-dom";
-import { Alert } from "@/components/MessageAlert";
-import type {AlertProps} from "@/types"
+import type { AlertProps } from "@/types";
 /**
  * A component for a "Register Financial Institution" form.
  * Renders as a modal overlay.
  */
-const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void }> = ({
+const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert?: (alert: AlertProps | null) => void }> = ({
   onClose,
+  setAlert,
 }) => {
   const [formData, setFormData] = useState({
     name: "",
@@ -27,7 +27,6 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void }> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState("");
   const navigate = useNavigate();
-  const [message, setMessage] = useState<AlertProps | null>(null);
   /**
    * Handles changes for all form inputs.
    */
@@ -104,7 +103,7 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void }> = ({
 
     try {
       await buyerService.becomeaFinancing(institutionData);
-      setMessage({
+      setAlert?.({
         id: Date.now(),
         title: "Success",
         message: "Successfully register for new Financial Institution",
@@ -119,7 +118,7 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void }> = ({
         contact_phone: "",
       });
     } catch (err: any) {
-      setMessage({
+      setAlert?.({
         id: Date.now(),
         title: "Fail Registration",
         message: "An unexpected error occurred. Please try again.",
@@ -135,7 +134,6 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void }> = ({
       className="fixed inset-0 bg-black/30 backdrop-blur-md z-50 flex justify-center items-center p-4 sm:p-6 lg:p-8 animate-fadeIn"
       onClick={onClose}
     >
-      <Alert alert={message} />
       <div
         className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-xl shadow-2xl relative flex flex-col animate-fadeInUp"
         onClick={(e) => e.stopPropagation()}

@@ -4,12 +4,12 @@ import { CloseIcon } from "@/assets/icons/icons";
 import { buyerService } from "../buyerService";
 import { Loader } from "@/components/Loader";
 import { useNavigate } from "react-router-dom";
-import { Alert } from "@/components/MessageAlert";
+import type { AlertProps } from "@/types";
 /**
  * A component for a "Become a Seller" registration form.
  * Renders as a modal overlay.
  */
-const BecomeSellerPage: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: AlertProps | null) => void }> = ({ onClose, setAlert }) => {
   const { getUserID, addnewRole, setActiveRole } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -23,12 +23,6 @@ const BecomeSellerPage: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState("");
   const navigate = useNavigate();
-  const [message, setMessage] = useState<{
-    id: number;
-    title: string;
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
   /**
    * Handles changes for all form inputs.
    */
@@ -85,7 +79,7 @@ const BecomeSellerPage: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
     try {
       await buyerService.becomeaSeller(sellerData);
-      setMessage({
+      setAlert?.({
         id: Date.now(),
         title: "Success",
         message: "Successfully register for new Seller",
@@ -103,7 +97,7 @@ const BecomeSellerPage: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         website: "",
       });
     } catch (err: any) {
-      setMessage({
+      setAlert?.({
         id: Date.now(),
         title: "Fail Registration",
         message: "An unexpected error occurred. Please try again.",
@@ -120,7 +114,6 @@ const BecomeSellerPage: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       className="fixed inset-0 bg-black/30 backdrop-blur-md z-50 flex justify-center items-center p-4 sm:p-6 lg:p-8 animate-fadeIn"
       onClick={onClose}
     >
-      <Alert alert={message} />
       {/* --- MODAL CONTENT --- */}
       <div
         className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-xl shadow-2xl relative flex flex-col animate-fadeInUp"

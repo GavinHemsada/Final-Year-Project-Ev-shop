@@ -9,7 +9,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
-import { Alert } from "@/components/MessageAlert";
+import type { AlertProps } from "@/types";
 
 const apiURL = import.meta.env.VITE_API_URL;
 
@@ -54,17 +54,11 @@ const profileSchema = yup.object({
     .required(),
 });
 
-const UserProfile: React.FC<{ user: User }> = React.memo(({ user }) => {
+const UserProfile: React.FC<{ user: User; setAlert?: (alert: AlertProps | null) => void }> = React.memo(({ user, setAlert }) => {
   const [email] = useState(user.email);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isChanged, setIsChanged] = useState(false);
-  const [message, setMessage] = useState<{
-    id: number;
-    title: string;
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
   const { getUserID } = useAuth();
   const userID = getUserID();
   const {
@@ -113,7 +107,7 @@ const UserProfile: React.FC<{ user: User }> = React.memo(({ user }) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.userProfile(userID!),
       });
-      setMessage({
+      setAlert?.({
         id: Date.now(),
         title: "Success",
         message: "Successfully Update uer details",
@@ -121,7 +115,7 @@ const UserProfile: React.FC<{ user: User }> = React.memo(({ user }) => {
       });
     },
     onError: () => {
-      setMessage({
+      setAlert?.({
         id: Date.now(),
         title: "Error",
         message: "Failed to Update User Detailsr",
@@ -146,12 +140,6 @@ const UserProfile: React.FC<{ user: User }> = React.memo(({ user }) => {
       formData.append("profile_image", selectedFile);
     }
     updateUserMutation.mutate(formData);
-    setMessage({
-      id: Date.now(),
-      title: "Success",
-      message: "Successfully Update uer details",
-      type: "success",
-    });
   };
 
   // Watch any form value change to enable button
@@ -167,7 +155,6 @@ const UserProfile: React.FC<{ user: User }> = React.memo(({ user }) => {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Profile Header */}
         <div className="flex items-center space-x-6">
-          <Alert alert={message} />
           <div className="flex flex-col items-center">
             <div
               className="relative group h-24 w-24 rounded-full border-2 border-gray-200 shadow-md overflow-hidden cursor-pointer"

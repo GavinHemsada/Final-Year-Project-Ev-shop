@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { CalendarIcon, ReviewsIcon } from "@/assets/icons/icons";
+import type { AlertProps } from "@/types";
 
 // --- Mock Data (replace with API calls) ---
 // This data simulates bookings that have feedback attached.
@@ -63,7 +64,7 @@ const StarRating: React.FC<{ rating: number }> = ({ rating }) => {
 /**
  * A page for users to view their submitted reviews.
  */
-export const MyReviewsPage: React.FC = () => {
+export const MyReviewsPage: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = () => {
   const [reviews, setReviews] = useState<
     (any & { model_name: string; slot_id: { model_id: string } })[]
   >([]);

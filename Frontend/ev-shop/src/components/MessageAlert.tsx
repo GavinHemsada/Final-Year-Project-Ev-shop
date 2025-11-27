@@ -10,6 +10,7 @@ interface AlertProps {
   onClose?: () => void; 
   position?: "center" | "left" | "right";
   positionValue?: number;
+  container?: boolean; // If true, positions relative to parent container instead of viewport
 }
 
 export const Alert: React.FC<AlertProps> = ({
@@ -17,6 +18,7 @@ export const Alert: React.FC<AlertProps> = ({
   onClose,
   position = "center",
   positionValue = 20,
+  container = false,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -66,10 +68,19 @@ export const Alert: React.FC<AlertProps> = ({
       ? { marginRight: positionValue }
       : {};
 
+  // Use absolute positioning when container is true, fixed when false
+  const containerClass = container 
+    ? "absolute inset-0 bg-black/40 flex items-center" 
+    : "fixed inset-0 bg-black/40 flex items-center";
+  
+  const alertWidthClass = container 
+    ? "max-w-sm w-full sm:max-w-sm" 
+    : "max-w-sm w-full";
+
   return (
-    <div className={`fixed inset-0 bg-black/40 flex items-center ${positionClass} z-50`}>
+    <div className={`${containerClass} ${positionClass} z-50`}>
       <div
-        className={`bg-white border ${border} rounded-lg shadow-lg relative max-w-sm w-full animate-slide-in`}
+        className={`bg-white border ${border} rounded-lg shadow-lg relative ${alertWidthClass} animate-slide-in mx-2 sm:mx-4`}
         style={offsetStyle}
       >
         {/* Close button */}

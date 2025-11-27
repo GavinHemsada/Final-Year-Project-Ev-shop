@@ -5,6 +5,7 @@ import {
   FileTextIcon,
   XCircleIcon,
 } from "@/assets/icons/icons";
+import type { AlertProps } from "@/types";
 
 // --- Mock Data (replace with API calls) ---
 
@@ -87,7 +88,7 @@ const getStatusInfo = (status: string) => {
   }
 };
 
-export const FinancingPage: React.FC = () => {
+export const FinancingPage: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = () => {
   // In a real app, you would fetch this data
   const [products] = useState(mockProducts);
   const [applications] = useState(mockApplications);

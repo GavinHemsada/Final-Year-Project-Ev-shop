@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { CloseIcon } from "@/assets/icons/icons"; // Assuming CloseIcon is in icons
-import type { Vehicle } from "@/types";
+import type { Vehicle, AlertProps } from "@/types";
 
 // --- Mock Data (replace with actual cart logic, e.g., from context) ---
 const mockCartItems: Vehicle[] = [
@@ -24,7 +24,7 @@ const mockCartItems: Vehicle[] = [
   },
 ];
 
-const CartPage: React.FC = () => {
+const CartPage: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = () => {
   const [cart, setCart] = useState<Vehicle[]>(mockCartItems);
   const onRemove = (id: number) => {
     setCart((currentCart) => currentCart.filter((item) => item.id !== id));

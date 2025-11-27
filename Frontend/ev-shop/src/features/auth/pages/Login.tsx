@@ -134,11 +134,19 @@ const LoginPage = () => {
 
       {/* Right Panel: Login Form */}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-white md:bg-black p-4 sm:p-6 lg:p-8 overflow-y-auto">
-        <div className="relative w-full max-w-md p-6 sm:p-8 space-y-6 bg-white rounded-xl shadow-lg">
+        <div className="relative w-full max-w-md p-6 sm:p-8 space-y-6 bg-white rounded-xl shadow-lg overflow-hidden">
           {/* Logo */}
           <img src={Logo} alt="Logo" className="w-20 h-20 mx-auto" />
           {/* Message display area for success/error alerts */}
-          <Alert alert={message} position="right" positionValue={200}/>
+          <Alert 
+            alert={message ? {
+              title: message.title,
+              message: message.message,
+              type: message.type,
+            } : null} 
+            position="center" 
+            container={true}
+          />
           {/* Form Header */}
           <div className="text-center">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">

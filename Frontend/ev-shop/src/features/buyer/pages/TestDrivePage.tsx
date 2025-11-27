@@ -6,6 +6,7 @@ import {
   ClockIcon,
 } from "@/assets/icons/icons"; // Assuming you have Calendar and Clock icons
 import { useAuth } from "@/context/AuthContext";
+import type { AlertProps } from "@/types";
 
 // --- Mock Data (replace with API calls) ---
 const mockSlots: any[] = [
@@ -57,7 +58,7 @@ const mockBookings: any[] = [
 /**
  * A page for users to view and book test drives.
  */
-export const TestDrivesPage: React.FC = () => {
+export const TestDrivesPage: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = () => {
   const [slots, setSlots] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);

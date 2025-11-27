@@ -13,7 +13,14 @@ import { Chatbot } from "../components/ChatBot";
 import { Sidebar } from "../components/SideBar";
 import { Header } from "../components/Header";
 import { VehicleList } from "../components/VehicalList";
-import type { User_Profile, Vehicle, Notification, ActiveTab } from "@/types";
+import type {
+  User_Profile,
+  Vehicle,
+  Notification,
+  ActiveTab,
+  AlertProps,
+} from "@/types";
+import { Alert } from "@/components/MessageAlert";
 
 const OrderHistory = lazy(() => import("./OrderHistoryPage"));
 const UserProfile = lazy(() => import("./UserProfilePage"));
@@ -49,6 +56,7 @@ const App: React.FC = () => {
   const [isBecomFinancer, setIsBecomeFinancer] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
 
   const { getUserID, logout, getRoles } = useAuth();
   const navigate = useNavigate();
@@ -128,6 +136,15 @@ const App: React.FC = () => {
     return filteredVehicles.slice(startIndex, endIndex);
   }, [filteredVehicles, currentPage]);
 
+  // Callback to handle alerts from child components
+  const handleSetAlert = useCallback((alertData: AlertProps | null) => {
+    setAlert(alertData);
+  }, []);
+
+  const handleCloseAlert = useCallback(() => {
+    setAlert(null);
+  }, []);
+
   // Tabs with memoized components
   const tabs = useMemo(
     () => ({
@@ -140,16 +157,21 @@ const App: React.FC = () => {
           onPageChange={setCurrentPage}
         />
       ),
-      profile: <UserProfile user={user!} />,
-      orders: <OrderHistory />,
-      services: <Services />,
-      financing: <FinancingPage />,
-      saved: <SavedVehicles />,
-      notification: <NotificationPage notifications={notifications} />,
-      cart: <CartPage />,
-      testDrives: <TestDrivesPage />,
-      reviews: <MyReviewsPage />,
-      community: <CommunityPage />,
+      profile: <UserProfile user={user!} setAlert={handleSetAlert} />,
+      orders: <OrderHistory setAlert={handleSetAlert} />,
+      services: <Services setAlert={handleSetAlert} />,
+      financing: <FinancingPage setAlert={handleSetAlert} />,
+      saved: <SavedVehicles setAlert={handleSetAlert} />,
+      notification: (
+        <NotificationPage
+          notifications={notifications}
+          setAlert={handleSetAlert}
+        />
+      ),
+      cart: <CartPage setAlert={handleSetAlert} />,
+      testDrives: <TestDrivesPage setAlert={handleSetAlert} />,
+      reviews: <MyReviewsPage setAlert={handleSetAlert} />,
+      community: <CommunityPage setAlert={handleSetAlert} />,
     }),
     [
       filteredVehicles,
@@ -158,6 +180,7 @@ const App: React.FC = () => {
       paginatedVehicles,
       currentPage,
       itemsPerPage,
+      handleSetAlert,
     ]
   );
 
@@ -269,11 +292,30 @@ const App: React.FC = () => {
 
       {isChatOpen && <Chatbot onClose={toggleChat} />}
       {isBecomeSellerModalOpen && (
-        <BecomeSellerPage onClose={setSellermodeOpen} />
+        <BecomeSellerPage
+          onClose={setSellermodeOpen}
+          setAlert={handleSetAlert}
+        />
       )}
       {isBecomFinancer && (
-        <RegisterFinancialInstitutionPage onClose={setFinancerModeOpen} />
+        <RegisterFinancialInstitutionPage
+          onClose={setFinancerModeOpen}
+          setAlert={handleSetAlert}
+        />
       )}
+      <Alert
+        alert={
+          alert
+            ? {
+                title: alert.title,
+                message: alert.message,
+                type: alert.type,
+                duration: alert.duration,
+              }
+            : null
+        }
+        onClose={handleCloseAlert}
+      />
     </>
   );
 };

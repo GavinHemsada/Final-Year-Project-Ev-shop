@@ -3,6 +3,7 @@ import {
   HeartIcon,
   ChatBubbleIcon,
 } from "@/assets/icons/icons";
+import type { AlertProps } from "@/types";
 
 // --- Helper Icons (can be moved to icons.tsx) ---
 const PhotographIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -64,7 +65,7 @@ const mockPosts = [
   },
 ];
 
-export const CommunityPage: React.FC = () => {
+export const CommunityPage: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = () => {
   const [posts, setPosts] = useState(mockPosts);
   const [newPostContent, setNewPostContent] = useState("");
 
