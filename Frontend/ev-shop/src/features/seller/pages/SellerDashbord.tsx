@@ -1,5 +1,11 @@
-import React, { useEffect, useState } from "react";
-import type { SellerActiveTab, UserRole, Notification } from "@/types";
+import React, { useEffect, useState, useCallback } from "react";
+import type {
+  SellerActiveTab,
+  UserRole,
+  Notification,
+  AlertProps,
+  ConfirmAlertProps,
+} from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "../components/Sidebar";
@@ -12,6 +18,7 @@ import { SavedVehicles } from "./SavedVehicalsPage";
 import { OrderHistory } from "./OrderHistoryPage";
 import { ListingsTable } from "../components/EvListingTable";
 import { AnalyticsChart } from "../components/AnalyticsChart";
+import { Alert, ConfirmAlert } from "@/components/MessageAlert";
 import {
   CarIcon,
   UserIcon,
@@ -22,10 +29,7 @@ import EvListingStepper from "./EvNewList";
 import { StatCard } from "../components/StatsCards";
 import { sellerService } from "../sellerService";
 import type { Vehicle } from "@/types/ev";
-import {
-  useQueries,
-  type UseQueryOptions,
-} from "@tanstack/react-query";
+import { useQueries, type UseQueryOptions } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
 
 const notifications: Notification[] = [
@@ -38,6 +42,13 @@ const SellerDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SellerActiveTab>("dashboard");
   const [userRole, setUserRole] = useState<UserRole[]>([]);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const [alert, setAlert] = useState<AlertProps | null>(null);
+  const [confirmAlert, setConfirmAlert] = useState<ConfirmAlertProps | null>(
+    null
+  );
+  const [confirmHandler, setConfirmHandler] = useState<(() => void) | null>(
+    null
+  );
   const { getUserID, logout, getRoles, setSellerId, getActiveRoleId } =
     useAuth();
   const navigate = useNavigate();
@@ -46,71 +57,116 @@ const SellerDashboard: React.FC = () => {
   const userID = getUserID();
 
   const results = useQueries({
-  queries: [
-    {
-      queryKey: queryKeys.sellerProfile(userID!),
-      queryFn: () => sellerService.getSellerProfile(userID!),
-      enabled: !!userID,
-      staleTime: 10 * 60 * 1000,
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      // workaround: cast to UseQueryOptions
-    },
-    {
-      queryKey: ["sellerEvlist", getActiveRoleId()],
-      queryFn: (): Promise<Vehicle[]> => sellerService.getSellerEvList(getActiveRoleId()!),
-      enabled: !!getActiveRoleId(),
-      staleTime: 10 * 60 * 1000,
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-    } as UseQueryOptions<Vehicle[], Error, Vehicle[], [string, string | null]>,
-  ],
-});
+    queries: [
+      {
+        queryKey: queryKeys.sellerProfile(userID!),
+        queryFn: () => sellerService.getSellerProfile(userID!),
+        enabled: !!userID,
+        staleTime: 10 * 60 * 1000,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        // workaround: cast to UseQueryOptions
+      },
+      {
+        queryKey: ["sellerEvlist", getActiveRoleId()],
+        queryFn: (): Promise<Vehicle[]> =>
+          sellerService.getSellerEvList(getActiveRoleId()!),
+        enabled: !!getActiveRoleId(),
+        staleTime: 10 * 60 * 1000,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+      } as UseQueryOptions<
+        Vehicle[],
+        Error,
+        Vehicle[],
+        [string, string | null]
+      >,
+    ],
+  });
 
-// Manually watch seller profile to set sellerId
+  // Manually watch seller profile to set sellerId
 
-useEffect(() => {
-  const sellerProfile = results[0].data;
-  if (sellerProfile && sellerProfile._id) {
-    setSellerId(sellerProfile._id);
-  }
-}, [results[0].data]);
+  useEffect(() => {
+    const sellerProfile = results[0].data;
+    if (sellerProfile && sellerProfile._id) {
+      setSellerId(sellerProfile._id);
+    }
+  }, [results[0].data]);
 
-useEffect(() => {
-  if (roles) setUserRole(roles);
-}, [roles]);
-const [sellerProfileQuery, evListQuery] = results;
+  useEffect(() => {
+    if (roles) setUserRole(roles);
+  }, [roles]);
+  const [sellerProfileQuery, evListQuery] = results;
 
   const seller = sellerProfileQuery.data;
   const listings = evListQuery.data || [];
+
+  // Callback to handle alerts from child components
+  const handleSetAlert = useCallback((alertData: AlertProps | null) => {
+    setAlert(alertData);
+  }, []);
+
+  const handleCloseAlert = useCallback(() => {
+    setAlert(null);
+  }, []);
+
+  const handleSetConfirmAlert = useCallback(
+    (confirmData: ConfirmAlertProps | null, handler?: () => void) => {
+      setConfirmAlert(confirmData);
+      setConfirmHandler(handler || null);
+    },
+    []
+  );
+
+  const handleCloseConfirmAlert = useCallback(() => {
+    setConfirmAlert(null);
+    setConfirmHandler(null);
+  }, []);
 
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
         return (
-          <SellerDashboardPage sellerid={seller?._id} listing={listings} setActiveTab={setActiveTab} />
+          <SellerDashboardPage
+            sellerid={seller?._id}
+            listing={listings}
+            setActiveTab={setActiveTab}
+            setAlert={handleSetAlert}
+            setConfirmAlert={handleSetConfirmAlert}
+          />
         );
       case "orders":
-        return <OrderHistory />;
+        return <OrderHistory setAlert={handleSetAlert} />;
       case "evList":
-        return <EvListingStepper />;
+        return <EvListingStepper setAlert={handleSetAlert} />;
       case "saved":
-        return <SavedVehicles />;
+        return <SavedVehicles setAlert={handleSetAlert} />;
       case "notification":
-        return <NotificationPage notifications={notifications} />;
+        return (
+          <NotificationPage
+            notifications={notifications}
+            setAlert={handleSetAlert}
+          />
+        );
       case "testDrives":
-        return <TestDrivesPage />;
+        return <TestDrivesPage setAlert={handleSetAlert} />;
       case "reviews":
-        return <MyReviewsPage />;
+        return <MyReviewsPage setAlert={handleSetAlert} />;
       case "community":
-        return <CommunityPage />;
+        return <CommunityPage setAlert={handleSetAlert} />;
       case "editEvlist":
-        return <EvListingStepper />;
+        return <EvListingStepper setAlert={handleSetAlert} />;
       default:
         return (
-          <SellerDashboardPage sellerid={seller?._id} listing={listings} setActiveTab={setActiveTab} />
+          <SellerDashboardPage
+            sellerid={seller?._id}
+            listing={listings}
+            setActiveTab={setActiveTab}
+            setAlert={handleSetAlert}
+            setConfirmAlert={handleSetConfirmAlert}
+          />
         );
     }
   };
@@ -122,6 +178,35 @@ const [sellerProfileQuery, evListQuery] = results;
 
   return (
     <>
+      <Alert
+        alert={
+          alert
+            ? {
+                title: alert.title,
+                message: alert.message,
+                type: alert.type,
+              }
+            : null
+        }
+        onClose={handleCloseAlert}
+      />
+      {confirmAlert && (
+        <ConfirmAlert
+          alert={{
+            title: confirmAlert.title,
+            message: confirmAlert.message,
+            confirmText: confirmAlert.confirmText,
+            cancelText: confirmAlert.cancelText,
+          }}
+          onConfirm={() => {
+            if (confirmHandler) {
+              confirmHandler();
+            }
+            handleCloseConfirmAlert();
+          }}
+          onCancel={handleCloseConfirmAlert}
+        />
+      )}
       <style>{`
         body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -185,7 +270,12 @@ const SellerDashboardPage: React.FC<{
   sellerid: string;
   listing: Vehicle[];
   setActiveTab: (tab: SellerActiveTab) => void;
-}> = ({ sellerid,setActiveTab, listing }) => (
+  setAlert?: (alert: AlertProps | null) => void;
+  setConfirmAlert?: (
+    alert: ConfirmAlertProps | null,
+    handler?: () => void
+  ) => void;
+}> = ({ sellerid, setActiveTab, listing, setAlert, setConfirmAlert }) => (
   <>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <StatCard
@@ -214,7 +304,13 @@ const SellerDashboardPage: React.FC<{
       />
     </div>
     <div className="mt-10 bg-white p-6 rounded-xl shadow-md">
-      <ListingsTable sellerid={sellerid} listings={listing} setActiveTab={setActiveTab} />
+      <ListingsTable
+        sellerid={sellerid}
+        listings={listing}
+        setActiveTab={setActiveTab}
+        setAlert={setAlert}
+        setConfirmAlert={setConfirmAlert}
+      />
     </div>
     <div className="mt-10 bg-white p-6 rounded-xl shadow-md">
       <AnalyticsChart />

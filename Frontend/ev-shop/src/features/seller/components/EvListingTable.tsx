@@ -1,36 +1,44 @@
 import { useState } from "react";
 import { PlusCircleIcon, EditIcon, TrashIcon } from "@/assets/icons/icons";
-import type { SellerActiveTab, Vehicle } from "@/types";
+import type { SellerActiveTab, Vehicle, AlertProps, ConfirmAlertProps } from "@/types";
 import { sellerService } from "../sellerService";
-import { Alert, ConfirmAlert } from "@/components/MessageAlert";
-import type { AlertProps, ConfirmAlertProps } from "@/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
+import React from "react";
 
 const apiURL = import.meta.env.VITE_API_URL;
 export const ListingsTable: React.FC<{
   sellerid: string;
   listings: Vehicle[];
   setActiveTab: (tab: SellerActiveTab) => void;
-}> = ({ sellerid, setActiveTab, listings }) => {
-  const [conAlert, setConAlert] = useState<ConfirmAlertProps | null>();
-  const [delAlert, setDelAlert] = useState<AlertProps | null>();
+  setAlert?: (alert: AlertProps | null) => void;
+  setConfirmAlert?: (alert: ConfirmAlertProps | null, handler?: () => void) => void;
+}> = ({ sellerid, setActiveTab, listings, setAlert, setConfirmAlert }) => {
   const [selectedListing, setSelectedListing] = useState<{
     listingId: string;
     modelId: string;
   } | null>(null);
   const queryClient = useQueryClient();
 
+  const handleConfirmDelete = async () => {
+    if (!selectedListing) return;
+
+    const { listingId, modelId } = selectedListing;
+    await deleteEVMutation.mutateAsync({ listingId, modelId });
+    setSelectedListing(null);
+    setConfirmAlert?.(null);
+  };
+
   const askDelete = (listingId: string, modelId: string) => {
     setSelectedListing({ listingId, modelId });
 
-    setConAlert({
+    setConfirmAlert?.({
       id: Date.now(),
       title: "Confirm",
       message: "Are you sure you want to delete this listing?",
       confirmText: "Delete",
       cancelText: "Cancel",
-    });
+    }, handleConfirmDelete);
   };
 
   const deleteEVMutation = useMutation({
@@ -45,10 +53,10 @@ export const ListingsTable: React.FC<{
       return sellerService.deleteListing(listingId);
     },
     onSuccess: async () => {
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.sellerEvlist(sellerid),
-        }),
-      setDelAlert({
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.sellerEvlist(sellerid),
+      });
+      setAlert?.({
         id: Date.now(),
         title: "Success",
         message: "Successfully deleted listing",
@@ -57,7 +65,7 @@ export const ListingsTable: React.FC<{
     },
 
     onError: () => {
-      setDelAlert({
+      setAlert?.({
         id: Date.now(),
         title: "Error",
         message: "Failed to delete listing",
@@ -66,30 +74,15 @@ export const ListingsTable: React.FC<{
     },
   });
 
-  const handleConfirmDelete = async () => {
-    if (!selectedListing) return;
-
-    const { listingId, modelId } = selectedListing;
-    await deleteEVMutation.mutateAsync({ listingId, modelId });
-    setSelectedListing(null);
-    setConAlert(null);
-  };
-
   const handleCancelDelete = () => {
     setSelectedListing(null);
-    setConAlert(null);
+    setConfirmAlert?.(null);
   };
 
-  <Alert alert={delAlert!} />
   return (
     <>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold">My Vehicle Listings</h2>
-        <ConfirmAlert
-          alert={conAlert!}
-          onCancel={handleCancelDelete}
-          onConfirm={handleConfirmDelete}
-        />
         <button
           onClick={() => setActiveTab("evList")}
           className="flex items-center gap-2 bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors"

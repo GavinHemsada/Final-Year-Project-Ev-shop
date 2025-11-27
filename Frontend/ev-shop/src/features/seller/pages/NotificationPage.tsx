@@ -1,9 +1,9 @@
 import { BellIcon } from "@/assets/icons/icons";
-import type { Notification } from "@/types";
+import type { Notification, AlertProps } from "@/types";
 
 // --- End Mock Data ---
 
-export const NotificationPage: React.FC<{ notifications: Notification[] }> = ({
+export const NotificationPage: React.FC<{ notifications: Notification[]; setAlert?: (alert: AlertProps | null) => void }> = ({
   notifications,
 }) => {
   return (

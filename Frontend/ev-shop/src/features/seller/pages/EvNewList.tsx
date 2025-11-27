@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from "react";
-import type { Brand, categorie, EvListingFormData } from "@/types";
+import type { Brand, categorie, EvListingFormData, AlertProps } from "@/types";
 import { sellerService } from "../sellerService";
 import { EvCheckIcon } from "@/assets/icons/icons";
 import { FormSelectField } from "@/components/FormSelect";
@@ -128,7 +128,7 @@ const EvListschema = yup.object({
     ),
 });
 
-export default function EvListingStepper() {
+export default function EvListingStepper({ setAlert }: { setAlert?: (alert: AlertProps | null) => void } = { setAlert: undefined }) {
   const { getActiveRoleId } = useAuth();
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [evBrands, setEvBrands] = useState<Brand[]>([]);

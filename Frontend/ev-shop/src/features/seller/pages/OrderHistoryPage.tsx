@@ -1,4 +1,4 @@
-import type { Order } from "@/types";
+import type { Order, AlertProps } from "@/types";
 
 const getStatusChip = (status: Order["status"]): string => {
   switch (status) {
@@ -37,7 +37,7 @@ const orders: Order[] = [
   },
 ];
 
-export const OrderHistory: React.FC = () => (
+export const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = () => (
   <div className="bg-white p-8 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
     <h1 className="text-3xl font-bold mb-6 dark:text-white">My Orders</h1>
     <div className="overflow-x-auto">
