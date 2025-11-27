@@ -37,6 +37,18 @@ export interface ICartRepository {
     listingId: string
   ): Promise<ICartItem | null>;
   /**
+   * Finds a cart item by its document ID.
+   * @param itemId - The ID of the cart item.
+   * @returns A promise that resolves to the cart item document or null if not found.
+   */
+  findCartItemById(itemId: string): Promise<ICartItem | null>;
+  /**
+   * Finds a cart by its document ID.
+   * @param cartId - The ID of the cart.
+   * @returns A promise that resolves to the cart document or null if not found.
+   */
+  findCartById(cartId: string): Promise<ICart | null>;
+  /**
    * Adds a new item to a cart.
    * @param cartId - The ID of the cart.
    * @param listingId - The ID of the vehicle listing to add.
@@ -89,7 +101,26 @@ export const CartRepository: ICartRepository = {
   /** Finds all cart items for a given cart ID and populates the associated listing details. */
   findCartItems: withErrorHandling(async (cartId: string) =>
     CartItem.find({ cart_id: new Types.ObjectId(cartId) })
-      .populate("listing_id")
+      .populate({
+        path: "listing_id",
+        populate: [
+          {
+            path: "model_id",
+            populate: [
+              { path: "brand_id", select: "brand_name brand_logo description" },
+              { path: "category_id", select: "category_name description" },
+            ],
+          },
+          {
+            path: "seller_id",
+            select: "business_name user_id",
+            populate: {
+              path: "user_id",
+              select: "profile_image name",
+            },
+          },
+        ],
+      })
       .exec()
   ),
 
@@ -100,6 +131,16 @@ export const CartRepository: ICartRepository = {
         cart_id: new Types.ObjectId(cartId),
         listing_id: new Types.ObjectId(listingId),
       })
+  ),
+
+  /** Finds a cart item by its document ID. */
+  findCartItemById: withErrorHandling(async (itemId: string) =>
+    CartItem.findById(itemId)
+  ),
+
+  /** Finds a cart by its document ID. */
+  findCartById: withErrorHandling(async (cartId: string) =>
+    Cart.findById(cartId)
   ),
 
   /** Creates a new CartItem document. */

@@ -7,7 +7,7 @@ import React, {
   useMemo,
 } from "react";
 import "../style/buyer.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { CloseIcon, ChatBubbleIcon } from "@/assets/icons/icons";
 import { Chatbot } from "../components/ChatBot";
 import { Sidebar } from "../components/SideBar";
@@ -60,6 +60,7 @@ const App: React.FC = () => {
 
   const { getUserID, logout, getRoles } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const userID = getUserID();
   const userRole = useMemo(() => getRoles() || [], [getRoles]);
   const itemsPerPage = 9;
@@ -155,6 +156,7 @@ const App: React.FC = () => {
           currentPage={currentPage}
           itemsPerPage={itemsPerPage}
           onPageChange={setCurrentPage}
+          setAlert={handleSetAlert}
         />
       ),
       profile: <UserProfile user={user!} setAlert={handleSetAlert} />,
@@ -196,6 +198,14 @@ const App: React.FC = () => {
   );
   const expandSidebar = useCallback(() => setIsSidebarExpanded(true), []);
   const collapseSidebar = useCallback(() => setIsSidebarExpanded(false), []);
+  // Handle navigation state for active tab
+  useEffect(() => {
+    const state = location.state as { activeTab?: ActiveTab } | null;
+    if (state?.activeTab) {
+      setActiveTab(state.activeTab);
+    }
+  }, [location.state]);
+
   const handleSetActiveTab = useCallback(
     (tab: ActiveTab) => setActiveTab(tab),
     []

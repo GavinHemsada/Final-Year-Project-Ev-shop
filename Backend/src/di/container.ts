@@ -57,6 +57,14 @@ import {
   ITestDriveRepository,
   TestDriveRepository,
 } from "../modules/testDrive/testDrive.repository";
+import {
+  ISavedVehicleRepository,
+  SavedVehicleRepository,
+} from "../modules/savedVehicle/savedVehicle.repository";
+import {
+  IRepairLocationRepository,
+  RepairLocationRepository,
+} from "../modules/repairLocation/repairLocation.repository";
 
 // ============================================================================
 // SERVICE IMPORTS
@@ -99,6 +107,10 @@ import {
   ITestDriveService,
   testDriveService,
 } from "../modules/testDrive/testDrive.service";
+import {
+  ISavedVehicleService,
+  savedVehicleService,
+} from "../modules/savedVehicle/savedVehicle.service";
 
 // ============================================================================
 // CONTROLLER IMPORTS
@@ -156,6 +168,18 @@ import {
   ITestDriveController,
   testDriveController,
 } from "../modules/testDrive/testDrive.controller";
+import {
+  ISavedVehicleController,
+  savedVehicleController,
+} from "../modules/savedVehicle/savedVehicle.controller";
+import {
+  IRepairLocationService,
+  repairLocationService,
+} from "../modules/repairLocation/repairLocation.service";
+import {
+  IRepairLocationController,
+  repairLocationController,
+} from "../modules/repairLocation/repairLocation.controller";
 
 /**
  * Central Dependency Injection Container
@@ -208,6 +232,12 @@ container.register<ISellerRepository>("SellerRepository", {
 container.register<ITestDriveRepository>("TestDriveRepository", {
   useValue: TestDriveRepository,
 });
+container.register<ISavedVehicleRepository>("SavedVehicleRepository", {
+  useValue: SavedVehicleRepository,
+});
+container.register<IRepairLocationRepository>("RepairLocationRepository", {
+  useValue: RepairLocationRepository,
+});
 
 // ============================================================================
 // SERVICES
@@ -227,7 +257,8 @@ container.register<IChatbotService>("ChatbotService", {
   useFactory: (c) =>
     chatbotService(
       c.resolve<IChatbotRepository>("ChatbotRepository"),
-      c.resolve<IUserRepository>("UserRepository")
+      c.resolve<IUserRepository>("UserRepository"),
+      c.resolve<IEvRepository>("EvRepository")
     ),
 });
 
@@ -310,6 +341,19 @@ container.register<ITestDriveService>("TestDriveService", {
     ),
 });
 
+container.register<ISavedVehicleService>("SavedVehicleService", {
+  useFactory: (c) =>
+    savedVehicleService(
+      c.resolve<ISavedVehicleRepository>("SavedVehicleRepository")
+    ),
+});
+container.register<IRepairLocationService>("RepairLocationService", {
+  useFactory: (c) =>
+    repairLocationService(
+      c.resolve<IRepairLocationRepository>("RepairLocationRepository")
+    ),
+});
+
 // ============================================================================
 // CONTROLLERS
 // ============================================================================
@@ -381,6 +425,19 @@ container.register<ISellerController>("SellerController", {
 container.register<ITestDriveController>("TestDriveController", {
   useFactory: (c) =>
     testDriveController(c.resolve<ITestDriveService>("TestDriveService")),
+});
+
+container.register<ISavedVehicleController>("SavedVehicleController", {
+  useFactory: (c) =>
+    savedVehicleController(
+      c.resolve<ISavedVehicleService>("SavedVehicleService")
+    ),
+});
+container.register<IRepairLocationController>("RepairLocationController", {
+  useFactory: (c) =>
+    repairLocationController(
+      c.resolve<IRepairLocationService>("RepairLocationService")
+    ),
 });
 
 export { container };

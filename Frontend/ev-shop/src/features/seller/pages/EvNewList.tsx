@@ -393,7 +393,7 @@ export default function EvListingStepper({ setAlert }: { setAlert?: (alert: Aler
               <FormInputField
                 label="Price Range"
                 type="text"
-                placeholder="e.g., $40,000 - $60,000"
+                placeholder="e.g., LKR 4,000,000 - LKR 6,000,000"
                 {...register("price_range")} // <-- Use register
                 error={errors.price_range?.message}
               />
@@ -469,10 +469,10 @@ export default function EvListingStepper({ setAlert }: { setAlert?: (alert: Aler
               />
               {/* Price */}
               <FormInputField
-                label="Price ($)"
+                label="Price (LKR)"
                 type="number"
                 min="0"
-                placeholder="e.g., 35000"
+                placeholder="e.g., 3500000"
                 {...register("price")} // <-- Use register
                 error={errors.price?.message}
               />
@@ -660,7 +660,7 @@ export default function EvListingStepper({ setAlert }: { setAlert?: (alert: Aler
                   </li>
                   <li>
                     <strong>Price:</strong>{" "}
-                    {formData.price ? `$${formData.price}` : "—"}
+                    {formData.price ? `LKR ${formData.price}` : "—"}
                   </li>
                   <li>
                     <strong>Battery Health:</strong>{" "}

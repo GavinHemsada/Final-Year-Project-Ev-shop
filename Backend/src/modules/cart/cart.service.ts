@@ -134,18 +134,27 @@ export function cartService(cartRepo: ICartRepository): ICartService {
     /**
      * Updates the quantity of a specific item in the cart.
      * It invalidates the user's cart cache upon successful update.
-     * Note: The current implementation has a bug in cache invalidation.
      */
     updateItemInCart: async (itemId, data) => {
       try {
         if (data.quantity === undefined) {
           return { success: false, error: "Quantity must be provided" };
         }
+        // Get the cart item first to find the cart_id
+        const cartItem = await cartRepo.findCartItemById(itemId);
+        if (!cartItem) {
+          return { success: false, error: "Cart item not found" };
+        }
+        // Get the cart to find the user_id
+        const cart = await cartRepo.findCartById(cartItem.cart_id.toString());
+        if (!cart) {
+          return { success: false, error: "Cart not found" };
+        }
+        // Update the item
         const item = await cartRepo.updateCartItem(itemId, data.quantity);
         if (!item) return { success: false, error: "Cart item not found" };
-        // BUG: This should invalidate the user's cart cache (`cart_${userId}`),
-        // but it's incorrectly using the item's ID.
-        await CacheService.delete(`cart_${item.id}`);
+        // Invalidate the user's cart cache
+        await CacheService.delete(`cart_${cart.user_id.toString()}`);
         return { success: true, item };
       } catch (err) {
         return { success: false, error: "Failed to update cart item" };
@@ -155,15 +164,24 @@ export function cartService(cartRepo: ICartRepository): ICartService {
     /**
      * Removes a specific item from the cart.
      * It invalidates the user's cart cache upon successful removal.
-     * Note: The current implementation has a bug in cache invalidation.
      */
     removeItemFromCart: async (itemId) => {
       try {
+        // Get the cart item first to find the cart_id
+        const cartItem = await cartRepo.findCartItemById(itemId);
+        if (!cartItem) {
+          return { success: false, error: "Cart item not found" };
+        }
+        // Get the cart to find the user_id
+        const cart = await cartRepo.findCartById(cartItem.cart_id.toString());
+        if (!cart) {
+          return { success: false, error: "Cart not found" };
+        }
+        // Remove the item
         const success = await cartRepo.removeCartItem(itemId);
         if (!success) return { success: false, error: "Cart item not found" };
-        // BUG: This should invalidate the user's cart cache (`cart_${userId}`),
-        // but it's incorrectly using the item's ID.
-        await CacheService.delete(`cart_${itemId}`);
+        // Invalidate the user's cart cache
+        await CacheService.delete(`cart_${cart.user_id.toString()}`);
         return { success: true };
       } catch (err) {
         return { success: false, error: "Failed to remove cart item" };

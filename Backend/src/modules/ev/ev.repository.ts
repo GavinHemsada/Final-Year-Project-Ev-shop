@@ -255,12 +255,16 @@ export const EvRepository: IEvRepository = {
     return await VehicleListing.find()
       .populate({
         path: "model_id",
-        populate: [
-          { path: "brand_id" },
-          { path: "category_id"},
-        ],
+        populate: [{ path: "brand_id" }, { path: "category_id" }],
       })
-      .populate("seller_id", "business_name")
+      .populate({
+        path: "seller_id",
+        select: "business_name user_id shop_logo",
+        populate: {
+          path: "user_id",
+          select: "profile_image name",
+        },
+      })
       .sort({ createdAt: -1 });
   }),
   /**
@@ -276,19 +280,34 @@ export const EvRepository: IEvRepository = {
           { path: "category_id", select: "category_name description" },
         ],
       })
-      .populate("seller_id", "business_name user_id");
+      .populate({
+        path: "seller_id",
+        select: "business_name user_id shop_logo",
+        populate: {
+          path: "user_id",
+          select: "profile_image name",
+        },
+      });
   }),
   /** Finds all vehicle listings for a specific seller, sorted by most recent. */
   findListingsBySeller: withErrorHandling(async (sellerId) => {
     return await VehicleListing.find({
       seller_id: new Types.ObjectId(sellerId),
     })
-    .populate({
+      .populate({
         path: "model_id",
         populate: [
           { path: "brand_id", select: "brand_name brand_logo description" },
           { path: "category_id", select: "category_name" },
         ],
+      })
+      .populate({
+        path: "seller_id",
+        select: "business_name user_id shop_logo",
+        populate: {
+          path: "user_id",
+          select: "profile_image name",
+        },
       })
       .sort({ createdAt: -1 });
   }),

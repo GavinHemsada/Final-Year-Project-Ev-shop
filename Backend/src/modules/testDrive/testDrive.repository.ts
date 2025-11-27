@@ -160,7 +160,15 @@ export const TestDriveRepository: ITestDriveRepository = {
   findSlotsBySeller: withErrorHandling(async (sellerId) => {
     return await TestDriveSlot.find({
       seller_id: new Types.ObjectId(sellerId),
-    }).sort({ available_date: -1 });
+    })
+      .populate({
+        path: "model_id",
+        populate: [
+          { path: "brand_id", select: "brand_name brand_logo" },
+          { path: "category_id", select: "category_name" },
+        ],
+      })
+      .sort({ available_date: -1 });
   }),
   /** Finds all active TestDriveSlots, sorted by their available date. */
   findActiveSlots: withErrorHandling(async () => {

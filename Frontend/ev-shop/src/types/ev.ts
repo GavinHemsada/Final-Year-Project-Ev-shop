@@ -35,6 +35,11 @@ export type Vehicle = {
   seller_id: {
     _id: string;
     business_name: string;
+    user_id?: {
+      _id: string;
+      profile_image?: string;
+      name?: string;
+    };
   };
 
   model_id: {

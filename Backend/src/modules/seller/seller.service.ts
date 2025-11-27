@@ -4,6 +4,7 @@ import { IUserRepository } from "../user/user.repository";
 import { IReviewRepository } from "../review/review.repository";
 import CacheService from "../../shared/cache/CacheService";
 import { UserRole } from "../../shared/enum/enum";
+import { addImage, deleteImage } from "../../shared/utils/imageHandel";
 
 /**
  * Defines the interface for the seller service, outlining the methods for managing seller profiles.
@@ -58,7 +59,8 @@ export interface ISellerService {
    */
   updateSeller(
     id: string,
-    data: UpdateSellerDTO
+    data: UpdateSellerDTO,
+    file?: Express.Multer.File
   ): Promise<{ success: boolean; seller?: any; error?: string }>;
   /**
    * Deletes a seller profile by its unique ID.
@@ -237,13 +239,26 @@ export function sellerService(
      * Updates a seller's profile information.
      * Invalidates all caches related to this seller to ensure data consistency.
      */
-    updateSeller: async (id, data) => {
+    updateSeller: async (id, data, file) => {
       try {
         const existingSeller = await repo.findById(id);
         if (!existingSeller) {
           return { success: false, error: "Seller not found" };
         }
-        const seller = await repo.update(id, data);
+
+        // Handle shop logo upload
+        const updateData: any = { ...data };
+        if (file) {
+          const sellerFolder = "Seller";
+          const logoPath = addImage(file, sellerFolder);
+          // Delete old logo if it exists
+          if (existingSeller.shop_logo) {
+            deleteImage(existingSeller.shop_logo);
+          }
+          updateData.shop_logo = logoPath;
+        }
+
+        const seller = await repo.update(id, updateData);
         if (!seller) return { success: false, error: "Seller not found" };
 
         // Invalidate caches to ensure data consistency on next read.

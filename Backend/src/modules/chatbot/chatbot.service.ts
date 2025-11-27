@@ -3,6 +3,7 @@ import { ChatbotConversationDTO, PredictionDTO } from "../../dtos/chatbot.DTO";
 import { IUserRepository } from "../user/user.repository";
 import { getChatbotResponse } from "../../shared/utils/chatbot";
 import CacheService from "../../shared/cache/CacheService";
+import { IEvRepository } from "../ev/ev.repository";
 
 /**
  * Defines the interface for the chatbot service, outlining methods for managing conversations and predictions.
@@ -128,7 +129,8 @@ export interface IChatbotService {
  */
 export function chatbotService(
   chatbotRepo: IChatbotRepository,
-  userRepo: IUserRepository
+  userRepo: IUserRepository,
+  evRepo: IEvRepository
 ): IChatbotService {
   return {
     /**
@@ -211,7 +213,7 @@ export function chatbotService(
      */
     getRespons: async (question) => {
       try {
-        const response = await getChatbotResponse(question);
+        const response = await getChatbotResponse(question, evRepo);
         if (!response)
           return { success: false, error: "Failed to get response" };
         return { success: true, response };

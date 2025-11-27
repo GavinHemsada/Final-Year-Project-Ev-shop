@@ -1,6 +1,6 @@
 import { LazyVehicleCard } from "@/components/EvModelCard";
 import { Pagination } from "@/components/PaginationBar";
-import type { Vehicle } from "@/types";
+import type { Vehicle, AlertProps } from "@/types";
 import React, { useCallback } from "react";
 
 /**
@@ -12,6 +12,7 @@ type VehicleListProps = {
   currentPage: number;
   itemsPerPage: number;
   onPageChange: (page: number) => void;
+  setAlert?: (alert: AlertProps | null) => void;
 };
 
 /**
@@ -24,6 +25,7 @@ export const VehicleList: React.FC<VehicleListProps> = ({
   currentPage,
   itemsPerPage,
   onPageChange,
+  setAlert,
 }) => {
   const totalPages = Math.ceil(totalVehicles / itemsPerPage);
 
@@ -59,10 +61,7 @@ export const VehicleList: React.FC<VehicleListProps> = ({
       {/* Vehicle Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 w-full">
         {vehicles.map((v, index) => (
-          <LazyVehicleCard
-            key={v._id}
-            vehicle={v}
-          />
+          <LazyVehicleCard key={v._id} vehicle={v} setAlert={setAlert} />
         ))}
       </div>
 

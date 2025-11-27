@@ -3,6 +3,7 @@ import { container } from "../../di/container";
 import { validateDto } from "../../shared/middlewares/DtoValidator.middleware";
 import { SellerDTO, UpdateSellerDTO } from "../../dtos/seller.DTO";
 import { ISellerController } from "./seller.controller";
+import { upload } from "../../shared/utils/imageHandel";
 
 /**
  * Factory function that creates and configures the router for seller-related endpoints.
@@ -164,8 +165,11 @@ export const sellerRouter = (): Router => {
    *       '500':
    *         description: Internal server error.
    */
-  router.put("/:id", validateDto(UpdateSellerDTO), (req, res) =>
-    controller.updateSeller(req, res)
+  router.put(
+    "/:id",
+    upload.single("shop_logo"),
+    validateDto(UpdateSellerDTO),
+    (req, res) => controller.updateSeller(req, res)
   );
 
   /**

@@ -16,6 +16,8 @@ import { MyReviewsPage } from "./MyReviewsPage";
 import { CommunityPage } from "./ComunityPage";
 import { SavedVehicles } from "./SavedVehicalsPage";
 import { OrderHistory } from "./OrderHistoryPage";
+import SellerProfilePage from "./SellerProfilePage";
+import RepairLocationsPage from "./RepairLocationsPage";
 import { ListingsTable } from "../components/EvListingTable";
 import { AnalyticsChart } from "../components/AnalyticsChart";
 import { Alert, ConfirmAlert } from "@/components/MessageAlert";
@@ -139,6 +141,8 @@ const SellerDashboard: React.FC = () => {
         );
       case "orders":
         return <OrderHistory setAlert={handleSetAlert} />;
+      case "profile":
+        return <SellerProfilePage setAlert={handleSetAlert} />;
       case "evList":
         return <EvListingStepper setAlert={handleSetAlert} />;
       case "saved":
@@ -156,6 +160,8 @@ const SellerDashboard: React.FC = () => {
         return <MyReviewsPage setAlert={handleSetAlert} />;
       case "community":
         return <CommunityPage setAlert={handleSetAlert} />;
+      case "repairLocations":
+        return <RepairLocationsPage setAlert={handleSetAlert} />;
       case "editEvlist":
         return <EvListingStepper setAlert={handleSetAlert} />;
       default:

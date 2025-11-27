@@ -7,6 +7,8 @@ import {
   KeyIcon,
   ChevronRightIcon,
   ChevronLeftIcon,
+  UserIcon,
+  ServiceIcon,
 } from "@/assets/icons/icons";
 import type { SellerActiveTab } from "@/types";
 import { useTheme } from "@/context/ThemeContext";
@@ -62,20 +64,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </span>
       </div>
       {/* --- END OF LOGO --- */}
-           <button
-    onClick={() => (isExpanded ? onCollapse() : onExpand())}
-    className="absolute top-1/9 -right-3 transform -translate-y-1/2
+      <button
+        onClick={() => (isExpanded ? onCollapse() : onExpand())}
+        className="absolute top-1/9 -right-3 transform -translate-y-1/2
                w-8 h-8 rounded-full flex items-center justify-center
                bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600
                shadow-md transition-all duration-300"
-    title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
-  >
-    {isExpanded ? (
-      <ChevronLeftIcon className="h-5 w-5 text-gray-700 dark:text-gray-200" />
-    ) : (
-      <ChevronRightIcon className="h-5 w-5 text-gray-700 dark:text-gray-200" />
-    )}
-  </button>
+        title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+      >
+        {isExpanded ? (
+          <ChevronLeftIcon className="h-5 w-5 text-gray-700 dark:text-gray-200" />
+        ) : (
+          <ChevronRightIcon className="h-5 w-5 text-gray-700 dark:text-gray-200" />
+        )}
+      </button>
       {/* Main navigation links */}
       <nav className="flex-1 px-2 md:px-4 py-6 space-y-2">
         {/* ... (All your other SidebarLinks stay the same) ... */}
@@ -94,6 +96,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           isExpanded={isExpanded}
         />
         <SidebarLink
+          text="Profile"
+          icon={<UserIcon className="h-5 w-5" />}
+          active={activeTab === "profile"}
+          onClick={() => setActiveTab("profile")}
+          isExpanded={isExpanded}
+        />
+        <SidebarLink
           text="Saved Vehicles"
           icon={<HeartIcon className="h-5 w-5" />}
           active={activeTab === "saved"}
@@ -103,8 +112,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <SidebarLink
           text="Test Drives"
           icon={<KeyIcon className="h-5 w-5" />}
-          active={activeTab === "test-drives"}
-          onClick={() => setActiveTab("test-drives")}
+          active={activeTab === "testDrives"}
+          onClick={() => setActiveTab("testDrives")}
           isExpanded={isExpanded}
         />
         <SidebarLink
@@ -119,6 +128,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon={<CommunityIcon className="h-5 w-5" />} // Use the new CommunityIcon
           active={activeTab === "community"}
           onClick={() => setActiveTab("community")}
+          isExpanded={isExpanded}
+        />
+        <SidebarLink
+          text="Repair Locations"
+          icon={<ServiceIcon className="h-5 w-5" />}
+          active={activeTab === "repairLocations"}
+          onClick={() => setActiveTab("repairLocations")}
           isExpanded={isExpanded}
         />
       </nav>

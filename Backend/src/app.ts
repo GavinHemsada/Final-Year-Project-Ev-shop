@@ -35,6 +35,8 @@ import { maintenanceRecordRouter } from "./modules/maintenance_record/maintenanc
 import { orderRouter } from "./modules/order/order.router";
 import { paymentRouter } from "./modules/payment/payment.router";
 import { evRouter } from "./modules/ev/ev.router";
+import { savedVehicleRouter } from "./modules/savedVehicle/savedVehicle.router";
+import { repairLocationRouter } from "./modules/repairLocation/repairLocation.router";
 
 // Logging utilities
 import morgan from "morgan";
@@ -44,8 +46,8 @@ import logger from "./shared/utils/logger";
 import { initializeMonitoring } from "./monitoring";
 
 // Swagger documentation setup
-import { swaggerSpec } from './config/swagger.config';
-import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from "./config/swagger.config";
+import swaggerUi from "swagger-ui-express";
 
 // Initialize the Express application
 const app: Express = express();
@@ -93,7 +95,14 @@ app.use(
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:","http://localhost:5173","http://localhost:5000", "http://localhost:3000"],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "https:",
+          "http://localhost:5173",
+          "http://localhost:5000",
+          "http://localhost:3000",
+        ],
       },
     },
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -149,7 +158,7 @@ app.use(
   "/uploads",
   express.static(path.join(__dirname, "../uploads"), {
     setHeaders: (res, path, stat) => {
-      res.setHeader("Cache-Control", "public, max-age=3600, immutable");      // prevent 304 / caching issues
+      res.setHeader("Cache-Control", "public, max-age=3600, immutable"); // prevent 304 / caching issues
     },
   })
 );
@@ -183,6 +192,8 @@ apiV1Router.use("/maintenance", protectJWT, maintenanceRecordRouter());
 apiV1Router.use("/order", protectJWT, orderRouter());
 apiV1Router.use("/payment", paymentLimiter, protectJWT, paymentRouter());
 apiV1Router.use("/ev", protectJWT, evRouter());
+apiV1Router.use("/saved-vehicle", protectJWT, savedVehicleRouter());
+apiV1Router.use("/repair-location", protectJWT, repairLocationRouter());
 
 // ============================================
 // MONITORING & HEALTH CHECK ENDPOINTS
@@ -226,11 +237,15 @@ app.use("/api/v1", apiV1Router);
 // });
 
 // Swagger Documentation Route
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  explorer: true,
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Ev-shop API Documentation',
-}));
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    explorer: true,
+    customCss: ".swagger-ui .topbar { display: none }",
+    customSiteTitle: "Ev-shop API Documentation",
+  })
+);
 
 // Global Error Handling Middleware
 // This middleware catches any errors that occur during request processing

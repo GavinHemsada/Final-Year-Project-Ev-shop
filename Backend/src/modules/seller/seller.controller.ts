@@ -113,7 +113,12 @@ export function sellerController(service: ISellerService): ISellerController {
      */
     updateSeller: async (req, res) => {
       try {
-        const result = await service.updateSeller(req.params.id, req.body);
+        const file = req.file;
+        const result = await service.updateSeller(
+          req.params.id,
+          req.body,
+          file
+        );
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "updateSeller");

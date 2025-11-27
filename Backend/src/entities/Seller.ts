@@ -17,6 +17,8 @@ export interface ISeller extends Document {
   description?: string;
   /** The URL of the seller's business website. This field is optional. */
   website?: string;
+  /** The path to the seller's shop logo image. This field is optional. */
+  shop_logo?: string;
   /** The seller's average rating, calculated from all reviews. This field is optional. */
   rating?: number;
   /** The total number of reviews the seller has received. */
@@ -38,6 +40,8 @@ const SellerSchema = new Schema<ISeller>(
     description: String,
     /** The URL for the seller's website. */
     website: String,
+    /** The path to the seller's shop logo image. */
+    shop_logo: String,
     /** The calculated average rating for the seller, with a range of 0 to 5. */
     rating: { type: Number, min: 0, max: 5 },
     /** The total count of reviews received by the seller, defaulting to 0. */
