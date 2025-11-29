@@ -62,7 +62,10 @@ export const RepairLocationRepository: IRepairLocationRepository = {
 
   findActiveLocations: withErrorHandling(async () => {
     return await RepairLocation.find({ is_active: true })
-      .populate("seller_id")
+      .populate({
+        path: "seller_id",
+        select: "business_name shop_logo",
+      })
       .sort({ createdAt: -1 });
   }),
 

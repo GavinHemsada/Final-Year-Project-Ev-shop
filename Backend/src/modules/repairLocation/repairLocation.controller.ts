@@ -8,6 +8,7 @@ import { handleResult, handleError } from "../../shared/utils/Respons.util";
 export interface IRepairLocationController {
   createRepairLocation(req: Request, res: Response): Promise<Response>;
   getRepairLocationsBySeller(req: Request, res: Response): Promise<Response>;
+  getAllActiveLocations(req: Request, res: Response): Promise<Response>;
   getRepairLocationById(req: Request, res: Response): Promise<Response>;
   updateRepairLocation(req: Request, res: Response): Promise<Response>;
   deleteRepairLocation(req: Request, res: Response): Promise<Response>;
@@ -37,6 +38,15 @@ export function repairLocationController(
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "getRepairLocationsBySeller");
+      }
+    },
+
+    getAllActiveLocations: async (req, res) => {
+      try {
+        const result = await service.getAllActiveLocations();
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "getAllActiveLocations");
       }
     },
 

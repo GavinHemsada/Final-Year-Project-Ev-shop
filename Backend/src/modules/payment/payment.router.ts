@@ -82,9 +82,8 @@ export const paymentRouter = (): Router => {
    *       '500':
    *         description: Internal server error.
    */
-  router.post("/payment-notify", (req, res) =>
-    controller.validatePayment(req, res)
-  );
+  // Payment webhook and return/cancel endpoints are registered in app.ts as public routes
+  // They are not included here to avoid duplication
 
   /**
    * @swagger

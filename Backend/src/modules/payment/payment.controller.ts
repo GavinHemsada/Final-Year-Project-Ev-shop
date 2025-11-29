@@ -54,6 +54,18 @@ export interface IPaymentController {
    * @param res - The Express response object.
    */
   deletePayment(req: Request, res: Response): Promise<Response>;
+  /**
+   * Handles the redirect from PayHere after payment completion.
+   * @param req - The Express request object, containing query parameters from PayHere.
+   * @param res - The Express response object.
+   */
+  handlePaymentReturn(req: Request, res: Response): Promise<Response>;
+  /**
+   * Handles the redirect from PayHere when payment is cancelled.
+   * @param req - The Express request object, containing query parameters from PayHere.
+   * @param res - The Express response object.
+   */
+  handlePaymentCancel(req: Request, res: Response): Promise<Response>;
 }
 
 /**
@@ -102,10 +114,16 @@ export function paymentController(
     },
     /**
      * Validates a payment after the user returns from the payment gateway.
+     * PayHere sends form data (application/x-www-form-urlencoded), so we use req.body
      */
     validatePayment: async (req, res) => {
       try {
-        const result = await service.validatePayment(req.params);
+        // PayHere sends data as form-urlencoded, so we need to use req.body
+        const result = await service.validatePayment(req.body);
+        // PayHere expects a simple response
+        if (result.success) {
+          return res.status(200).send("OK");
+        }
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "validatePayment");
@@ -153,6 +171,88 @@ export function paymentController(
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "deletePayment");
+      }
+    },
+    /**
+     * Handles the redirect from PayHere after payment completion.
+     * Redirects user to success or failure page based on payment status.
+     * Also updates payment and order status if webhook hasn't fired yet.
+     */
+    handlePaymentReturn: async (req, res) => {
+      try {
+        const { order_id, payment_id, status_code } = req.query;
+        
+        // If we have status_code from PayHere, process it as a webhook would
+        if (status_code && order_id) {
+          // Process the payment notification similar to webhook
+          const webhookData = {
+            merchant_id: req.query.merchant_id as string,
+            order_id: order_id as string,
+            payment_id: payment_id as string,
+            payhere_amount: req.query.payhere_amount as string,
+            payhere_currency: req.query.payhere_currency as string,
+            status_code: status_code as string,
+            md5sig: req.query.md5sig as string,
+            method: req.query.method as string,
+          };
+          
+          // Try to validate and update payment/order status
+          await service.validatePayment(webhookData);
+        }
+        
+        // Get the payment to check its status
+        const paymentResult = await service.getPaymentByOrderId(order_id as string);
+        
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        
+        if (!paymentResult.success || !paymentResult.payment) {
+          // Redirect to failure page if payment not found
+          res.redirect(`${frontendUrl}/user/payment/failed?order_id=${order_id}`);
+          return res;
+        }
+
+        const payment = paymentResult.payment;
+
+        // Redirect based on payment status
+        if (payment.status === "completed" || status_code === "2") {
+          res.redirect(`${frontendUrl}/user/payment/return?order_id=${order_id}&payment_id=${payment_id}`);
+        } else if (payment.status === "failed" || status_code === "-2") {
+          res.redirect(`${frontendUrl}/user/payment/failed?order_id=${order_id}`);
+        } else {
+          res.redirect(`${frontendUrl}/user/payment/pending?order_id=${order_id}`);
+        }
+        return res;
+      } catch (err) {
+        console.error("Error in handlePaymentReturn:", err);
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        res.redirect(`${frontendUrl}/user/payment/error`);
+        return res;
+      }
+    },
+    /**
+     * Handles the redirect from PayHere when payment is cancelled.
+     * Redirects user to cancellation page.
+     */
+    handlePaymentCancel: async (req, res) => {
+      try {
+        const { order_id } = req.query;
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        
+        // Optionally update payment status to cancelled
+        if (order_id) {
+          const paymentResult = await service.getPaymentByOrderId(order_id as string);
+          if (paymentResult.success && paymentResult.payment) {
+            // Payment cancellation will be handled by the webhook if user cancels during payment
+            // This is just for the redirect
+          }
+        }
+        
+        res.redirect(`${frontendUrl}/payment/cancelled?order_id=${order_id || ""}`);
+        return res;
+      } catch (err) {
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        res.redirect(`${frontendUrl}/payment/error`);
+        return res;
       }
     },
   };

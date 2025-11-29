@@ -1,6 +1,6 @@
 export const queryKeys = {
-    // buyer
-  userProfile: (id:string) => ["userProfile", id],
+  // buyer
+  userProfile: (id: string) => ["userProfile", id],
   notifications: (userID: string) => ["notification", userID],
   cart: (id: string) => ["cart", id],
   orders: (id: string) => ["orders", id],
@@ -8,10 +8,26 @@ export const queryKeys = {
   testDrive: (id: string) => ["testDrive", id],
   communityPosts: ["communityPosts"],
   communityPost: (id: string) => ["communityPost", id],
+  savedVehicles: (userId: string) => ["savedVehicles", userId],
+  isVehicleSaved: (userId: string, listingId: string) => [
+    "isVehicleSaved",
+    userId,
+    listingId,
+  ],
+  vehicleById: (id: string) => ["vehicle", id],
+  postReplies: (postId: string) => ["postReplies", postId],
   // seller
   sellerProfile: (id: string) => ["sellerProfile", id],
   sellerOrders: (id: string) => ["sellerOrders", id],
   sellerEvlist: (id: string) => ["sellerEvlist", id],
   sellerTestDrive: (id: string) => ["sellerTestDrive", id],
-  // finac
+  repairLocations: (sellerId: string) => ["repairLocations", sellerId],
+  testDriveSlots: (sellerId: string) => ["testDriveSlots", sellerId],
+  evModels: ["evModels"],
+  evCategories: ["evCategories"],
+  evBrands: ["evBrands"],
+  // financial
+  financialInstitution: (userId: string) => ["financialInstitution", userId],
+  financialProducts: (institutionId: string) => ["financialProducts", institutionId],
+  financialApplications: (institutionId: string) => ["financialApplications", institutionId],
 };

@@ -5,12 +5,14 @@ import { useAuth } from "@/context/AuthContext";
 import { buyerService } from "../buyerService";
 import { LazyVehicleCard } from "@/components/EvModelCard";
 import { Loader } from "@/components/Loader";
+import { useToast } from "@/context/ToastContext";
 
 const SavedVehicles: React.FC<{
-  setAlert?: (alert: AlertProps | null) => void;
+  setAlert?: (alert: AlertProps | null) => void; // Keep for backward compatibility but prefer toast
 }> = ({ setAlert }) => {
   const { getUserID } = useAuth();
   const userId = getUserID();
+  const { showToast } = useToast();
   const [savedVehicles, setSavedVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,53 +32,39 @@ const SavedVehicles: React.FC<{
       const response = await buyerService.getSavedVehicles(userId);
 
       // handleResult unwraps the response, so response is directly the savedVehicles array
-      // But it could also be the full object if axios doesn't unwrap it
-      let savedVehiclesData = null;
+      let savedVehiclesData: any[] = [];
 
       if (Array.isArray(response)) {
         // Response is directly the array (unwrapped by handleResult)
         savedVehiclesData = response;
       } else if (response && Array.isArray(response.savedVehicles)) {
-        // Response has the wrapper structure
+        // Response has the wrapper structure (fallback)
         savedVehiclesData = response.savedVehicles;
-      } else if (
-        response &&
-        response.success &&
-        Array.isArray(response.savedVehicles)
-      ) {
-        // Response has success wrapper
+      } else if (response && response.success && Array.isArray(response.savedVehicles)) {
+        // Response has success wrapper (fallback)
         savedVehiclesData = response.savedVehicles;
       }
 
-      if (
-        savedVehiclesData &&
-        Array.isArray(savedVehiclesData) &&
-        savedVehiclesData.length > 0
-      ) {
-        // Map saved vehicles to Vehicle type format
-        const vehicles: Vehicle[] = savedVehiclesData
-          .filter((saved: any) => saved && saved.listing_id) // Filter out any null/undefined entries
-          .map((saved: any) => {
-            const listing = saved.listing_id;
-            if (!listing) return null;
+      // Map saved vehicles to Vehicle type format
+      const vehicles: Vehicle[] = savedVehiclesData
+        .filter((saved: any) => saved && saved.listing_id) // Filter out any null/undefined entries
+        .map((saved: any) => {
+          const listing = saved.listing_id;
+          if (!listing) return null;
 
-            return {
-              ...listing,
-              _id: listing._id || listing.id,
-            };
-          })
-          .filter((v: Vehicle | null) => v !== null) as Vehicle[];
+          return {
+            ...listing,
+            _id: listing._id || listing.id,
+          };
+        })
+        .filter((v: Vehicle | null) => v !== null) as Vehicle[];
 
-        setSavedVehicles(vehicles);
-      } else {
-        setSavedVehicles([]);
-      }
-    } catch (error) {
+      setSavedVehicles(vehicles);
+    } catch (error: any) {
       console.error("Failed to fetch saved vehicles:", error);
-      setAlert?.({
-        id: Date.now(),
-        title: "Error",
-        message: "Failed to load saved vehicles",
+      const errorMessage = error?.response?.data?.message || "Failed to load saved vehicles";
+      showToast({
+        text: errorMessage,
         type: "error",
       });
       setSavedVehicles([]);
@@ -93,20 +81,16 @@ const SavedVehicles: React.FC<{
       // If no error thrown, assume success
       // Remove from local state
       setSavedVehicles((prev) => prev.filter((v) => v._id !== listingId));
-      setAlert?.({
-        id: Date.now(),
-        title: "Success",
-        message: "Vehicle removed from saved",
+      showToast({
+        text: "Vehicle removed from saved",
         type: "success",
       });
     } catch (error: any) {
       console.error("Failed to remove saved vehicle:", error);
       const errorMessage =
         error?.response?.data?.message || "Failed to remove saved vehicle";
-      setAlert?.({
-        id: Date.now(),
-        title: "Error",
-        message: errorMessage,
+      showToast({
+        text: errorMessage,
         type: "error",
       });
     }

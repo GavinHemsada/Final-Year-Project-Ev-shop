@@ -176,16 +176,13 @@ export const TopMessageAlerts = ({
       borderColor: "#f87171",
     },
   };
-  const alertPosition =
-    position === "top" ? `top-[${positionValue}]` : `bottom-[${positionValue}]`;
-
   const { bg, text, border, borderColor } = colorMap[message.type];
-  const baseClasses = `absolute ${alertPosition} right-[${right}] w-[${width}] max-w-md flex items-center gap-3 p-3 shadow-md animate-slide-in-out`;
+  const baseClasses = `fixed max-w-md flex items-center gap-3 p-3 shadow-md animate-slide-in-out z-50 ${bg} ${text} ${border}`;
 
   return (
     <div
       key={message.id}
-      className={`${baseClasses} ${bg} ${text} ${border}`}
+      className={baseClasses}
       style={{
         borderLeftColor: borderColor,
         [position]: positionValue,

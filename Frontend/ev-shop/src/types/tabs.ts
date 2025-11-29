@@ -56,3 +56,21 @@ export type SellerActiveTab =
   | "testDrives"
   | "notification"
   | "repairLocations";
+
+export const FinancialActiveTabs = {
+  Dashboard: "dashboard",
+  Applications: "applications",
+  Products: "products",
+  Profile: "profile",
+  Notification: "notification",
+} as const;
+
+export type FinancialActiveTabs =
+  (typeof FinancialActiveTabs)[keyof typeof FinancialActiveTabs];
+
+export type FinancialActiveTab =
+  | "dashboard"
+  | "applications"
+  | "products"
+  | "profile"
+  | "notification";

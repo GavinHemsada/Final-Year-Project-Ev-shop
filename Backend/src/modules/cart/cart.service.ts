@@ -87,7 +87,7 @@ export function cartService(cartRepo: ICartRepository): ICartService {
     },
 
     /**
-     * Adds an item to the cart. If the item is already in the cart, it increases the quantity.
+     * Adds an item to the cart. If the item is already in the cart, it returns an error.
      * After the operation, it invalidates the user's cart cache to ensure data consistency.
      */
     addItemToCart: async (data) => {
@@ -105,27 +105,24 @@ export function cartService(cartRepo: ICartRepository): ICartService {
           data.listing_id
         );
 
-        let result;
-        // If item exists, update quantity; otherwise, create a new cart item.
+        // If item already exists in cart, return an error
         if (existingItem) {
-          const newQuantity = existingItem.quantity + data.quantity;
-          const updatedItem = await cartRepo.updateCartItem(
-            existingItem._id.toString(),
-            newQuantity
-          );
-          result = { success: true, item: updatedItem };
-        } else {
-          const newItem = await cartRepo.addCartItem(
-            cartId,
-            data.listing_id,
-            data.quantity
-          );
-          result = { success: true, item: newItem };
+          return { 
+            success: false, 
+            error: "This item is already in your cart. You can only add each vehicle once." 
+          };
         }
+
+        // Create a new cart item
+        const newItem = await cartRepo.addCartItem(
+          cartId,
+          data.listing_id,
+          data.quantity
+        );
 
         // Invalidate the cart cache after modifying it
         await CacheService.delete(cacheKey);
-        return result;
+        return { success: true, item: newItem };
       } catch (err) {
         return { success: false, error: "Failed to add item to cart" };
       }

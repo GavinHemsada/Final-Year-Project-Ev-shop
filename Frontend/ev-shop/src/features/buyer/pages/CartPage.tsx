@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 import { CloseIcon } from "@/assets/icons/icons";
 import type { Vehicle, AlertProps } from "@/types";
 import { useAuth } from "@/context/AuthContext";
-import { buyerService } from "../buyerService";
 import { Loader } from "@/components/Loader";
+import { useCart, useRemoveCartItem, useUpdateCartItem } from "@/hooks/useCart";
+import { useToast } from "@/context/ToastContext";
 
 const apiURL = import.meta.env.VITE_API_URL;
 
@@ -14,80 +16,55 @@ interface CartItem {
 }
 
 const CartPage: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = ({
-  setAlert,
+  setAlert, // Keep for backward compatibility but prefer toast
 }) => {
   const { getUserID } = useAuth();
   const userId = getUserID();
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+  
+  // Use React Query hooks
+  const { data: cart, isLoading, error } = useCart(userId);
+  const removeCartItemMutation = useRemoveCartItem();
+  const updateCartItemMutation = useUpdateCartItem();
 
-  useEffect(() => {
-    if (userId) {
-      fetchCart();
-    } else {
-      setLoading(false);
-    }
-  }, [userId]);
-
-  const fetchCart = async () => {
-    if (!userId) return;
-
-    try {
-      setLoading(true);
-      const response = await buyerService.getUserCart(userId);
-
-      // handleResult unwraps the response, so response is directly the cart object
-      let cartData = null;
-      if (response && response.items) {
-        // Response has items array
-        cartData = response;
-      } else if (Array.isArray(response)) {
-        // Response is directly an array (unlikely but handle it)
-        cartData = { items: response };
-      }
-
-      if (cartData && cartData.items && Array.isArray(cartData.items)) {
-        setCartItems(cartData.items);
-      } else {
-        setCartItems([]);
-      }
-    } catch (error) {
-      console.error("Failed to fetch cart:", error);
-      setAlert?.({
-        id: Date.now(),
-        title: "Error",
-        message: "Failed to load cart items",
-        type: "error",
-      });
-      setCartItems([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const cartItems: CartItem[] = cart?.items || [];
 
   const onRemove = async (itemId: string) => {
     if (!userId) return;
 
     try {
-      await buyerService.removeCartItem(itemId);
-      // Remove from local state
-      setCartItems((prev) => prev.filter((item) => item._id !== itemId));
-      setAlert?.({
-        id: Date.now(),
-        title: "Success",
-        message: "Item removed from cart",
+      await removeCartItemMutation.mutateAsync({ itemId, userId });
+      showToast({
+        text: "Item removed from cart",
         type: "success",
       });
-      // Refresh cart to update totals
-      await fetchCart();
     } catch (error: any) {
       console.error("Failed to remove item:", error);
       const errorMessage =
         error?.response?.data?.message || "Failed to remove item";
-      setAlert?.({
-        id: Date.now(),
-        title: "Error",
-        message: errorMessage,
+      showToast({
+        text: errorMessage,
+        type: "error",
+      });
+    }
+  };
+
+  const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
+    if (!userId || newQuantity < 1) return;
+
+    try {
+      await updateCartItemMutation.mutateAsync({
+        itemId,
+        quantity: newQuantity,
+        userId,
+      });
+    } catch (error: any) {
+      console.error("Failed to update quantity:", error);
+      const errorMessage =
+        error?.response?.data?.message || "Failed to update quantity";
+      showToast({
+        text: errorMessage,
         type: "error",
       });
     }
@@ -117,7 +94,7 @@ const CartPage: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = ({
     );
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
         <h1 className="text-2xl font-bold mb-6 dark:text-white">Your Cart</h1>
@@ -128,85 +105,150 @@ const CartPage: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = ({
     );
   }
 
+  if (error) {
+    return (
+      <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
+        <h1 className="text-2xl font-bold mb-6 dark:text-white">Your Cart</h1>
+        <p className="text-gray-500 text-center py-10 dark:text-gray-400">
+          Failed to load cart items. Please try again.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
       <h1 className="text-2xl font-bold mb-6 dark:text-white">Your Cart</h1>
       {cartItems.length === 0 ? (
-        <p className="text-gray-500 text-center py-10 dark:text-gray-400">
-          Your cart is empty.
-        </p>
+        <div className="text-center py-16">
+          <p className="text-gray-500 dark:text-gray-400 text-lg">
+            Your cart is empty.
+          </p>
+        </div>
       ) : (
-        <div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Cart Items List */}
-          <div className="space-y-4">
+          <div className="lg:col-span-2 space-y-4">
             {cartItems.map((item) => {
               const vehicle = item.listing_id;
-              if (!vehicle) return null;
-
-              const firstImage =
-                vehicle.images && vehicle.images.length > 0
-                  ? `${apiURL}${vehicle.images[0]}`
-                  : "https://placehold.co/600x400/3498db/ffffff?text=No+Image";
-
-              const vehiclePrice = vehicle.price
-                ? `LKR ${vehicle.price.toLocaleString("en-US")}`
-                : "Price on request";
+              const imageUrl = vehicle?.images?.[0]
+                ? `${apiURL}${vehicle.images[0]}`
+                : null;
 
               return (
                 <div
                   key={item._id}
-                  className="flex items-center justify-between border-b pb-4 last:border-b-0 dark:border-gray-700"
+                  className="flex gap-4 p-4 border border-gray-200 rounded-lg dark:border-gray-700"
                 >
-                  <div className="flex items-center gap-4 flex-1">
-                    <img
-                      src={firstImage}
-                      alt={vehicle.model_id?.model_name || "Vehicle"}
-                      className="h-20 w-28 object-cover rounded-lg"
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-semibold dark:text-white">
-                        {vehicle.model_id?.brand_id?.brand_name || "Brand"}{" "}
-                        {vehicle.model_id?.model_name || "Model"}
-                      </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {vehicle.model_id?.year || ""} •{" "}
-                        {vehicle.model_id?.category_id?.category_name || "EV"}
-                      </p>
-                      <div className="flex items-center gap-4 mt-1">
-                        <p className="text-sm font-medium text-blue-600">
-                          {vehiclePrice}
-                        </p>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          Qty: {item.quantity}
+                  {/* Vehicle Image */}
+                  <div className="flex-shrink-0">
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={vehicle?.model_id?.model_name || "Vehicle"}
+                        className="w-24 h-24 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center dark:bg-gray-700">
+                        <span className="text-gray-400 text-xs">No Image</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Vehicle Details */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-lg dark:text-white truncate">
+                      {vehicle?.model_id?.brand_id?.brand_name}{" "}
+                      {vehicle?.model_id?.model_name}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {vehicle?.model_id?.year} •{" "}
+                      {vehicle?.model_id?.category_id?.category_name}
+                    </p>
+                    <p className="text-lg font-bold text-blue-600 dark:text-blue-400 mt-2">
+                      LKR {vehicle?.price?.toLocaleString("en-US")}
+                    </p>
+
+                    {/* Quantity Controls */}
+                    <div className="flex items-center gap-3 mt-3">
+                      <label className="text-sm text-gray-600 dark:text-gray-400">
+                        Quantity:
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() =>
+                            handleUpdateQuantity(item._id, item.quantity - 1)
+                          }
+                          disabled={
+                            item.quantity <= 1 ||
+                            updateCartItemMutation.isPending
+                          }
+                          className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:hover:bg-gray-700"
+                        >
+                          -
+                        </button>
+                        <span className="px-3 py-1 border border-gray-300 rounded dark:border-gray-600 dark:text-white">
+                          {item.quantity}
                         </span>
+                        <button
+                          onClick={() =>
+                            handleUpdateQuantity(item._id, item.quantity + 1)
+                          }
+                          disabled={updateCartItemMutation.isPending}
+                          className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:hover:bg-gray-700"
+                        >
+                          +
+                        </button>
                       </div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => onRemove(item._id)}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-100 rounded-full transition-colors dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-red-900"
-                    title="Remove item"
-                  >
-                    <CloseIcon className="h-5 w-5" />
-                  </button>
+
+                  {/* Remove Button */}
+                  <div className="flex-shrink-0">
+                    <button
+                      onClick={() => onRemove(item._id)}
+                      disabled={removeCartItemMutation.isPending}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-red-400 dark:hover:bg-red-900/30 disabled:opacity-50"
+                      title="Remove item"
+                    >
+                      <CloseIcon className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
 
           {/* Cart Summary */}
-          <div className="mt-8 pt-6 border-t dark:border-gray-700">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-lg font-medium text-gray-600 dark:text-gray-300">
-                Total:
-              </span>
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                {formattedTotalPrice}
-              </span>
+          <div className="lg:col-span-1">
+            <div className="sticky top-4 p-6 border border-gray-200 rounded-lg dark:border-gray-700">
+              <h2 className="text-xl font-bold mb-4 dark:text-white">
+                Order Summary
+              </h2>
+              <div className="space-y-3 mb-4">
+                <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                  <span>Subtotal ({cartItems.length} items)</span>
+                  <span>{formattedTotalPrice}</span>
+                </div>
+                <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                  <span>Shipping</span>
+                  <span>Free</span>
+                </div>
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                  <div className="flex justify-between text-lg font-bold dark:text-white">
+                    <span>Total</span>
+                    <span>{formattedTotalPrice}</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate("/user/checkout")}
+                disabled={cartItems.length === 0}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-600"
+              >
+                Proceed to Checkout
+              </button>
             </div>
-            <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600">
-              Proceed to Checkout
-            </button>
           </div>
         </div>
       )}

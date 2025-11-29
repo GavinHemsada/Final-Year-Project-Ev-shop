@@ -4,10 +4,11 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay, Pagination } from "swiper/modules";
 import { HeartIcon, ArrowLeftIcon } from "@/assets/icons/icons";
 import { buyerService } from "../buyerService";
+import { useAddToCart } from "@/hooks/useCart";
 import { useAuth } from "@/context/AuthContext";
-import type { Vehicle, AlertProps } from "@/types";
+import { useToast } from "@/context/ToastContext";
+import type { Vehicle } from "@/types";
 import { Loader } from "@/components/Loader";
-import { Alert } from "@/components/MessageAlert";
 
 const apiURL = import.meta.env.VITE_API_URL;
 const swiperModules = [Navigation, Autoplay, Pagination];
@@ -22,8 +23,8 @@ const VehicleDetailsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [addingToCart, setAddingToCart] = useState(false);
-  const [alert, setAlert] = useState<AlertProps | null>(null);
+  const addToCartMutation = useAddToCart();
+  const { showToast } = useToast();
 
   // Fetch vehicle details
   useEffect(() => {
@@ -36,20 +37,16 @@ const VehicleDetailsPage: React.FC = () => {
         if (response && response._id) {
           setVehicle(response);
         } else {
-          setAlert({
-            id: Date.now(),
-            title: "Error",
-            message: "Vehicle not found",
+          showToast({
+            text: "Vehicle not found",
             type: "error",
           });
           setTimeout(() => navigate("/user/dashboard"), 2000);
         }
       } catch (error: any) {
         console.error("Failed to fetch vehicle:", error);
-        setAlert({
-          id: Date.now(),
-          title: "Error",
-          message: "Failed to load vehicle details",
+        showToast({
+          text: "Failed to load vehicle details",
           type: "error",
         });
         setTimeout(() => navigate("/user/dashboard"), 2000);
@@ -88,16 +85,24 @@ const VehicleDetailsPage: React.FC = () => {
       if (isSaved) {
         await buyerService.removeSavedVehicle(userId, vehicle._id);
         setIsSaved(false);
+        showToast({
+          text: "Vehicle removed from saved list!",
+          type: "success",
+        });
       } else {
         await buyerService.saveVehicle(userId, vehicle._id);
         setIsSaved(true);
+        showToast({
+          text: "Vehicle added to saved list!",
+          type: "success",
+        });
       }
     } catch (error: any) {
       console.error("Failed to toggle save:", error);
-      setAlert({
-        id: Date.now(),
-        title: "Error",
-        message: "Failed to update saved status",
+      const errorMessage =
+        error?.response?.data?.message || "Failed to update saved status";
+      showToast({
+        text: errorMessage,
         type: "error",
       });
     } finally {
@@ -108,77 +113,121 @@ const VehicleDetailsPage: React.FC = () => {
   // Handle add to cart
   const handleAddToCart = async () => {
     if (!userId || !vehicle) {
-      setAlert({
-        id: Date.now(),
-        title: "Login Required",
-        message: "Please log in to add items to your cart",
+      showToast({
+        text: "Please log in to add items to your cart",
         type: "error",
       });
       return;
     }
 
-    setAddingToCart(true);
     try {
-      await buyerService.addToCart(userId, vehicle._id, 1);
-      setAlert({
-        id: Date.now(),
-        title: "Success",
-        message: "Item added to cart successfully!",
+      await addToCartMutation.mutateAsync({
+        userId,
+        listingId: vehicle._id,
+        quantity: 1,
+      });
+      showToast({
+        text: "Item added to cart successfully!",
         type: "success",
       });
     } catch (error: any) {
       console.error("Failed to add to cart:", error);
       const errorMessage =
         error?.response?.data?.message || "Failed to add item to cart";
-      setAlert({
-        id: Date.now(),
-        title: "Error",
-        message: errorMessage,
+      showToast({
+        text: errorMessage,
         type: "error",
       });
-    } finally {
-      setAddingToCart(false);
     }
   };
 
-  // Handle buy now
+  // Handle buy now - go directly to checkout
   const handleBuyNow = async () => {
     if (!userId || !vehicle) {
-      setAlert({
-        id: Date.now(),
-        title: "Login Required",
-        message: "Please log in to purchase",
+      showToast({
+        text: "Please log in to purchase",
         type: "error",
       });
       return;
     }
 
-    setAddingToCart(true);
-    try {
-      // Add to cart first, then navigate to cart page
-      await buyerService.addToCart(userId, vehicle._id, 1);
-      setAlert({
-        id: Date.now(),
-        title: "Success",
-        message: "Item added to cart! Redirecting to cart...",
-        type: "success",
-      });
-      // Navigate to dashboard with cart tab active
-      setTimeout(() => {
-        navigate("/user/dashboard", { state: { activeTab: "cart" } });
-      }, 1000);
-    } catch (error: any) {
-      console.error("Failed to add to cart:", error);
-      const errorMessage =
-        error?.response?.data?.message || "Failed to add item to cart";
-      setAlert({
-        id: Date.now(),
-        title: "Error",
-        message: errorMessage,
+    if (!vehicle.seller_id?._id) {
+      showToast({
+        text: "Invalid vehicle: missing seller information",
         type: "error",
       });
-    } finally {
-      setAddingToCart(false);
+      return;
+    }
+
+    try {
+      // Create order directly
+      const orderData = {
+        user_id: userId,
+        listing_id: vehicle._id,
+        seller_id: vehicle.seller_id._id,
+        total_amount: vehicle.price || 0,
+      };
+
+      const order = await buyerService.placeOrder(orderData);
+
+      if (!order || !order._id) {
+        throw new Error("Failed to create order");
+      }
+
+      // Create payment session
+      const frontendUrl = window.location.origin;
+      const paymentData = {
+        order_id: order._id,
+        payment_type: "purchase",
+        amount: vehicle.price || 0,
+        returnUrl: `${frontendUrl}/user/payment/return`,
+        cancelUrl: `${frontendUrl}/user/payment/cancel`,
+      };
+
+      const paymentResponse = await buyerService.createPayment(paymentData);
+
+      // handleResult unwraps the response, so paymentResponse is the requestObject directly
+      // or it could be { requestObject } depending on the structure
+      const requestObject = paymentResponse?.requestObject || paymentResponse;
+
+      if (!requestObject || typeof requestObject !== "object") {
+        console.error("Payment response:", paymentResponse);
+        throw new Error(
+          paymentResponse?.error || "Failed to create payment session"
+        );
+      }
+
+      // Submit form to PayHere
+      const PAYHERE_SANDBOX_URL = "https://sandbox.payhere.lk/pay/checkout";
+      const PAYHERE_LIVE_URL = "https://www.payhere.lk/pay/checkout";
+      const payHereUrl = import.meta.env.VITE_PAYHERE_MODE === "live" 
+        ? PAYHERE_LIVE_URL 
+        : PAYHERE_SANDBOX_URL;
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = payHereUrl;
+      form.style.display = "none";
+
+      // Add all fields from payment request object
+      Object.entries(requestObject).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = String(value);
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+    } catch (error: any) {
+      console.error("Buy now error:", error);
+      const errorMessage =
+        error?.response?.data?.message || error?.message || "Failed to process purchase";
+      showToast({
+        text: errorMessage,
+        type: "error",
+      });
     }
   };
 
@@ -430,17 +479,17 @@ const VehicleDetailsPage: React.FC = () => {
                 <div className="space-y-3">
                   <button
                     onClick={handleBuyNow}
-                    disabled={!userId || addingToCart}
+                    disabled={!userId || addToCartMutation.isPending}
                     className="w-full bg-blue-600 text-white font-semibold py-4 px-6 rounded-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   >
                     Buy Now
                   </button>
                   <button
                     onClick={handleAddToCart}
-                    disabled={!userId || addingToCart}
+                    disabled={!userId || addToCartMutation.isPending}
                     className="w-full bg-gray-200 text-gray-800 font-semibold py-4 px-6 rounded-lg hover:bg-gray-300 transition-all duration-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {addingToCart ? "Adding..." : "Add to Cart"}
+                    {addToCartMutation.isPending ? "Adding..." : "Add to Cart"}
                   </button>
                   <button className="w-full bg-white border-2 border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-lg hover:bg-gray-50 transition-all duration-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
                     Book Test Drive
@@ -459,19 +508,6 @@ const VehicleDetailsPage: React.FC = () => {
       </div>
 
       {/* Alert Component */}
-      <Alert
-        alert={
-          alert
-            ? {
-                title: alert.title,
-                message: alert.message,
-                type: alert.type,
-                duration: alert.duration,
-              }
-            : null
-        }
-        onClose={() => setAlert(null)}
-      />
     </div>
   );
 };

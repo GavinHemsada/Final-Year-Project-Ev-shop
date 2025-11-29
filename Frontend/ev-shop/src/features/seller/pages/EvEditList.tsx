@@ -132,8 +132,9 @@ const EvListEditSchema = yup.object({
     ),
 });
 
-export default function EvListingEditStepper() {
-  const { listingId } = useParams<{ listingId: string }>();
+export default function EvListingEditStepper({ listingId: propListingId }: { listingId?: string | null }) {
+  const { listingId: paramListingId } = useParams<{ listingId: string }>();
+  const listingId = propListingId || paramListingId;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { getActiveRoleId } = useAuth();
@@ -211,54 +212,82 @@ export default function EvListingEditStepper() {
   const evCategories = categoriesData || [];
 
   // React Query: Fetch listing data for editing
-  const { data: listingData, isLoading: isLoadingListing } = useQuery({
+  const { data: listingData, isLoading: isLoadingListing, error: listingError } = useQuery({
     queryKey: ["listingForEdit", listingId],
-    queryFn: () => sellerService.getListingForEdit(listingId!),
-    enabled: !!listingId && evBrands.length > 0 && evCategories.length > 0,
+    queryFn: async () => {
+      if (!listingId) throw new Error("Listing ID is required");
+      try {
+        const result = await sellerService.getListingForEdit(listingId);
+        // Backend's handleResult unwraps { success: true, listing: {...} } to just the listing object
+        // So result is the listing directly
+        if (!result || !result.model_id) {
+          throw new Error("Listing data is incomplete");
+        }
+        return result;
+      } catch (error: any) {
+        throw new Error(error?.response?.data?.message || error?.message || "Failed to load listing");
+      }
+    },
+    enabled: !!listingId,
     staleTime: 5 * 60 * 1000,
+    retry: 1,
   });
 
   // Populate form when listing data is loaded
   useEffect(() => {
-    if (listingData && listingData.model_id) {
+    if (listingData && listingData.model_id && evBrands.length > 0 && evCategories.length > 0) {
+      const model = listingData.model_id;
+      
+      // Get brand and category IDs - handle both populated and non-populated cases
+      const brandId = typeof model?.brand_id === 'object' 
+        ? model.brand_id?._id || model.brand_id?.id
+        : model?.brand_id || "";
+      
+      const categoryId = typeof model?.category_id === 'object'
+        ? model.category_id?._id || model.category_id?.id
+        : model?.category_id || "";
+
       const formattedData: any = {
-        brand_id:
-          listingData.model_id?.brand_id?._id ||
-          listingData.model_id?.brand_id ||
-          "",
-        category_id:
-          listingData.model_id?.category_id?._id ||
-          listingData.model_id?.category_id ||
-          "",
-        model_name: listingData.model_id?.model_name || "",
-        year: listingData.model_id?.year || "",
-        battery_capacity_kwh: listingData.model_id?.battery_capacity_kwh || "",
-        range_km: listingData.model_id?.range_km || "",
-        charging_time_hours: listingData.model_id?.charging_time_hours || "",
-        motor_type: listingData.model_id?.motor_type || "",
-        seating_capacity: listingData.model_id?.seating_capacity || "",
-        price_range: listingData.model_id?.price_range || "",
-        specifications: listingData.model_id?.specifications || [],
-        features: listingData.model_id?.features || [],
+        brand_id: brandId,
+        category_id: categoryId,
+        model_name: model?.model_name || "",
+        year: model?.year?.toString() || "",
+        battery_capacity_kwh: model?.battery_capacity_kwh?.toString() || "",
+        range_km: model?.range_km?.toString() || "",
+        charging_time_hours: model?.charging_time_hours?.toString() || "",
+        motor_type: model?.motor_type || "",
+        seating_capacity: model?.seating_capacity?.toString() || "",
+        price_range: model?.price_range || "",
+        specifications: Array.isArray(model?.specifications) 
+          ? model.specifications 
+          : (model?.specifications ? [model.specifications] : []),
+        features: Array.isArray(model?.features) 
+          ? model.features 
+          : (model?.features ? [model.features] : []),
         listing_type: listingData.listing_type || "",
         condition: listingData.condition || "",
-        price: listingData.price || "",
-        battery_health: listingData.battery_health || "",
+        price: listingData.price?.toString() || "",
+        battery_health: listingData.battery_health?.toString() || "",
         color: listingData.color || "",
-        registration_year: listingData.registration_year || "",
-        number_of_ev: listingData.number_of_ev || "",
+        registration_year: listingData.registration_year?.toString() || "",
+        number_of_ev: listingData.number_of_ev?.toString() || "",
         images: [],
       };
 
       reset(formattedData);
-      setModelId(listingData.model_id._id || listingData.model_id);
+      
+      // Set model ID - handle both string and object cases
+      const modelIdValue = typeof model === 'object' 
+        ? model._id || model.id 
+        : model || listingData.model_id;
+      setModelId(modelIdValue);
 
       // Store existing images
       if (listingData.images && Array.isArray(listingData.images)) {
         setExistingImages(listingData.images);
       }
     }
-  }, [listingData, reset]);
+  }, [listingData, reset, evBrands, evCategories]);
 
   const steps = [
     { id: 1, name: "Vehicle" },
@@ -844,11 +873,28 @@ export default function EvListingEditStepper() {
   };
 
   // Show loading spinner while fetching data
-  if (isLoadingListing || !listingData) {
+  if (isLoadingListing) {
     return (
       <div className="w-full max-w-4xl mx-auto p-8 flex justify-center items-center">
         <Loader size={20} color="#4f46e5" />
         <p className="ml-4">Loading listing details...</p>
+      </div>
+    );
+  }
+
+  // Show error if listing not found or failed to load
+  if (listingError || (!isLoadingListing && listingId && !listingData)) {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-8 flex flex-col items-center justify-center min-h-[400px]">
+        <p className="text-red-600 dark:text-red-400 text-lg mb-4">
+          {listingError?.message || "Failed to load listing details"}
+        </p>
+        <button
+          onClick={() => navigate("/seller/dashboard")}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          Back to Dashboard
+        </button>
       </div>
     );
   }

@@ -92,17 +92,32 @@ export const CommunityPage: React.FC<{
     try {
       setIsLoading(true);
       const response = await buyerService.getCommunityPosts();
-      // handleResult unwraps the response
-      const postsData = response?.posts || response || [];
-      setPosts(Array.isArray(postsData) ? postsData : []);
+      // handleResult unwraps { success: true, posts: [...] } to { posts: [...] }
+      // So response should be an object with posts property
+      let postsData: any[] = [];
+
+      if (Array.isArray(response)) {
+        // Response is directly the array (unwrapped by handleResult)
+        postsData = response;
+      } else if (response && Array.isArray(response.posts)) {
+        // Response is { posts: [...] } (most likely case)
+        postsData = response.posts;
+      } else if (response && response.success && Array.isArray(response.posts)) {
+        // Response has success wrapper (fallback)
+        postsData = response.posts;
+      }
+
+      setPosts(postsData);
     } catch (error: any) {
       console.error("Failed to fetch posts:", error);
+      const errorMessage = error?.response?.data?.message || "Failed to load community posts";
       setAlert?.({
         id: Date.now(),
         title: "Error",
-        message: "Failed to load community posts",
+        message: errorMessage,
         type: "error",
       });
+      setPosts([]);
     } finally {
       setIsLoading(false);
     }

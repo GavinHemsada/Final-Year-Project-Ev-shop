@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import type {
-  SellerActiveTab,
+  FinancialActiveTab,
   UserRole,
   Notification,
   AlertProps,
@@ -11,38 +11,28 @@ import { useNavigate } from "react-router-dom";
 import { Sidebar } from "../components/Sidebar";
 import { Header } from "../components/Header";
 import { NotificationPage } from "./NotificationPage";
-import { TestDrivesPage } from "./TestDrivePage";
-import { MyReviewsPage } from "./MyReviewsPage";
-import { CommunityPage } from "./ComunityPage";
-import { SavedVehicles } from "./SavedVehicalsPage";
-import { OrderHistory } from "./OrderHistoryPage";
-import SellerProfilePage from "./SellerProfilePage";
-import RepairLocationsPage from "./RepairLocationsPage";
-import { ListingsTable } from "../components/EvListingTable";
-import { AnalyticsChart } from "../components/AnalyticsChart";
+import { ApplicationsPage } from "./ApplicationsPage";
+import { ProductsPage } from "./ProductsPage";
+import { ProfilePage } from "./ProfilePage";
 import { Alert, ConfirmAlert } from "@/components/MessageAlert";
 import {
-  CarIcon,
-  UserIcon,
-  ShoppingCartIcon,
   DollarSignIcon,
+  FileTextIcon,
+  ShoppingCartIcon,
+  UserIcon,
 } from "@/assets/icons/icons";
-import EvListingStepper from "./EvNewList";
 import { StatCard } from "../components/StatsCards";
-import { sellerService } from "../sellerService";
-import type { Vehicle } from "@/types/ev";
+import { financialService } from "../financialService";
 import { useQueries, type UseQueryOptions } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
 
 const notifications: Notification[] = [
-  { id: 1, message: "Aura EV", time: "Sedan" },
-  { id: 2, message: "Pulse XR", time: "SUV" },
+  { id: 1, message: "New application received", time: "2 hours ago" },
+  { id: 2, message: "Product approval pending", time: "1 day ago" },
 ];
 
-// --- Main Seller Dashboard Component ---
-const SellerDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<SellerActiveTab>("dashboard");
-  const [editListingId, setEditListingId] = useState<string | null>(null);
+const FinancialDashboard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<FinancialActiveTab>("dashboard");
   const [userRole, setUserRole] = useState<UserRole[]>([]);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [alert, setAlert] = useState<AlertProps | null>(null);
@@ -52,7 +42,7 @@ const SellerDashboard: React.FC = () => {
   const [confirmHandler, setConfirmHandler] = useState<(() => void) | null>(
     null
   );
-  const { getUserID, logout, getRoles, setSellerId, getActiveRoleId } =
+  const { getUserID, logout, getRoles, setFinancialId, getActiveRoleId } =
     useAuth();
   const navigate = useNavigate();
   const roles = getRoles();
@@ -62,51 +52,54 @@ const SellerDashboard: React.FC = () => {
   const results = useQueries({
     queries: [
       {
-        queryKey: queryKeys.sellerProfile(userID!),
-        queryFn: () => sellerService.getSellerProfile(userID!),
+        queryKey: ["financialInstitution", userID],
+        queryFn: () => financialService.getFinancialInstitutionProfile(userID!),
         enabled: !!userID,
         staleTime: 10 * 60 * 1000,
         refetchOnMount: false,
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
-        // workaround: cast to UseQueryOptions
       },
       {
-        queryKey: ["sellerEvlist", getActiveRoleId()],
-        queryFn: (): Promise<Vehicle[]> =>
-          sellerService.getSellerEvList(getActiveRoleId()!),
+        queryKey: ["financialProducts", getActiveRoleId()],
+        queryFn: () =>
+          financialService.getProductsByInstitution(getActiveRoleId()!),
         enabled: !!getActiveRoleId(),
         staleTime: 10 * 60 * 1000,
         refetchOnMount: false,
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
-      } as UseQueryOptions<
-        Vehicle[],
-        Error,
-        Vehicle[],
-        [string, string | null]
-      >,
+      },
+      {
+        queryKey: ["financialApplications", getActiveRoleId()],
+        queryFn: () =>
+          financialService.getApplicationsByInstitution(getActiveRoleId()!),
+        enabled: !!getActiveRoleId(),
+        staleTime: 10 * 60 * 1000,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+      },
     ],
   });
 
-  // Manually watch seller profile to set sellerId
-
   useEffect(() => {
-    const sellerProfile = results[0].data;
-    if (sellerProfile && sellerProfile._id) {
-      setSellerId(sellerProfile._id);
+    const institutionProfile = results[0].data;
+    if (institutionProfile && institutionProfile.institution?._id) {
+      setFinancialId(institutionProfile.institution._id);
     }
-  }, [results[0].data]);
+  }, [results[0].data, setFinancialId]);
 
   useEffect(() => {
     if (roles) setUserRole(roles);
   }, [roles]);
-  const [sellerProfileQuery, evListQuery] = results;
 
-  const seller = sellerProfileQuery.data;
-  const listings = evListQuery.data || [];
+  const [institutionQuery, productsQuery, applicationsQuery] = results;
 
-  // Callback to handle alerts from child components
+  const institution = institutionQuery.data?.institution;
+  const products = productsQuery.data?.products || [];
+  const applications = applicationsQuery.data?.applications || [];
+
   const handleSetAlert = useCallback((alertData: AlertProps | null) => {
     setAlert(alertData);
   }, []);
@@ -132,22 +125,21 @@ const SellerDashboard: React.FC = () => {
     switch (activeTab) {
       case "dashboard":
         return (
-          <SellerDashboardPage
-            sellerid={seller?._id}
-            listing={listings}
+          <FinancialDashboardPage
+            institutionId={institution?._id}
+            products={products}
+            applications={applications}
             setActiveTab={setActiveTab}
             setAlert={handleSetAlert}
             setConfirmAlert={handleSetConfirmAlert}
           />
         );
-      case "orders":
-        return <OrderHistory setAlert={handleSetAlert} />;
+      case "applications":
+        return <ApplicationsPage setAlert={handleSetAlert} />;
+      case "products":
+        return <ProductsPage setAlert={handleSetAlert} />;
       case "profile":
-        return <SellerProfilePage setAlert={handleSetAlert} />;
-      case "evList":
-        return <EvListingStepper setAlert={handleSetAlert} />;
-      case "saved":
-        return <SavedVehicles setAlert={handleSetAlert} />;
+        return <ProfilePage setAlert={handleSetAlert} />;
       case "notification":
         return (
           <NotificationPage
@@ -155,21 +147,12 @@ const SellerDashboard: React.FC = () => {
             setAlert={handleSetAlert}
           />
         );
-      case "testDrives":
-        return <TestDrivesPage setAlert={handleSetAlert} />;
-      case "reviews":
-        return <MyReviewsPage setAlert={handleSetAlert} />;
-      case "community":
-        return <CommunityPage setAlert={handleSetAlert} />;
-      case "repairLocations":
-        return <RepairLocationsPage setAlert={handleSetAlert} />;
-      case "editEvlist":
-        return <EvListingStepper setAlert={handleSetAlert} listingId={editListingId} />;
       default:
         return (
-          <SellerDashboardPage
-            sellerid={seller?._id}
-            listing={listings}
+          <FinancialDashboardPage
+            institutionId={institution?._id}
+            products={products}
+            applications={applications}
             setActiveTab={setActiveTab}
             setAlert={handleSetAlert}
             setConfirmAlert={handleSetConfirmAlert}
@@ -221,7 +204,6 @@ const SellerDashboard: React.FC = () => {
       `}</style>
 
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-        {/* Sidebar */}
         <Sidebar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -230,17 +212,16 @@ const SellerDashboard: React.FC = () => {
           onCollapse={() => setIsSidebarExpanded(false)}
         />
 
-        {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header
-            seller={seller}
+            institution={institution}
             notifications={notifications}
             onLogout={handleLogout}
             setActiveTab={setActiveTab}
           />
 
           <main className="flex-1 overflow-y-auto p-8 animate-fadeIn bg-gray-50 dark:bg-gray-900">
-            {activeTab !== "dashboard" && userRole?.includes("seller") && (
+            {activeTab !== "dashboard" && userRole?.includes("finance") && (
               <nav
                 className="mb-4 text-sm font-medium text-gray-500 dark:text-gray-400 animate-fadeIn"
                 aria-label="Breadcrumb"
@@ -273,56 +254,94 @@ const SellerDashboard: React.FC = () => {
   );
 };
 
-const SellerDashboardPage: React.FC<{
-  sellerid: string;
-  listing: Vehicle[];
-  setActiveTab: (tab: SellerActiveTab) => void;
+const FinancialDashboardPage: React.FC<{
+  institutionId: string;
+  products: any[];
+  applications: any[];
+  setActiveTab: (tab: FinancialActiveTab) => void;
   setAlert?: (alert: AlertProps | null) => void;
   setConfirmAlert?: (
     alert: ConfirmAlertProps | null,
     handler?: () => void
   ) => void;
-}> = ({ sellerid, setActiveTab, listing, setAlert, setConfirmAlert }) => (
-  <>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <StatCard
-        title="Total Revenue"
-        value="LKR 9,800,000"
-        icon={<DollarSignIcon className="h-6 w-6 text-green-600" />}
-        bgColor="bg-green-100"
-      />
-      <StatCard
-        title="Vehicles Sold"
-        value="1"
-        icon={<ShoppingCartIcon className="h-6 w-6 text-blue-600" />}
-        bgColor="bg-blue-100"
-      />
-      <StatCard
-        title="Active Listings"
-        value="2"
-        icon={<CarIcon className="h-6 w-6 text-indigo-600" />}
-        bgColor="bg-indigo-100"
-      />
-      <StatCard
-        title="Total Views"
-        value="4,050"
-        icon={<UserIcon className="h-6 w-6 text-yellow-600" />}
-        bgColor="bg-yellow-100"
-      />
-    </div>
-    <div className="mt-10 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-none dark:border dark:border-gray-700">
-      <ListingsTable
-        sellerid={sellerid}
-        listings={listing}
-        setActiveTab={setActiveTab}
-        setAlert={setAlert}
-        setConfirmAlert={setConfirmAlert}
-      />
-    </div>
-    <div className="mt-10 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-none dark:border dark:border-gray-700">
-      <AnalyticsChart />
-    </div>
-  </>
-);
+}> = ({ institutionId, products, applications, setActiveTab }) => {
+  const totalProducts = products.length;
+  const totalApplications = applications.length;
+  const pendingApplications = applications.filter(
+    (app) => app.status === "PENDING"
+  ).length;
+  const approvedApplications = applications.filter(
+    (app) => app.status === "APPROVED"
+  ).length;
 
-export default SellerDashboard;
+  return (
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          title="Total Products"
+          value={totalProducts.toString()}
+          icon={<ShoppingCartIcon className="h-6 w-6 text-blue-600" />}
+          bgColor="bg-blue-100"
+        />
+        <StatCard
+          title="Total Applications"
+          value={totalApplications.toString()}
+          icon={<FileTextIcon className="h-6 w-6 text-indigo-600" />}
+          bgColor="bg-indigo-100"
+        />
+        <StatCard
+          title="Pending Applications"
+          value={pendingApplications.toString()}
+          icon={<UserIcon className="h-6 w-6 text-yellow-600" />}
+          bgColor="bg-yellow-100"
+        />
+        <StatCard
+          title="Approved Applications"
+          value={approvedApplications.toString()}
+          icon={<DollarSignIcon className="h-6 w-6 text-green-600" />}
+          bgColor="bg-green-100"
+        />
+      </div>
+      <div className="mt-10 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-none dark:border dark:border-gray-700">
+        <h2 className="text-xl font-bold mb-4 dark:text-white">
+          Recent Applications
+        </h2>
+        {applications.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400">
+            No applications yet. Applications will appear here once users submit
+            financing requests.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {applications.slice(0, 5).map((app) => (
+              <div
+                key={app._id}
+                className="p-4 border border-gray-200 rounded-lg dark:border-gray-700"
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-semibold dark:text-white">
+                      Application #{app._id.slice(-6)}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Status: {app.status}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("applications")}
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                  >
+                    View Details
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
+export default FinancialDashboard;
+

@@ -12,6 +12,36 @@ import {
   EnvelopeIcon,
   ClockIcon,
 } from "@/assets/icons/icons";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMapEvents,
+} from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+// Fix for default marker icons in react-leaflet
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+});
+
+// Custom marker icon
+const createCustomIcon = (color: string = "red") => {
+  return L.divIcon({
+    className: "custom-marker",
+    html: `<div style="background-color: ${color}; width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+  });
+};
 
 interface RepairLocation {
   _id: string;
@@ -27,6 +57,20 @@ interface RepairLocation {
   is_active: boolean;
 }
 
+// Component to handle map clicks
+function MapClickHandler({
+  onClick,
+}: {
+  onClick: (lat: number, lng: number) => void;
+}) {
+  useMapEvents({
+    click: (e) => {
+      onClick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+}
+
 /**
  * A page for sellers to manage their repair locations on a map.
  */
@@ -39,12 +83,14 @@ export const RepairLocationsPage: React.FC<{
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<RepairLocation | null>(null);
+  const [editingLocation, setEditingLocation] = useState<RepairLocation | null>(
+    null
+  );
   const [formData, setFormData] = useState({
     name: "",
     address: "",
-    latitude: 0,
-    longitude: 0,
+    latitude: 7.8731, // Default to Sri Lanka center
+    longitude: 80.7718,
     phone: "",
     email: "",
     operating_hours: "",
@@ -79,18 +125,9 @@ export const RepairLocationsPage: React.FC<{
     }
   };
 
-  const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMapClick = (lat: number, lng: number) => {
     if (!showAddForm && !editingLocation) return;
-    
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    // Convert pixel coordinates to approximate lat/lng
-    // This is a simplified conversion - in production, use proper map library
-    const lat = 7.8731 - (y / rect.height) * 0.5; // Sri Lanka approximate range
-    const lng = 79.7712 + (x / rect.width) * 1.0;
-    
+
     setFormData({
       ...formData,
       latitude: parseFloat(lat.toFixed(6)),
@@ -100,14 +137,16 @@ export const RepairLocationsPage: React.FC<{
 
   const handleGeocodeAddress = async () => {
     if (!formData.address) return;
-    
+
     try {
       // Use OpenStreetMap Nominatim API for geocoding (free, no API key needed)
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.address + ", Sri Lanka")}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          formData.address + ", Sri Lanka"
+        )}&limit=1`
       );
       const data = await response.json();
-      
+
       if (data && data.length > 0) {
         setFormData({
           ...formData,
@@ -124,7 +163,8 @@ export const RepairLocationsPage: React.FC<{
         setAlert?.({
           id: Date.now(),
           title: "Warning",
-          message: "Could not find location. Please click on the map to set coordinates.",
+          message:
+            "Could not find location. Please click on the map to set coordinates.",
           type: "error",
         });
       }
@@ -133,7 +173,8 @@ export const RepairLocationsPage: React.FC<{
       setAlert?.({
         id: Date.now(),
         title: "Error",
-        message: "Failed to geocode address. Please click on the map to set coordinates.",
+        message:
+          "Failed to geocode address. Please click on the map to set coordinates.",
         type: "error",
       });
     }
@@ -143,8 +184,8 @@ export const RepairLocationsPage: React.FC<{
     setFormData({
       name: "",
       address: "",
-      latitude: 0,
-      longitude: 0,
+      latitude: 7.8731,
+      longitude: 80.7718,
       phone: "",
       email: "",
       operating_hours: "",
@@ -159,7 +200,12 @@ export const RepairLocationsPage: React.FC<{
     e.preventDefault();
     if (!sellerId) return;
 
-    if (!formData.name || !formData.address || !formData.latitude || !formData.longitude) {
+    if (
+      !formData.name ||
+      !formData.address ||
+      !formData.latitude ||
+      !formData.longitude
+    ) {
       setAlert?.({
         id: Date.now(),
         title: "Error",
@@ -228,7 +274,9 @@ export const RepairLocationsPage: React.FC<{
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this repair location?")) {
+    if (
+      !window.confirm("Are you sure you want to delete this repair location?")
+    ) {
       return;
     }
 
@@ -250,6 +298,18 @@ export const RepairLocationsPage: React.FC<{
         type: "error",
       });
     }
+  };
+
+  // Calculate center of all locations for map view
+  const getMapCenter = () => {
+    if (locations.length === 0) {
+      return [7.8731, 80.7718] as [number, number]; // Default to Sri Lanka center
+    }
+    const avgLat =
+      locations.reduce((sum, loc) => sum + loc.latitude, 0) / locations.length;
+    const avgLng =
+      locations.reduce((sum, loc) => sum + loc.longitude, 0) / locations.length;
+    return [avgLat, avgLng] as [number, number];
   };
 
   if (isLoading) {
@@ -282,7 +342,9 @@ export const RepairLocationsPage: React.FC<{
       {showAddForm && (
         <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
           <h2 className="text-xl font-bold mb-4 dark:text-white">
-            {editingLocation ? "Edit Repair Location" : "Add New Repair Location"}
+            {editingLocation
+              ? "Edit Repair Location"
+              : "Add New Repair Location"}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -360,7 +422,7 @@ export const RepairLocationsPage: React.FC<{
                     })
                   }
                   required
-                  placeholder="e.g., 79.7712"
+                  placeholder="e.g., 80.7718"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
@@ -400,7 +462,10 @@ export const RepairLocationsPage: React.FC<{
                   type="text"
                   value={formData.operating_hours}
                   onChange={(e) =>
-                    setFormData({ ...formData, operating_hours: e.target.value })
+                    setFormData({
+                      ...formData,
+                      operating_hours: e.target.value,
+                    })
                   }
                   placeholder="e.g., Mon-Fri: 9AM-6PM"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
@@ -445,35 +510,29 @@ export const RepairLocationsPage: React.FC<{
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Click on map to set location coordinates *
               </label>
-              <div
-                className="w-full h-64 border-2 border-gray-300 rounded-lg overflow-hidden relative cursor-crosshair dark:border-gray-600"
-                onClick={handleMapClick}
-              >
-                <iframe
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  loading="lazy"
-                  allowFullScreen
-                  referrerPolicy="no-referrer-when-downgrade"
-                  src={`https://www.google.com/maps/embed/v1/view?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "YOUR_API_KEY"}&center=${formData.latitude || 7.8731},${formData.longitude || 79.7712}&zoom=10`}
-                />
-                {formData.latitude && formData.longitude && (
-                  <div
-                    className="absolute"
-                    style={{
-                      left: "50%",
-                      top: "50%",
-                      transform: "translate(-50%, -50%)",
-                      pointerEvents: "none",
-                    }}
-                  >
-                    <MapPinIcon className="h-8 w-8 text-red-600" />
-                  </div>
-                )}
+              <div className="w-full h-64 border-2 border-gray-300 rounded-lg overflow-hidden dark:border-gray-600">
+                <MapContainer
+                  center={[formData.latitude, formData.longitude]}
+                  zoom={10}
+                  style={{ height: "100%", width: "100%", zIndex: 0 }}
+                  className="z-0"
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  {formData.latitude && formData.longitude && (
+                    <Marker
+                      position={[formData.latitude, formData.longitude]}
+                      icon={createCustomIcon("red")}
+                    />
+                  )}
+                  <MapClickHandler onClick={handleMapClick} />
+                </MapContainer>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Click on the map or use the address geocoding button to set coordinates
+                Click on the map or use the address geocoding button to set
+                coordinates
               </p>
             </div>
 
@@ -508,15 +567,40 @@ export const RepairLocationsPage: React.FC<{
           <h2 className="text-xl font-bold mb-4 dark:text-white">Map View</h2>
           <div className="w-full h-96 border-2 border-gray-300 rounded-lg overflow-hidden dark:border-gray-600">
             {locations.length > 0 ? (
-              <iframe
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                loading="lazy"
-                allowFullScreen
-                referrerPolicy="no-referrer-when-downgrade"
-                src={`https://www.google.com/maps/embed/v1/view?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyBFw0Qbyq9zTFTd-tUY6d-s6U4UZZZ"}&center=${locations[0]?.latitude || 7.8731},${locations[0]?.longitude || 79.7712}&zoom=10${locations.map((loc, idx) => `&markers=color:red%7C${loc.latitude},${loc.longitude}`).join("")}`}
-              />
+              <MapContainer
+                center={getMapCenter()}
+                zoom={locations.length === 1 ? 12 : 8}
+                style={{ height: "100%", width: "100%", zIndex: 0 }}
+                className="z-0"
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {locations.map((location) => (
+                  <Marker
+                    key={location._id}
+                    position={[location.latitude, location.longitude]}
+                    icon={createCustomIcon(
+                      location.is_active ? "blue" : "gray"
+                    )}
+                  >
+                    <Popup>
+                      <div className="p-2">
+                        <h3 className="font-bold text-sm">{location.name}</h3>
+                        <p className="text-xs text-gray-600">
+                          {location.address}
+                        </p>
+                        {location.phone && (
+                          <p className="text-xs text-gray-600">
+                            Phone: {location.phone}
+                          </p>
+                        )}
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700">
                 <p className="text-gray-500 dark:text-gray-400">
@@ -527,7 +611,8 @@ export const RepairLocationsPage: React.FC<{
           </div>
           {locations.length > 0 && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              Showing {locations.length} location{locations.length !== 1 ? "s" : ""} on map
+              Showing {locations.length} location
+              {locations.length !== 1 ? "s" : ""} on map
             </p>
           )}
         </div>
@@ -538,7 +623,8 @@ export const RepairLocationsPage: React.FC<{
           {locations.length === 0 ? (
             <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
               <p className="text-gray-500 text-center py-10 dark:text-gray-400">
-                No repair locations added yet. Click "Add Location" to get started.
+                No repair locations added yet. Click "Add Location" to get
+                started.
               </p>
             </div>
           ) : (
@@ -618,4 +704,3 @@ export const RepairLocationsPage: React.FC<{
 };
 
 export default RepairLocationsPage;
-

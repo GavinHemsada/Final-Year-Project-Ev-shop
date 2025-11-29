@@ -6,10 +6,10 @@ import { ProfileDropdown } from "./ProfileDropdown";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { PageLoader } from "@/components/Loader";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import RoleButton from "./RoleButton";
 import React from "react";
-import { buyerService } from "../buyerService";
+import { useCartCount } from "@/hooks/useCart";
 
 type HeaderProps = {
   searchTerm: string;
@@ -38,9 +38,11 @@ export const Header = React.memo(
     console.log(userRole);
     const { setActiveRole, getUserID } = useAuth();
     const [loading, setLoading] = useState(false);
-    const [cartItemCount, setCartItemCount] = useState(0);
     const navigate = useNavigate();
     const userId = getUserID();
+    
+    // Use React Query hook for cart count - no polling needed!
+    const cartItemCount = useCartCount(userId);
 
     const switchRoleAndNavigate = useCallback(
       async (role: UserRole, path: string) => {
@@ -58,37 +60,6 @@ export const Header = React.memo(
       },
       [setActiveRole, navigate]
     );
-
-    // Fetch cart item count
-    useEffect(() => {
-      const fetchCartCount = async () => {
-        if (!userId) {
-          setCartItemCount(0);
-          return;
-        }
-        try {
-          const response = await buyerService.getUserCart(userId);
-          // handleResult unwraps the response, so response is directly the cart object
-          if (response && response.items && Array.isArray(response.items)) {
-            const totalCount = response.items.reduce(
-              (sum: number, item: any) => sum + (item.quantity || 0),
-              0
-            );
-            setCartItemCount(totalCount);
-          } else {
-            setCartItemCount(0);
-          }
-        } catch (error) {
-          console.error("Failed to fetch cart count:", error);
-          setCartItemCount(0);
-        }
-      };
-
-      fetchCartCount();
-      // Refresh cart count every 5 seconds to keep it updated
-      const interval = setInterval(fetchCartCount, 5000);
-      return () => clearInterval(interval);
-    }, [userId]);
 
     const newUser =
       userRole.includes("user") &&

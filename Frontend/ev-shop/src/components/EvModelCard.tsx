@@ -9,6 +9,8 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useInView } from "react-intersection-observer";
 import { useAuth } from "@/context/AuthContext";
 import { buyerService } from "@/features/buyer/buyerService";
+import { useAddToCart } from "@/hooks/useCart";
+import { useToast } from "@/context/ToastContext";
 
 const apiURL = import.meta.env.VITE_API_URL;
 
@@ -141,13 +143,15 @@ export const VehicleCard: React.FC<{
   vehicle: Vehicle;
   className?: string;
   style?: React.CSSProperties;
-  setAlert?: (alert: AlertProps | null) => void;
+  setAlert?: (alert: AlertProps | null) => void; // Keep for backward compatibility but prefer toast
 }> = ({ vehicle, className, style, setAlert }) => {
   const { model_id, images, seller_id } = vehicle;
   const { getUserID } = useAuth();
   const userId = getUserID();
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const addToCartMutation = useAddToCart();
+  const { showToast } = useToast();
 
   // Check if vehicle is saved on mount
   useEffect(() => {
@@ -177,7 +181,10 @@ export const VehicleCard: React.FC<{
     e.stopPropagation();
 
     if (!userId) {
-      // Could show a toast/alert here to prompt login
+      showToast({
+        text: "Please log in to save vehicles",
+        type: "error",
+      });
       return;
     }
 
@@ -185,19 +192,27 @@ export const VehicleCard: React.FC<{
     try {
       if (isSaved) {
         await buyerService.removeSavedVehicle(userId, vehicle._id);
-        // If no error thrown, assume success
         setIsSaved(false);
+        showToast({
+          text: "Vehicle removed from saved list!",
+          type: "success",
+        });
       } else {
         await buyerService.saveVehicle(userId, vehicle._id);
-        // If no error thrown, assume success
         setIsSaved(true);
+        showToast({
+          text: "Vehicle added to saved list!",
+          type: "success",
+        });
       }
     } catch (error: any) {
       console.error("Failed to toggle save:", error);
-      // Check if error response has a message
-      if (error?.response?.data?.message) {
-        console.error("Error message:", error.response.data.message);
-      }
+      const errorMessage =
+        error?.response?.data?.message || "Failed to update saved status";
+      showToast({
+        text: errorMessage,
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -377,39 +392,38 @@ export const VehicleCard: React.FC<{
               e.preventDefault();
               e.stopPropagation();
               if (!userId) {
-                setAlert?.({
-                  id: Date.now(),
-                  title: "Login Required",
-                  message: "Please log in to add items to your cart",
+                showToast({
+                  text: "Please log in to add items to your cart",
                   type: "error",
                 });
                 return;
               }
               try {
-                await buyerService.addToCart(userId, vehicle._id, 1);
-                setAlert?.({
-                  id: Date.now(),
-                  title: "Success",
-                  message: "Item added to cart successfully!",
+                await addToCartMutation.mutateAsync({
+                  userId,
+                  listingId: vehicle._id,
+                  quantity: 1,
+                });
+                showToast({
+                  text: "Item added to cart successfully!",
                   type: "success",
                 });
               } catch (error: any) {
                 console.error("Failed to add to cart:", error);
                 const errorMessage =
                   error?.response?.data?.message ||
+                  error?.message ||
                   "Failed to add item to cart";
-                setAlert?.({
-                  id: Date.now(),
-                  title: "Error",
-                  message: errorMessage,
+                showToast({
+                  text: errorMessage,
                   type: "error",
                 });
               }
             }}
-            disabled={!userId}
+            disabled={!userId || addToCartMutation.isPending}
             className="flex-1 bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
-            Add to Cart
+            {addToCartMutation.isPending ? "Adding..." : "Add to Cart"}
           </button>
           <button className="flex-1 bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300 transition-all duration-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
             Book Test Drive

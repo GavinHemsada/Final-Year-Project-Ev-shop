@@ -58,12 +58,23 @@ export const buyerService = {
   },
 
   // payment operations
-  createPaymentIntent: async (orderData: any) => {
-    const response = await axiosPrivate.post(`/payment`, orderData);
+  createPayment: async (paymentData: {
+    order_id: string;
+    payment_type: string;
+    amount: number;
+    returnUrl: string;
+    cancelUrl: string;
+    tax_amount?: number;
+  }) => {
+    const response = await axiosPrivate.post(`/payment`, paymentData);
     return response.data;
   },
   getPaymentByOrderId: async (orderId: string) => {
     const response = await axiosPrivate.get(`/payment/order/${orderId}`);
+    return response.data;
+  },
+  getPaymentStatus: async (paymentId: string) => {
+    const response = await axiosPrivate.get(`/payment/payment-status/${paymentId}`);
     return response.data;
   },
 
@@ -131,6 +142,11 @@ export const buyerService = {
   // services operations
   getAvailableServices: async () => {
     const response = await axiosPrivate.get(`/maintenance-records`);
+    return response.data;
+  },
+  // repair locations operations
+  getAllRepairLocations: async () => {
+    const response = await axiosPrivate.get(`/repair-location/active`);
     return response.data;
   },
 

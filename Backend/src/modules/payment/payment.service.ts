@@ -1,7 +1,7 @@
 import { CreatePaymentDTO } from "../../dtos/payment.DTO";
 import { IPaymentRepository } from "./payment.repository";
 import { IOrderRepository } from "../order/order.repository";
-import { PaymentStatus } from "../../shared/enum/enum";
+import { PaymentStatus, OrderStatus } from "../../shared/enum/enum";
 import {
   createPaymentRequest,
   singelLineAddress,
@@ -103,36 +103,46 @@ export function paymentService(
         // Ensure the associated order exists.
         const order = await orderRepo.findById(data.order_id);
         if (!order) return { success: false, error: "Order not found" };
+        
+        // Check if user_id is populated (object with properties) or just an ObjectId
+        if (!order.user_id || typeof order.user_id !== "object" || !("name" in order.user_id)) {
+          return { success: false, error: "Order user information not found. Please ensure the order is properly created." };
+        }
+
         const { returnUrl, cancelUrl, ...otherData } = data;
         // Prepare the data for the payment record.
         const paymentData = {
           ...otherData,
           status: PaymentStatus.CONFIRMED,
         };
-        let requestObject;
+        
         // Create the payment request object with customer details from the order.
-        if ("name" in order.user_id) {
-          requestObject = createPaymentRequest({
-            orderId: paymentData.order_id,
-            amount: paymentData.amount,
-            currency: "LKR",
-            description: paymentData.payment_type,
-            customerInfo: {
-              firstName: order.user_id.name.split(" ")[0],
-              lastName: order.user_id.name.split(" ")[1],
-              email: order.user_id.email,
-              phone: order.user_id.phone,
-              address: singelLineAddress(order.user_id.address),
-              city: order.user_id.address.city,
-              country: order.user_id.address.country,
-            },
-            returnUrl: data.returnUrl,
-            cancelUrl: data.cancelUrl,
-            notifyUrl: notifyurl,
-          });
-        }
+        const user = order.user_id;
+        const nameParts = (user.name || "User").split(" ");
+        const firstName = nameParts[0] || "User";
+        const lastName = nameParts.slice(1).join(" ") || "Name";
+        
+        const requestObject = createPaymentRequest({
+          orderId: paymentData.order_id,
+          amount: paymentData.amount,
+          currency: "LKR",
+          description: paymentData.payment_type,
+          customerInfo: {
+            firstName: firstName,
+            lastName: lastName,
+            email: user.email || "customer@example.com",
+            phone: user.phone || "0000000000",
+            address: user.address ? singelLineAddress(user.address) : "Address not provided",
+            city: user.address?.city || "Colombo",
+            country: user.address?.country || "Sri Lanka",
+          },
+          returnUrl: data.returnUrl,
+          cancelUrl: data.cancelUrl,
+          notifyUrl: notifyurl,
+        });
+        
         if (!requestObject)
-          return { success: false, error: "Failed to create payment" };
+          return { success: false, error: "Failed to create payment request" };
         // Create the payment record in the database.
         const payment = await repo.create(paymentData);
         if (!payment)
@@ -163,6 +173,15 @@ export function paymentService(
           md5sig,
           method,
         } = data;
+
+        console.log("Payment webhook received:", {
+          merchant_id,
+          order_id,
+          payment_id,
+          status_code,
+          method,
+        });
+
         // Verify the integrity of the notification hash.
         const valid = verifyNotificationHash({
           merchantId: merchant_id,
@@ -172,17 +191,91 @@ export function paymentService(
           statusCode: status_code,
           md5sig: md5sig,
         });
-        if (!valid) return { success: false, error: "Invalid payment" };
-        // Find the corresponding payment record.
+
+        if (!valid) {
+          console.error("Invalid payment hash verification");
+          return { success: false, error: "Invalid payment hash" };
+        }
+
+        // Find the corresponding payment record by order_id
+        // Note: order_id from PayHere is the order's _id that we sent
         const payment = await repo.findByOrderId(order_id);
-        if (!payment) return { success: false, error: "Payment not found" };
+        if (!payment) {
+          console.error(`Payment not found for order_id: ${order_id}`);
+          return { success: false, error: "Payment not found" };
+        }
+
+        console.log(`Payment found: ${payment._id}, current status: ${payment.status}`);
+
+        // Find the order to update
+        const order = await orderRepo.findById(order_id);
+        if (!order) {
+          console.error(`Order not found for order_id: ${order_id}`);
+          return { success: false, error: "Order not found" };
+        }
+
+        console.log(`Order found: ${order._id}, current status: ${order.order_status}`);
+
         // Update the payment status based on the status code from PayHere.
         if (status_code === "2") {
+          // Payment completed
           payment.status = PaymentStatus.COMPLETED;
+          payment.payment_method = method?.toLowerCase();
+          payment.payment_id = payment_id;
+          await payment.save();
+          console.log(`Payment ${payment._id} updated to COMPLETED`);
+
+          // Update order status to CONFIRMED when payment is completed
+          order.order_status = OrderStatus.CONFIRMED;
+          order.payment_status = "confirmed";
+          await order.save();
+          console.log(`Order ${order._id} updated to CONFIRMED`);
+
+          // Invalidate order caches
+          await Promise.all([
+            CacheService.delete(`order_${order_id}`),
+            CacheService.delete(`orders_user_${order.user_id}`),
+            CacheService.delete(`orders_seller_${order.seller_id}`),
+          ]);
         } else if (status_code === "-2") {
+          // Payment failed
           payment.status = PaymentStatus.FAILED;
+          payment.payment_method = method?.toLowerCase();
+          payment.payment_id = payment_id;
+          await payment.save();
+          console.log(`Payment ${payment._id} updated to FAILED`);
+
+          // Update order payment status to failed
+          order.payment_status = "failed";
+          await order.save();
+          console.log(`Order ${order._id} payment_status updated to failed`);
+
+          await Promise.all([
+            CacheService.delete(`order_${order_id}`),
+            CacheService.delete(`orders_user_${order.user_id}`),
+            CacheService.delete(`orders_seller_${order.seller_id}`),
+          ]);
         } else if (status_code === "-1") {
+          // Payment cancelled
           payment.status = PaymentStatus.CANCELLED;
+          payment.payment_method = method?.toLowerCase();
+          payment.payment_id = payment_id;
+          await payment.save();
+          console.log(`Payment ${payment._id} updated to CANCELLED`);
+
+          // Update order status to CANCELLED when payment is cancelled
+          order.order_status = OrderStatus.CANCELLED;
+          order.payment_status = "cancelled";
+          await order.save();
+          console.log(`Order ${order._id} updated to CANCELLED`);
+
+          await Promise.all([
+            CacheService.delete(`order_${order_id}`),
+            CacheService.delete(`orders_user_${order.user_id}`),
+            CacheService.delete(`orders_seller_${order.seller_id}`),
+          ]);
+        } else {
+          console.log(`Unknown status_code: ${status_code}, not updating payment/order`);
         }
 
         // Invalidate caches for this specific payment
@@ -192,12 +285,9 @@ export function paymentService(
           CacheService.deletePattern("payments_query_*"),
         ]);
 
-        // Save the updated payment details.
-        payment.payment_method = method.toLowerCase();
-        payment.payment_id = payment_id;
-        await payment.save();
         return { success: true };
       } catch (err) {
+        console.error("Error validating payment:", err);
         return { success: false, error: "Failed to validate payment" };
       }
     },

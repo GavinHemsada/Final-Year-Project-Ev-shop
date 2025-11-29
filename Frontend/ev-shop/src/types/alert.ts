@@ -8,7 +8,7 @@ export type AlertProps = {
 export type MessageAlertsProps = {
   id: string;
   text: string;
-  type: "success" | "error" | "info";
+  type: "success" | "error" | "warning" | "info";
 };
 export type ConfirmAlertProps = {
   id: number;

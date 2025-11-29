@@ -22,6 +22,10 @@ export interface IRepairLocationService {
     sellerId: string
   ): Promise<{ success: boolean; locations?: any[]; error?: string }>;
   /**
+   * Retrieves all active repair locations (for buyers to view).
+   */
+  getAllActiveLocations(): Promise<{ success: boolean; locations?: any[]; error?: string }>;
+  /**
    * Retrieves a repair location by its ID.
    */
   getRepairLocationById(
@@ -80,6 +84,24 @@ export function repairLocationService(
         return { success: true, locations };
       } catch (err) {
         return { success: false, error: "Failed to fetch repair locations" };
+      }
+    },
+
+    getAllActiveLocations: async () => {
+      try {
+        const cacheKey = "repair_locations_active";
+        const locations = await CacheService.getOrSet(
+          cacheKey,
+          async () => {
+            const data = await repo.findActiveLocations();
+            return data ?? [];
+          },
+          3600 // Cache for 1 hour
+        );
+
+        return { success: true, locations };
+      } catch (err) {
+        return { success: false, error: "Failed to fetch active repair locations" };
       }
     },
 

@@ -3,6 +3,7 @@ import AuthRoutes from "../features/auth/authRouter";
 import ProtectedRoute from "../routes/ProtectedRouter";
 import BuyerRouter from "@/features/buyer/buyerRouter";
 import SellerRouter from "@/features/seller/sellerRouter";
+import FinancialRouter from "@/features/financial/financialRouter";
 
 import NotFound from "../pages/NotFoundPage";
 import UnauthorizedPage from "@/pages/UnauthorizedPage";
@@ -28,6 +29,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={["seller"]}>
             <SellerRouter />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/financial/*"
+        element={
+          <ProtectedRoute allowedRoles={["finance"]}>
+            <FinancialRouter />
           </ProtectedRoute>
         }
       />

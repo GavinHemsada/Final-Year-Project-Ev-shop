@@ -1,12 +1,22 @@
 import { Route, Routes } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import VehicleDetailsPage from "./pages/VehicleDetailsPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import PaymentSuccessPage from "./pages/PaymentSuccessPage";
+import PaymentFailedPage from "./pages/PaymentFailedPage";
+import PaymentCancelledPage from "./pages/PaymentCancelledPage";
+import PaymentErrorPage from "./pages/PaymentErrorPage";
 
 const BuyerRouter = () => {
   return (
     <Routes>
       <Route path="dashboard" element={<Dashboard />} />
       <Route path="vehicle/:id" element={<VehicleDetailsPage />} />
+      <Route path="checkout" element={<CheckoutPage />} />
+      <Route path="payment/return" element={<PaymentSuccessPage />} />
+      <Route path="payment/failed" element={<PaymentFailedPage />} />
+      <Route path="payment/cancelled" element={<PaymentCancelledPage />} />
+      <Route path="payment/error" element={<PaymentErrorPage />} />
     </Routes>
   );
 };

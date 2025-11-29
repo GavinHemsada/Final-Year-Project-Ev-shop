@@ -34,6 +34,8 @@ import { sellerRouter } from "./modules/seller/seller.router";
 import { maintenanceRecordRouter } from "./modules/maintenance_record/maintenanceRecord.router";
 import { orderRouter } from "./modules/order/order.router";
 import { paymentRouter } from "./modules/payment/payment.router";
+import { container } from "./di/container";
+import { IPaymentController } from "./modules/payment/payment.controller";
 import { evRouter } from "./modules/ev/ev.router";
 import { savedVehicleRouter } from "./modules/savedVehicle/savedVehicle.router";
 import { repairLocationRouter } from "./modules/repairLocation/repairLocation.router";
@@ -190,6 +192,30 @@ apiV1Router.use("/financial", protectJWT, financialRouter());
 apiV1Router.use("/seller", protectJWT, sellerRouter());
 apiV1Router.use("/maintenance", protectJWT, maintenanceRecordRouter());
 apiV1Router.use("/order", protectJWT, orderRouter());
+// Payment webhook and return/cancel endpoints must be public (no JWT protection)
+// PayHere will call these endpoints directly
+const paymentController = container.resolve<IPaymentController>("PaymentController");
+
+// Webhook endpoint for PayHere notifications
+apiV1Router.post(
+  "/payment/payment-notify",
+  paymentLimiter,
+  (req, res) => paymentController.validatePayment(req, res)
+);
+
+// Return URL handler (after successful/failed payment)
+apiV1Router.get(
+  "/payment/payment-return",
+  (req, res) => paymentController.handlePaymentReturn(req, res)
+);
+
+// Cancel URL handler (when user cancels payment)
+apiV1Router.get(
+  "/payment/payment-cancel",
+  (req, res) => paymentController.handlePaymentCancel(req, res)
+);
+
+// All other payment routes require authentication
 apiV1Router.use("/payment", paymentLimiter, protectJWT, paymentRouter());
 apiV1Router.use("/ev", protectJWT, evRouter());
 apiV1Router.use("/saved-vehicle", protectJWT, savedVehicleRouter());

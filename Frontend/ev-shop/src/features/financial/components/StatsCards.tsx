@@ -12,3 +12,4 @@ export const StatCard: React.FC<{
     </div>
   </div>
 );
+

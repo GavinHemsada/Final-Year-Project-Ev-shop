@@ -9,6 +9,12 @@ export const sellerService = {
     const response = await axiosPrivate.get(`/ev/listings/seller/${sellerId}`);
     return response.data;
   },
+  getListingForEdit: async (listingId: string) => {
+    const response = await axiosPrivate.get(`/ev/listings/${listingId}`);
+    // Backend's handleResult unwraps { success: true, listing: {...} } to just the listing object
+    // So response.data is the listing directly
+    return response.data;
+  },
   getAllEvCateogry: async () => {
     const response = await axiosPrivate.get("/ev/categories");
     return response.data;
@@ -19,6 +25,10 @@ export const sellerService = {
   },
   createnewModel: async (modelData: any) => {
     const response = await axiosPrivate.post("/ev/models", modelData);
+    return response.data;
+  },
+  updateModel: async (modelId: string, modelData: any) => {
+    const response = await axiosPrivate.put(`/ev/models/${modelId}`, modelData);
     return response.data;
   },
   createListing: async (listingData: any) => {
@@ -107,6 +117,11 @@ export const sellerService = {
     const response = await axiosPrivate.delete(
       `/repair-location/${locationId}`
     );
+    return response.data;
+  },
+  // Order operations
+  getSellerOrders: async (sellerId: string) => {
+    const response = await axiosPrivate.get(`/order/seller/${sellerId}`);
     return response.data;
   },
 };

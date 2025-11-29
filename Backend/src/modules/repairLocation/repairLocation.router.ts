@@ -36,6 +36,15 @@ export const repairLocationRouter = (): Router => {
   );
 
   /**
+   * @route GET /repair-location/active
+   * Gets all active repair locations (for buyers).
+   */
+  router.get(
+    "/active",
+    (req, res) => controller.getAllActiveLocations(req, res)
+  );
+
+  /**
    * @route GET /repair-location/:id
    * Gets a repair location by ID.
    */
