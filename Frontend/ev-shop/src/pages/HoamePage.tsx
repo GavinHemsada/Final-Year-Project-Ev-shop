@@ -9,35 +9,12 @@ import { EvModelCard } from "@/components/EvModelCard";
 import bgVideo from "@/assets/Video/bg_video.mp4";
 import bgrevVideo from "@/assets/Video/bg_video_reversed.mp4";
 import ReverseLoopVideo from "@/hooks/videoRevice";
+import { useQuery } from "@tanstack/react-query";
+import { welcomeService } from "./welcomeService";
+import type { Vehicle } from "@/types";
+import { Loader } from "@/components/Loader";
 
-
-// --- Mock Data (replace with your actual data from an API) ---
-const featuredModels = [
-  {
-    name: "Aura-X",
-    image:
-      "https://images.unsplash.com/photo-1617986014354-1358a89694c0?q=80&w=2070&auto=format&fit=crop",
-    specs: "0-100 km/h in 3.2s",
-    range: "610 km Range",
-  },
-  {
-    name: "Photon GT",
-    image:
-      "https://images.unsplash.com/photo-1621292898738-166199104328?q=80&w=1974&auto=format&fit=crop",
-    specs: "Luxury & Performance",
-    range: "550 km Range",
-  },
-  {
-    name: "Volt Urban",
-    image:
-      "https://images.unsplash.com/photo-1603487002163-95273130d939?q=80&w=2070&auto=format&fit=crop",
-    specs: "Compact & Efficient",
-    range: "420 km Range",
-  },
-];
-
-// --- Mock Data for Benefits ---
-// This array holds data for the "Why Choose Us" section, detailing the advantages of electric vehicles.
+// --- Benefits Data (static content) ---
 const benefits = [
   {
     icon: <FaLeaf />,
@@ -114,43 +91,112 @@ const HeroSection = () => (
 
 /**
  * FeaturedModelsSection Component
- * This component displays a grid of featured car models.
+ * This component displays a grid of featured car models fetched from the API.
  * It uses `whileInView` to trigger animations as the user scrolls down.
  */
-const FeaturedModelsSection = () => (
-  <section className="py-20 bg-slate-800">
-    <div className="container mx-auto px-6">
-      <motion.h2
-        className="text-4xl font-bold text-center mb-12"
-        initial={{ opacity: 0, y: -20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-      >
-        Our Signature Collection
-      </motion.h2>
-      {/* Grid container for the model cards with staggered animations. */}
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10"
-        variants={containerVariants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
-      >
-        {/* Map through the `featuredModels` data to render each model card. */}
-        {featuredModels.map((model, index) => (
-          <EvModelCard
-            key={index}
-            name={model.name}
-            image={model.image}
-            specs={model.specs}
-            range={model.range}
-          />
-        ))}
-      </motion.div>
-    </div>
-  </section>
-);
+const FeaturedModelsSection = () => {
+  const { data: listingsData, isLoading, error } = useQuery({
+    queryKey: ["featuredListings"],
+    queryFn: () => welcomeService.getFeaturedListings(6),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: 1, // Only retry once
+    retryOnMount: false, // Don't retry on mount if it failed
+  });
+
+  // Transform Vehicle data to EvModelCard format
+  // Handle both direct array response and wrapped response
+  const listings = Array.isArray(listingsData) 
+    ? listingsData 
+    : listingsData?.listings || [];
+
+  const featuredModels = listings.length > 0
+    ? listings.map((vehicle: Vehicle) => {
+        const modelName = vehicle.model_id?.model_name || "Unknown Model";
+        const brandName = vehicle.model_id?.brand_id?.brand_name || "";
+        const fullName = brandName ? `${brandName} ${modelName}` : modelName;
+        const image =
+          vehicle.images && vehicle.images.length > 0
+            ? `${import.meta.env.VITE_API_BASE_URL}/uploads/${vehicle.images[0]}`
+            : "https://via.placeholder.com/400x300?text=No+Image";
+        const logo = vehicle.model_id?.brand_id?.brand_logo
+          ? `${import.meta.env.VITE_API_BASE_URL}/uploads/${vehicle.model_id.brand_id.brand_logo}`
+          : undefined;
+        const price = vehicle.price
+          ? `LKR ${vehicle.price.toLocaleString("en-US")}`
+          : undefined;
+        const range = vehicle.model_id?.range_km
+          ? `${vehicle.model_id.range_km} km Range`
+          : undefined;
+        const specs = vehicle.model_id?.motor_type || undefined;
+
+        return {
+          name: fullName,
+          image,
+          logo,
+          price,
+          range,
+          specs,
+          linkTo: `/user/vehicle/${vehicle._id}`,
+        };
+      })
+    : [];
+
+  return (
+    <section className="py-20 bg-slate-800">
+      <div className="container mx-auto px-6">
+        <motion.h2
+          className="text-4xl font-bold text-center mb-12"
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          Our Signature Collection
+        </motion.h2>
+        {/* Grid container for the model cards with staggered animations. */}
+        {isLoading ? (
+          <div className="flex justify-center items-center min-h-[400px]">
+            <Loader size={50} color="#3b82f6" />
+          </div>
+        ) : error ? (
+          <div className="text-center text-gray-400 py-12">
+            <p>Unable to load featured vehicles. Please try again later.</p>
+            {process.env.NODE_ENV === "development" && (
+              <p className="text-xs mt-2 text-red-400">
+                Error: {error instanceof Error ? error.message : "Unknown error"}
+              </p>
+            )}
+          </div>
+        ) : featuredModels.length === 0 ? (
+          <div className="text-center text-gray-400 py-12">
+            <p>No featured vehicles available at the moment.</p>
+          </div>
+        ) : (
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+          >
+            {featuredModels.map((model: any, index: number) => (
+              <EvModelCard
+                key={model.name + index}
+                name={model.name}
+                image={model.image}
+                logo={model.logo}
+                price={model.price}
+                specs={model.specs}
+                range={model.range}
+                linkTo={model.linkTo}
+              />
+            ))}
+          </motion.div>
+        )}
+      </div>
+    </section>
+  );
+};
 
 /**
  * WhyChooseUsSection Component
@@ -204,7 +250,7 @@ const WhyChooseUsSection = () => (
  */
 const EVHomePage = () => {
   return (
-    <div className="bg-slate-900 text-white font-sans">
+    <div className="bg-slate-900 text-white font-sans min-h-screen">
       {/* ===== Hero Section ===== */}
       <HeroSection />
 

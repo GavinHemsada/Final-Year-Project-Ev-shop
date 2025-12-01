@@ -1,60 +1,66 @@
 import { motion } from "framer-motion";
 import { containerVariants } from "@/components/animations/variants";
 import { EvModelCard } from "@/components/EvModelCard";
-
-// --- Mock Data for Car Models ---
-const carModels = [
-  {
-    name: "Aura-X",
-    image:
-      "https://images.unsplash.com/photo-1617986014354-1358a89694c0?q=80&w=2070&auto=format&fit=crop",
-    price: "Starting at $79,990",
-    range: "610 km",
-    acceleration: "3.2s 0-100 km/h",
-  },
-  {
-    name: "Photon GT",
-    image:
-      "https://images.unsplash.com/photo-1621292898738-166199104328?q=80&w=1974&auto=format&fit=crop",
-    price: "Starting at $105,000",
-    range: "550 km",
-    acceleration: "3.8s 0-100 km/h",
-  },
-  {
-    name: "Volt Urban",
-    image:
-      "https://images.unsplash.com/photo-1603487002163-95273130d939?q=80&w=2070&auto=format&fit=crop",
-    price: "Starting at $45,500",
-    range: "420 km",
-    acceleration: "6.1s 0-100 km/h",
-  },
-  {
-    name: "E-Nova SUV",
-    image:
-      "https://images.unsplash.com/photo-1631392682973-317242a3afa4?q=80&w=2070&auto=format&fit=crop",
-    price: "Starting at $88,000",
-    range: "580 km",
-    acceleration: "4.5s 0-100 km/h",
-  },
-  {
-    name: "Ion Compact",
-    image:
-      "https://images.unsplash.com/photo-1582269209588-e81a34d4def6?q=80&w=2071&auto=format&fit=crop",
-    price: "Starting at $39,900",
-    range: "380 km",
-    acceleration: "7.2s 0-100 km/h",
-  },
-  {
-    name: "Bolt Truck",
-    image:
-      "https://images.unsplash.com/photo-1631557983226-9f8728a55d6a?q=80&w=2070&auto=format&fit=crop",
-    price: "Starting at $95,000",
-    range: "650 km",
-    acceleration: "4.1s 0-100 km/h",
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { welcomeService } from "./welcomeService";
+import type { Vehicle } from "@/types";
+import { Loader } from "@/components/Loader";
+import { useState } from "react";
 
 const ModelsPage = () => {
+  const [page, setPage] = useState(1);
+  const limit = 12;
+
+  const { data: listingsData, isLoading, error } = useQuery({
+    queryKey: ["allListings", page],
+    queryFn: () => welcomeService.getAllListings({ page, limit }),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: 1, // Only retry once
+    retryOnMount: false, // Don't retry on mount if it failed
+  });
+
+  // Transform Vehicle data to EvModelCard format
+  // Handle both direct array response and wrapped response
+  const listings = Array.isArray(listingsData) 
+    ? listingsData 
+    : listingsData?.listings || [];
+
+  const carModels = listings.length > 0
+    ? listings.map((vehicle: Vehicle) => {
+        const modelName = vehicle.model_id?.model_name || "Unknown Model";
+        const brandName = vehicle.model_id?.brand_id?.brand_name || "";
+        const fullName = brandName ? `${brandName} ${modelName}` : modelName;
+        const image =
+          vehicle.images && vehicle.images.length > 0
+            ? `${import.meta.env.VITE_API_BASE_URL}/uploads/${vehicle.images[0]}`
+            : "https://via.placeholder.com/400x300?text=No+Image";
+        const logo = vehicle.model_id?.brand_id?.brand_logo
+          ? `${import.meta.env.VITE_API_BASE_URL}/uploads/${vehicle.model_id.brand_id.brand_logo}`
+          : undefined;
+        const price = vehicle.price
+          ? `LKR ${vehicle.price.toLocaleString("en-US")}`
+          : undefined;
+        const range = vehicle.model_id?.range_km
+          ? `${vehicle.model_id.range_km} km`
+          : undefined;
+        const acceleration = vehicle.model_id?.motor_type
+          ? vehicle.model_id.motor_type
+          : undefined;
+
+        return {
+          name: fullName,
+          image,
+          logo,
+          price,
+          range,
+          acceleration,
+          linkTo: `/user/vehicle/${vehicle._id}`,
+        };
+      })
+    : [];
+
+  const totalPages = listingsData?.totalPages || 1;
+
   return (
     <div className="bg-slate-900 min-h-screen text-white">
       <main className="pt-24 pb-16">
@@ -71,25 +77,68 @@ const ModelsPage = () => {
             </p>
           </motion.div>
 
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            {carModels.map((model) => (
-              <EvModelCard
-                key={model.name}
-                name={model.name}
-                image={model.image}
-                price={model.price}
-                range={model.range}
-                acceleration={model.acceleration}
-                showLink={true}
-                linkTo={`${model.name.toLowerCase().replace(/ /g, "-")}`}
-              />
-            ))}
-          </motion.div>
+          {isLoading ? (
+            <div className="flex justify-center items-center min-h-[400px]">
+              <Loader size={50} color="#3b82f6" />
+            </div>
+          ) : error ? (
+            <div className="text-center text-gray-400 py-12">
+              <p>Unable to load vehicles. Please try again later.</p>
+              <p className="text-sm mt-2">
+                {error instanceof Error ? error.message : "Unknown error"}
+              </p>
+            </div>
+          ) : carModels.length === 0 ? (
+            <div className="text-center text-gray-400 py-12">
+              <p>No vehicles available at the moment.</p>
+            </div>
+          ) : (
+            <>
+              <motion.div
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                {carModels.map((model: any, index: number) => (
+                  <EvModelCard
+                    key={model.name + index}
+                    name={model.name}
+                    image={model.image}
+                    logo={model.logo}
+                    price={model.price}
+                    range={model.range}
+                    acceleration={model.acceleration}
+                    showLink={true}
+                    linkTo={model.linkTo}
+                  />
+                ))}
+              </motion.div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-12">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-600 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-gray-400">
+                    Page {page} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-600 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </main>
     </div>

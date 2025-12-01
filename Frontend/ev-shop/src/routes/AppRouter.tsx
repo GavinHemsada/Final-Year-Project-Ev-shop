@@ -4,6 +4,7 @@ import ProtectedRoute from "../routes/ProtectedRouter";
 import BuyerRouter from "@/features/buyer/buyerRouter";
 import SellerRouter from "@/features/seller/sellerRouter";
 import FinancialRouter from "@/features/financial/financialRouter";
+import AdminRouter from "@/features/admin/adminRouter";
 
 import NotFound from "../pages/NotFoundPage";
 import UnauthorizedPage from "@/pages/UnauthorizedPage";
@@ -37,6 +38,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={["finance"]}>
             <FinancialRouter />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/*"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminRouter />
           </ProtectedRoute>
         }
       />

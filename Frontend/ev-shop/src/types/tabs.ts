@@ -74,3 +74,29 @@ export type FinancialActiveTab =
   | "products"
   | "profile"
   | "notification";
+
+export const AdminActiveTabs = {
+  Dashboard: "dashboard",
+  Users: "users",
+  Orders: "orders",
+  EVListings: "evListings",
+  Sellers: "sellers",
+  Financial: "financial",
+  Reviews: "reviews",
+  Payments: "payments",
+  Settings: "settings",
+} as const;
+
+export type AdminActiveTabs =
+  (typeof AdminActiveTabs)[keyof typeof AdminActiveTabs];
+
+export type AdminActiveTab =
+  | "dashboard"
+  | "users"
+  | "orders"
+  | "evListings"
+  | "sellers"
+  | "financial"
+  | "reviews"
+  | "payments"
+  | "settings";

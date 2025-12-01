@@ -36,6 +36,7 @@ import { orderRouter } from "./modules/order/order.router";
 import { paymentRouter } from "./modules/payment/payment.router";
 import { container } from "./di/container";
 import { IPaymentController } from "./modules/payment/payment.controller";
+import { IEvController } from "./modules/ev/ev.controller";
 import { evRouter } from "./modules/ev/ev.router";
 import { savedVehicleRouter } from "./modules/savedVehicle/savedVehicle.router";
 import { repairLocationRouter } from "./modules/repairLocation/repairLocation.router";
@@ -217,6 +218,12 @@ apiV1Router.get(
 
 // All other payment routes require authentication
 apiV1Router.use("/payment", paymentLimiter, protectJWT, paymentRouter());
+
+// Public EV listings endpoint (for welcome page - no authentication required)
+const evController = container.resolve<IEvController>("EvController");
+apiV1Router.get("/ev/listings", (req, res) => evController.getAllListings(req, res));
+
+// All other EV routes require authentication
 apiV1Router.use("/ev", protectJWT, evRouter());
 apiV1Router.use("/saved-vehicle", protectJWT, savedVehicleRouter());
 apiV1Router.use("/repair-location", protectJWT, repairLocationRouter());
