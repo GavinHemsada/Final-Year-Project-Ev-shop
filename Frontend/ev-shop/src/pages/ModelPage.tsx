@@ -29,13 +29,13 @@ const ModelsPage = () => {
     ? listings.map((vehicle: Vehicle) => {
         const modelName = vehicle.model_id?.model_name || "Unknown Model";
         const brandName = vehicle.model_id?.brand_id?.brand_name || "";
-        const fullName = brandName ? `${brandName} ${modelName}` : modelName;
+        const fullName = brandName ? `${brandName} - ${modelName}` : modelName;
         const image =
           vehicle.images && vehicle.images.length > 0
-            ? `${import.meta.env.VITE_API_BASE_URL}/uploads/${vehicle.images[0]}`
+            ? `${import.meta.env.VITE_API_URL}${vehicle.images[0]}`
             : "https://via.placeholder.com/400x300?text=No+Image";
         const logo = vehicle.model_id?.brand_id?.brand_logo
-          ? `${import.meta.env.VITE_API_BASE_URL}/uploads/${vehicle.model_id.brand_id.brand_logo}`
+          ? `${import.meta.env.VITE_API_URL}${vehicle.model_id.brand_id.brand_logo}`
           : undefined;
         const price = vehicle.price
           ? `LKR ${vehicle.price.toLocaleString("en-US")}`
@@ -62,7 +62,7 @@ const ModelsPage = () => {
   const totalPages = listingsData?.totalPages || 1;
 
   return (
-    <div className="bg-slate-900 min-h-screen text-white">
+    <div className="bg-gray-50 min-h-screen">
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-6">
           <motion.div
@@ -71,8 +71,8 @@ const ModelsPage = () => {
             transition={{ duration: 0.5 }}
             className="text-center mb-12"
           >
-            <h1 className="text-5xl font-bold">Our Electric Fleet</h1>
-            <p className="text-lg text-gray-400 mt-2">
+            <h1 className="text-5xl font-bold text-gray-900">Our Electric Fleet</h1>
+            <p className="text-lg text-gray-600 mt-2">
               Find the perfect vehicle to power your journey.
             </p>
           </motion.div>
@@ -82,14 +82,14 @@ const ModelsPage = () => {
               <Loader size={50} color="#3b82f6" />
             </div>
           ) : error ? (
-            <div className="text-center text-gray-400 py-12">
+            <div className="text-center text-gray-600 py-12">
               <p>Unable to load vehicles. Please try again later.</p>
-              <p className="text-sm mt-2">
+              <p className="text-sm mt-2 text-gray-500">
                 {error instanceof Error ? error.message : "Unknown error"}
               </p>
             </div>
           ) : carModels.length === 0 ? (
-            <div className="text-center text-gray-400 py-12">
+            <div className="text-center text-gray-600 py-12">
               <p>No vehicles available at the moment.</p>
             </div>
           ) : (
@@ -121,17 +121,17 @@ const ModelsPage = () => {
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-600 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
                   >
                     Previous
                   </button>
-                  <span className="text-gray-400">
+                  <span className="text-gray-600">
                     Page {page} of {totalPages}
                   </span>
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page >= totalPages}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-600 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
                   >
                     Next
                   </button>

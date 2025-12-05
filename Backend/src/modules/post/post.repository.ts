@@ -3,6 +3,7 @@ import { IPost, Post } from "../../entities/Post";
 import { IPostReply, PostReply } from "../../entities/PostReply";
 import { PostDTO, PostReplyDTO } from "../../dtos/post.DTO";
 import { withErrorHandling } from "../../shared/utils/CustomException";
+import { PostView } from "../../entities/PostView";
 
 /**
  * Defines the contract for the post repository, specifying the methods for data access operations
@@ -41,12 +42,37 @@ export interface IPostRepository {
    */
   updatePost(id: string, data: Partial<PostDTO>): Promise<IPost | null>;
   /**
-   * Updates the view count for a post.
-   * @param id - The ID of the post to update.
-   * @param views - The new view count.
-   * @returns A promise that resolves to the updated post document or null.
+   * Checks if a user has already viewed a post today.
+   * @param post_id - The ID of the post.
+   * @param user_id - The ID of the user.
+   * @param view_date - The date in YYYY-MM-DD format.
+   * @returns A promise that resolves to true if the view exists, false otherwise.
    */
-  updatePostViews(id: string, views: number): Promise<IPost | null>;
+  hasUserViewedPostToday(
+    post_id: string,
+    user_id: string,
+    view_date: string
+  ): Promise<boolean>;
+  /**
+   * Records a view for a post by a user on a specific date.
+   * @param post_id - The ID of the post.
+   * @param user_id - The ID of the user.
+   * @param view_date - The date in YYYY-MM-DD format.
+   * @returns A promise that resolves to the created view record or null.
+   */
+  createPostView(
+    post_id: string,
+    user_id: string,
+    view_date: string
+  ): Promise<any>;
+  /**
+   * Atomically increments the view count for a post by 1.
+   * Only increments if the user hasn't viewed the post today.
+   * @param id - The ID of the post to update.
+   * @param user_id - The ID of the user viewing the post.
+   * @returns A promise that resolves to the updated post document or null, or false if already viewed today.
+   */
+  updatePostViews(id: string, user_id: string): Promise<IPost | null | false>;
   /**
    * Updates the reply count for a post.
    * @param id - The ID of the post to update.
@@ -179,9 +205,69 @@ export const PostRepository: IPostRepository = {
   updatePost: withErrorHandling(async (id: string, data: Partial<PostDTO>) => {
     return await Post.findByIdAndUpdate(id, data, { new: true });
   }),
-  /** Finds a post by ID and updates its view count. */
-  updatePostViews: withErrorHandling(async (id: string, views: number) => {
-    return await Post.findByIdAndUpdate(id, { views }, { new: true });
+  /** Checks if a user has already viewed a post today. */
+  hasUserViewedPostToday: async (
+    post_id: string,
+    user_id: string,
+    view_date: string
+  ): Promise<boolean> => {
+    try {
+      const view = await PostView.findOne({ post_id, user_id, view_date });
+      return view !== null;
+    } catch (error) {
+      console.error(`Error checking if user viewed post today:`, error);
+      return false; // Return false on error (assume not viewed)
+    }
+  },
+
+  /** Records a view for a post by a user on a specific date. */
+  createPostView: withErrorHandling(
+    async (post_id: string, user_id: string, view_date: string) => {
+      try {
+        return await PostView.create({ post_id, user_id, view_date });
+      } catch (error: any) {
+        // If duplicate key error (unique index violation), return null
+        if (error.code === 11000) {
+          return null;
+        }
+        throw error;
+      }
+    }
+  ),
+
+  /** Finds a post by ID and atomically increments its view count if user hasn't viewed today. */
+  updatePostViews: withErrorHandling(async (id: string, user_id: string) => {
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split("T")[0];
+
+    // Check if user has already viewed this post today
+    const hasViewed = await PostView.findOne({
+      post_id: id,
+      user_id,
+      view_date: today,
+    });
+    if (hasViewed) {
+      // User has already viewed today, don't increment
+      return false;
+    }
+
+    // Create the view record first (this will fail if duplicate due to unique index)
+    try {
+      await PostView.create({ post_id: id, user_id, view_date: today });
+    } catch (error: any) {
+      // If duplicate key error, another request already created it, so don't increment
+      if (error.code === 11000) {
+        return false;
+      }
+      throw error;
+    }
+
+    // If view record was created successfully, increment the post's view count
+    return await Post.findByIdAndUpdate(
+      id,
+      { $inc: { views: 1 } },
+      { new: true }
+    );
   }),
   /** Finds a post by ID and updates its reply count. */
   updatePostReplyCount: withErrorHandling(

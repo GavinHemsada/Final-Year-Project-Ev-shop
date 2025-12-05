@@ -5,9 +5,9 @@ interface AlertProps {
     title?: string;
     message?: string;
     type?: "success" | "error";
-    duration?: number; 
+    duration?: number;
   } | null;
-  onClose?: () => void; 
+  onClose?: () => void;
   position?: "center" | "left" | "right";
   positionValue?: number;
   container?: boolean; // If true, positions relative to parent container instead of viewport
@@ -48,9 +48,20 @@ export const Alert: React.FC<AlertProps> = ({
 
   const { title = "", message = "", type = "error" } = alert;
 
-  const colorMap: Record<"success" | "error", { icon: string; title: string; border: string }> = {
-    success: { icon: "text-green-600", title: "text-green-700", border: "border-green-300" },
-    error: { icon: "text-red-600", title: "text-red-700", border: "border-red-300" },
+  const colorMap: Record<
+    "success" | "error",
+    { icon: string; title: string; border: string }
+  > = {
+    success: {
+      icon: "text-green-600",
+      title: "text-green-700",
+      border: "border-green-300",
+    },
+    error: {
+      icon: "text-red-600",
+      title: "text-red-700",
+      border: "border-red-300",
+    },
   };
 
   const { icon, title: titleColor, border } = colorMap[type];
@@ -69,12 +80,12 @@ export const Alert: React.FC<AlertProps> = ({
       : {};
 
   // Use absolute positioning when container is true, fixed when false
-  const containerClass = container 
-    ? "absolute inset-0 bg-black/40 flex items-center" 
+  const containerClass = container
+    ? "absolute inset-0 bg-black/40 flex items-center"
     : "fixed inset-0 bg-black/40 flex items-center";
-  
-  const alertWidthClass = container 
-    ? "max-w-sm w-full sm:max-w-sm" 
+
+  const alertWidthClass = container
+    ? "max-w-sm w-full sm:max-w-sm"
     : "max-w-sm w-full";
 
   return (
@@ -103,23 +114,39 @@ export const Alert: React.FC<AlertProps> = ({
         {/* Body */}
         <div className="p-6 pt-0 text-center">
           {type === "success" ? (
-            <svg className={`w-16 h-16 mx-auto ${icon} animate-pop`} xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+            <svg
+              className={`w-16 h-16 mx-auto ${icon} animate-pop`}
+              xmlns="http://www.w3.org/2000/svg"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
               <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM8.5 13.3l-3.3-3.3 1.4-1.4 1.9 1.9 4.3-4.3 1.4 1.4-5.7 5.7Z" />
             </svg>
           ) : (
-            <svg className={`w-16 h-16 mx-auto ${icon} animate-pop`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className={`w-16 h-16 mx-auto ${icon} animate-pop`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           )}
 
-          <h3 className={`text-xl font-semibold mt-5 mb-3 ${titleColor}`}>{title}</h3>
+          <h3 className={`text-xl font-semibold mt-5 mb-3 ${titleColor}`}>
+            {title}
+          </h3>
           <p className="text-gray-600 mb-6">{message}</p>
         </div>
       </div>
     </div>
   );
 };
-
 
 type MessageType = "success" | "warning" | "error";
 
@@ -249,12 +276,13 @@ export const TopMessageAlerts = ({
 };
 
 interface ConfirmAlertProps {
-  alert:{
+  alert: {
     title?: string;
     message?: string;
     confirmText?: string;
     cancelText?: string;
-  }
+    onConfirmAction?: () => void;
+  };
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -265,7 +293,12 @@ export const ConfirmAlert: React.FC<ConfirmAlertProps> = ({
   onCancel,
 }) => {
   if (!alert) return null;
-  const { title = "", message = "", confirmText = "Confirm", cancelText = "Cancel" } = alert;
+  const {
+    title = "",
+    message = "",
+    confirmText = "Confirm",
+    cancelText = "Cancel",
+  } = alert;
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white border rounded-lg shadow-lg relative max-w-sm w-full animate-slide-in">
@@ -313,7 +346,10 @@ export const ConfirmAlert: React.FC<ConfirmAlertProps> = ({
 
           <div className="flex justify-center gap-3">
             <button
-              onClick={onConfirm}
+              onClick={() => {
+                onConfirm();
+                alert?.onConfirmAction?.(); // Run next steps
+              }}
               className="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-base inline-flex items-center px-4 py-2.5"
             >
               {confirmText}

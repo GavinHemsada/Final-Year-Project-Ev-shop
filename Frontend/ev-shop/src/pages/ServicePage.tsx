@@ -28,7 +28,7 @@ const services = [
 
 const ServicesPage = () => {
   return (
-    <div className="bg-slate-900 min-h-screen text-white">
+    <div className="bg-gray-50 min-h-screen">
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-6">
           <motion.div
@@ -37,8 +37,8 @@ const ServicesPage = () => {
             transition={{ duration: 0.5 }}
             className="text-center mb-16"
           >
-            <h1 className="text-5xl font-bold">Owner Services</h1>
-            <p className="text-lg text-gray-400 mt-2">We're here to support you for the entire life of your vehicle.</p>
+            <h1 className="text-5xl font-bold text-gray-900">Owner Services</h1>
+            <p className="text-lg text-gray-600 mt-2">We're here to support you for the entire life of your vehicle.</p>
           </motion.div>
 
           <motion.div
@@ -50,13 +50,13 @@ const ServicesPage = () => {
             {services.map((service, index) => (
               <motion.div
                 key={index}
-                className="flex items-start bg-slate-800 p-8 rounded-lg shadow-lg"
+                className="flex items-start bg-white p-8 rounded-lg shadow-lg border border-gray-200"
                 variants={itemVariants}
               >
-                <div className="text-blue-500 mr-8">{service.icon}</div>
+                <div className="text-blue-600 mr-8">{service.icon}</div>
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">{service.title}</h2>
-                  <p className="text-gray-300">{service.description}</p>
+                  <h2 className="text-2xl font-bold mb-2 text-gray-900">{service.title}</h2>
+                  <p className="text-gray-600">{service.description}</p>
                 </div>
               </motion.div>
             ))}

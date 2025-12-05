@@ -43,5 +43,21 @@ export const welcomeService = {
       return { listings: [], total: 0, page: 1, limit, totalPages: 0 };
     }
   },
+
+  // Get active repair locations (public endpoint - no authentication required)
+  getActiveRepairLocations: async () => {
+    try {
+      const url = `/repair-location/active`;
+      
+      // Use public axios instance (no auth required)
+      const response = await axiosInstance.get(url);
+      // Backend's handleResult unwraps the response, so return data directly
+      return response.data;
+    } catch (error: any) {
+      console.error("Error fetching repair locations:", error);
+      // Return empty result instead of throwing to prevent page crash
+      return [];
+    }
+  },
 };
 

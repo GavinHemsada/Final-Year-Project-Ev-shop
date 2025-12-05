@@ -49,7 +49,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
         message={toast}
         onClose={handleClose}
         position="top"
-        positionValue="20px"
+        positionValue="70px"
         right="20px"
         width="350px"
       />

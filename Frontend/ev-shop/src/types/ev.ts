@@ -40,6 +40,7 @@ export type Vehicle = {
       profile_image?: string;
       name?: string;
     };
+    shop_logo?: string;
   };
 
   model_id: {

@@ -6,3 +6,7 @@ export * from "./chatbot";
 export * from "./tabs";
 export * from "./ev";
 export * from "./alert";
+export * from "./seller";
+export * from "./repirelocation";
+export * from "./cart";
+export * from "./post";

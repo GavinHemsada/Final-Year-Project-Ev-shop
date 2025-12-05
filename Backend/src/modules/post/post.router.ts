@@ -192,8 +192,8 @@ export const postRouter = (): Router => {
    * @swagger
    * /post/post/{id}/views:
    *   patch:
-   *     summary: Update post view count
-   *     description: Updates the view count of a post. Typically called internally when a post is viewed.
+   *     summary: Increment post view count
+   *     description: Atomically increments the view count of a post by 1. Typically called when a post is viewed.
    *     tags: [Posts]
    *     security:
    *       - bearerAuth: []
@@ -204,18 +204,9 @@ export const postRouter = (): Router => {
    *         schema:
    *           type: string
    *         description: The ID of the post to update.
-   *     requestBody:
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               views:
-   *                 type: number
-   *                 description: The new view count.
    *     responses:
    *       '200':
-   *         description: View count updated successfully.
+   *         description: View count incremented successfully.
    *       '401':
    *         description: Unauthorized.
    *       '404':

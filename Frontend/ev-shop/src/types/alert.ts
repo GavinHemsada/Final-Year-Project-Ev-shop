@@ -8,12 +8,12 @@ export type AlertProps = {
 export type MessageAlertsProps = {
   id: string;
   text: string;
-  type: "success" | "error" | "warning" | "info";
+  type: "success" | "error" | "warning";
 };
 export type ConfirmAlertProps = {
-  id: number;
   title?: string;
   message?: string;
   confirmText?: string;
   cancelText?: string;
+  onConfirmAction?: () => void;
 };

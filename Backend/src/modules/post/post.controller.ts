@@ -185,13 +185,17 @@ export function postController(postService: IPostService): IPostController {
       }
     },
     /**
-     * Updates the view count for a specific post.
+     * Atomically increments the view count for a specific post.
+     * Only increments if the user hasn't viewed the post today.
      */
     updatePostViews: async (req, res) => {
       const id = req.params.id;
-      const views = req.body.views;
+      const user_id = req.user?.userId; // Get user_id from JWT token (set by protectJWT middleware)
+      if (!user_id) {
+        return res.status(401).json({ success: false, error: "User not authenticated" });
+      }
       try {
-        const result = await postService.updatePostViews(id, views);
+        const result = await postService.updatePostViews(id, user_id);
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "updating post views");

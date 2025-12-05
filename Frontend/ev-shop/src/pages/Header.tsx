@@ -52,16 +52,21 @@ const Header = () => {
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled
-            ? "bg-slate-900/80 backdrop-blur-sm shadow-lg"
+            ? "bg-white/95 backdrop-blur-sm shadow-lg"
             : "bg-transparent"
         }`}
       >
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           {/* Logo */}
-          <Link to="/" className="text-2xl font-bold text-white tracking-wider">
-            E<span className="text-blue-500">Volte</span>
+          <Link 
+            to="/" 
+            className={`text-2xl font-bold tracking-wider transition-colors duration-300 ${
+              isScrolled ? "text-gray-900" : "text-white"
+            }`}
+          >
+            E<span className="text-blue-600">Volte</span>
             {/* <img src={Logo} alt="Electro volt" className="w-15 h-15"/> */}
           </Link>
 
@@ -71,7 +76,11 @@ const Header = () => {
               <Link
                 key={link.name}
                 to={link.path}
-                className="text-gray-300 hover:text-blue-400 transition-colors duration-300"
+                className={`transition-colors duration-300 ${
+                  isScrolled
+                    ? "text-gray-700 hover:text-blue-600"
+                    : "text-gray-200 hover:text-blue-400"
+                }`}
               >
                 {link.name}
               </Link>
@@ -88,7 +97,9 @@ const Header = () => {
           <div className="md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="text-white text-2xl z-50"
+              className={`text-2xl z-50 transition-colors duration-300 ${
+                isScrolled ? "text-gray-900" : "text-white"
+              }`}
             >
               {isOpen ? <FiX /> : <FiMenu />}
             </button>
@@ -113,14 +124,14 @@ const Header = () => {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="fixed top-0 right-0 bottom-0 w-3/4 max-w-sm bg-slate-900 z-40 p-8 pt-24 md:hidden"
+              className="fixed top-0 right-0 bottom-0 w-3/4 max-w-sm bg-white z-40 p-8 pt-24 md:hidden shadow-xl"
             >
               <div className="flex flex-col items-center space-y-8">
                 {navLinks.map((link) => (
                   <Link
                     key={link.name}
                     to={link.path}
-                    className="text-gray-300 text-2xl hover:text-blue-400 transition-colors duration-300"
+                    className="text-gray-700 text-2xl hover:text-blue-600 transition-colors duration-300"
                     onClick={() => setIsOpen(false)} // Close menu on click
                   >
                     {link.name}

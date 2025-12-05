@@ -67,15 +67,21 @@ export interface IPostService {
     postData: Partial<PostDTO>
   ): Promise<{ success: boolean; post?: any; error?: string }>;
   /**
-   * Updates the view count for a specific post.
+   * Atomically increments the view count for a specific post.
+   * Only increments if the user hasn't viewed the post today.
    * @param id - The ID of the post.
-   * @param views - The new view count.
+   * @param user_id - The ID of the user viewing the post.
    * @returns A promise that resolves to an object containing the updated post data or an error.
    */
   updatePostViews(
     id: string,
-    views: number
-  ): Promise<{ success: boolean; post?: any; error?: string }>;
+    user_id: string
+  ): Promise<{
+    success: boolean;
+    post?: any;
+    error?: string;
+    alreadyViewed?: boolean;
+  }>;
   /**
    * Updates the reply count for a specific post.
    * @param id - The ID of the post.
@@ -330,19 +336,27 @@ export function postService(
       }
     },
     /**
-     * Specifically updates the view count of a post.
+     * Atomically increments the view count of a post.
+     * Only increments if the user hasn't viewed the post today.
      */
-    updatePostViews: async (id, views) => {
+    updatePostViews: async (id, user_id) => {
       try {
-        const post = await postRepo.updatePostViews(id, views);
-        if (!post) return { success: false, error: "Post not found" };
+        const result = await postRepo.updatePostViews(id, user_id);
+
+        // If result is false, user has already viewed today
+        if (result === false) {
+          return { success: true, alreadyViewed: true };
+        }
+
+        if (!result) return { success: false, error: "Post not found" };
+
         // Invalidate all relevant post caches
         await Promise.all([
           CacheService.delete(`post_${id}`),
           CacheService.deletePattern("posts_*"),
-          CacheService.delete(`posts_user_${post.user_id}`),
+          CacheService.delete(`posts_user_${result.user_id}`),
         ]);
-        return { success: true, post };
+        return { success: true, post: result };
       } catch (err) {
         return { success: false, error: "Failed to update post views" };
       }
@@ -508,11 +522,24 @@ export function postService(
         if (!post) return { success: false, error: "Post not found" };
         const reply = await postRepo.createReply({ ...replyData, user_id });
 
-        // Invalidate caches for replies
+        // Update post reply count and last_reply_by
+        const currentReplyCount = post.reply_count || 0;
+        await Promise.all([
+          postRepo.updatePostReplyCount(
+            replyData.post_id,
+            currentReplyCount + 1
+          ),
+          postRepo.updatePostLastReplyBy(replyData.post_id, user_id),
+        ]);
+
+        // Invalidate caches for replies and posts
         await Promise.all([
           CacheService.delete("replies"),
           CacheService.delete(`replies_post_${replyData.post_id}`),
           CacheService.delete(`replies_user_${user_id}`),
+          CacheService.delete(`post_${replyData.post_id}`),
+          CacheService.deletePattern("posts_*"),
+          CacheService.delete(`posts_user_${post.user_id}`),
         ]);
 
         return { success: true, reply };
@@ -552,15 +579,31 @@ export function postService(
         const existingReply = await postRepo.findReplyById(id);
         if (!existingReply) return { success: false, error: "Reply not found" };
 
+        const post = await postRepo.findPostById(
+          existingReply.post_id.toString()
+        );
+        if (!post) return { success: false, error: "Post not found" };
+
         const success = await postRepo.deleteReply(id);
         if (!success) return { success: false, error: "Reply not found" };
 
-        // Invalidate all relevant reply caches
+        // Update post reply count (decrement)
+        const currentReplyCount = post.reply_count || 0;
+        const newReplyCount = Math.max(0, currentReplyCount - 1);
+        await postRepo.updatePostReplyCount(
+          existingReply.post_id.toString(),
+          newReplyCount
+        );
+
+        // Invalidate all relevant reply and post caches
         await Promise.all([
           CacheService.delete(`reply_${id}`),
           CacheService.delete("replies"),
           CacheService.delete(`replies_post_${existingReply.post_id}`),
           CacheService.delete(`replies_user_${existingReply.user_id}`),
+          CacheService.delete(`post_${existingReply.post_id}`),
+          CacheService.deletePattern("posts_*"),
+          CacheService.delete(`posts_user_${post.user_id}`),
         ]);
 
         return { success: true };

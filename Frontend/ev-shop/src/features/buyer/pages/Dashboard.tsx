@@ -19,8 +19,9 @@ import type {
   Notification,
   ActiveTab,
   AlertProps,
+  ConfirmAlertProps,
 } from "@/types";
-import { Alert } from "@/components/MessageAlert";
+import { Alert, ConfirmAlert } from "@/components/MessageAlert";
 
 const OrderHistory = lazy(() => import("./OrderHistoryPage"));
 const UserProfile = lazy(() => import("./UserProfilePage"));
@@ -57,6 +58,9 @@ const App: React.FC = () => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [alert, setAlert] = useState<AlertProps | null>(null);
+  const [confirmAlert, setConfirmAlert] = useState<ConfirmAlertProps | null>(
+    null
+  );
 
   const { getUserID, logout, getRoles } = useAuth();
   const navigate = useNavigate();
@@ -146,6 +150,21 @@ const App: React.FC = () => {
     setAlert(null);
   }, []);
 
+  const handleSetConfirmAlert = useCallback((confirmAlertData: ConfirmAlertProps | null) => {
+    setConfirmAlert(confirmAlertData);
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    if (confirmAlert?.onConfirmAction) {
+      confirmAlert.onConfirmAction();
+    }
+    setConfirmAlert(null);
+  }, [confirmAlert]);
+
+  const handleCloseConfirmAlert = useCallback(() => {
+    setConfirmAlert(null);
+  }, []);
+
   // Tabs with memoized components
   const tabs = useMemo(
     () => ({
@@ -170,10 +189,10 @@ const App: React.FC = () => {
           setAlert={handleSetAlert}
         />
       ),
-      cart: <CartPage setAlert={handleSetAlert} />,
+      cart: <CartPage />,
       testDrives: <TestDrivesPage setAlert={handleSetAlert} />,
       reviews: <MyReviewsPage setAlert={handleSetAlert} />,
-      community: <CommunityPage setAlert={handleSetAlert} />,
+      community: <CommunityPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />,
     }),
     [
       filteredVehicles,
@@ -326,6 +345,19 @@ const App: React.FC = () => {
         }
         onClose={handleCloseAlert}
       />
+      {confirmAlert && (
+        <ConfirmAlert
+          alert={{
+            title: confirmAlert.title,
+            message: confirmAlert.message,
+            confirmText: confirmAlert.confirmText,
+            cancelText: confirmAlert.cancelText,
+            onConfirmAction: confirmAlert.onConfirmAction,
+          }}
+          onConfirm={handleConfirm}
+          onCancel={handleCloseConfirmAlert}
+        />
+      )}
     </>
   );
 };

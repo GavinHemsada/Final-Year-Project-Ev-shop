@@ -161,8 +161,13 @@ export const buyerService = {
   },
 
   // community operations
-  getCommunityPosts: async () => {
-    const response = await axiosPrivate.get(`/post/posts`);
+  getCommunityPosts: async (params?: { search?: string }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.search) {
+      queryParams.append("search", params.search);
+    }
+    const url = `/post/posts${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+    const response = await axiosPrivate.get(url);
     return response.data;
   },
   getCommunityPostbyUser: async (user_id: string) => {
@@ -179,24 +184,12 @@ export const buyerService = {
   },
   deleteCommunityPost: async (id: string) => {
     const response = await axiosPrivate.delete(`/post/post/${id}`);
-    return response.data;
+    return response.data ?? true;
   },
   postView: async (id: string) => {
-    // Get current post to increment views
-    try {
-      const postResponse = await axiosPrivate.get(`/post/post/${id}`);
-      const currentViews = postResponse.data?.post?.views || 0;
-      const response = await axiosPrivate.patch(`/post/post/${id}/views`, {
-        views: currentViews + 1,
-      });
-      return response.data;
-    } catch (error) {
-      // If getting post fails, just try to increment anyway
-      const response = await axiosPrivate.patch(`/post/post/${id}/views`, {
-        views: 1,
-      });
-      return response.data;
-    }
+    // Atomically increment view count on the server
+    const response = await axiosPrivate.patch(`/post/post/${id}/views`);
+    return response.data;
   },
   replyCount: async (id: string) => {
     // Get current reply count and increment

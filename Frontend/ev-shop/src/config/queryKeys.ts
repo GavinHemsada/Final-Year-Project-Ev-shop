@@ -6,8 +6,11 @@ export const queryKeys = {
   orders: (id: string) => ["orders", id],
   evlist: ["evlist"],
   testDrive: (id: string) => ["testDrive", id],
-  communityPosts: ["communityPosts"],
+
+  communityPosts: (search?: string) => ["communityPosts", search || ""],
   communityPost: (id: string) => ["communityPost", id],
+  myPosts: (userId: string) => ["myPosts", userId],
+
   savedVehicles: (userId: string) => ["savedVehicles", userId],
   isVehicleSaved: (userId: string, listingId: string) => [
     "isVehicleSaved",
@@ -22,12 +25,19 @@ export const queryKeys = {
   sellerEvlist: (id: string) => ["sellerEvlist", id],
   sellerTestDrive: (id: string) => ["sellerTestDrive", id],
   repairLocations: (sellerId: string) => ["repairLocations", sellerId],
+  activeRepairLocations: ["activeRepairLocations"],
   testDriveSlots: (sellerId: string) => ["testDriveSlots", sellerId],
   evModels: ["evModels"],
   evCategories: ["evCategories"],
   evBrands: ["evBrands"],
   // financial
   financialInstitution: (userId: string) => ["financialInstitution", userId],
-  financialProducts: (institutionId: string) => ["financialProducts", institutionId],
-  financialApplications: (institutionId: string) => ["financialApplications", institutionId],
+  financialProducts: (institutionId: string) => [
+    "financialProducts",
+    institutionId,
+  ],
+  financialApplications: (institutionId: string) => [
+    "financialApplications",
+    institutionId,
+  ],
 };
