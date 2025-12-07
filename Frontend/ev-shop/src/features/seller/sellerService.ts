@@ -51,6 +51,87 @@ export const sellerService = {
     return response.data;
   },
 
+  // community operations
+  getCommunityPosts: async (params?: { search?: string }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.search) {
+      queryParams.append("search", params.search);
+    }
+    const url = `/post/posts${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
+    const response = await axiosPrivate.get(url);
+    return response.data;
+  },
+  getCommunityPostbySeller: async (seller_id: string) => {
+    const response = await axiosPrivate.get(`/post/posts/seller/${seller_id}`);
+    return response.data;
+  },
+  createCommunityPost: async (postData: any) => {
+    const response = await axiosPrivate.post(`/post/post`, postData);
+    return response.data;
+  },
+  updateCommunityPost: async (id: string, postData: any) => {
+    const response = await axiosPrivate.put(`/post/post/${id}`, postData);
+    return response.data;
+  },
+  deleteCommunityPost: async (id: string) => {
+    const response = await axiosPrivate.delete(`/post/post/${id}`);
+    return response.data;
+  },
+  postView: async (id: string) => {
+    // Atomically increment view count on the server
+    const response = await axiosPrivate.patch(`/post/post/${id}/views`);
+    return response.data;
+  },
+  replyCount: async (id: string) => {
+    // Get current reply count and increment
+    try {
+      const postResponse = await axiosPrivate.get(`/post/post/${id}`);
+      const currentCount = postResponse.data?.post?.reply_count || 0;
+      const response = await axiosPrivate.patch(
+        `/post/post/${id}/reply-count`,
+        {
+          reply_count: currentCount + 1,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      // If getting post fails, just try to set to 1
+      const response = await axiosPrivate.patch(
+        `/post/post/${id}/reply-count`,
+        {
+          reply_count: 1,
+        }
+      );
+      return response.data;
+    }
+  },
+  lastReplyBy: async (id: string, data: { last_reply_by: string }) => {
+    const response = await axiosPrivate.patch(
+      `/post/post/${id}/last-reply-by`,
+      data
+    );
+    return response.data;
+  },
+  // replies operations
+  getPostReplies: async (post_id: string) => {
+    const response = await axiosPrivate.get(`/post/replies/post/${post_id}`);
+    return response.data;
+  },
+  createPostReply: async (replyData: any) => {
+    const response = await axiosPrivate.post(`/post/reply`, replyData);
+    return response.data;
+  },
+  updatePostReply: async (id: string, replyData: any) => {
+    const response = await axiosPrivate.put(`/post/reply/${id}`, replyData);
+    return response.data;
+  },
+  deletePostReply: async (id: string) => {
+    const response = await axiosPrivate.delete(`/post/reply/${id}`);
+    return response.data;
+  },
+
   // test drive slot operations
   getTestDriveSlotsBySeller: async (sellerId: string) => {
     const response = await axiosPrivate.get(
@@ -96,24 +177,30 @@ export const sellerService = {
     return response.data;
   },
   // Repair location operations
-  getRepairLocations: async (sellerId: string) => {
+  getRepairLocationsBySeller: async (sellerId: string) => {
     const response = await axiosPrivate.get(
       `/repair-location/seller/${sellerId}`
     );
     return response.data;
   },
-  createRepairLocation: async (locationData: any) => {
+  createRepairLocation: async (locationData: { seller_id: string }) => {
     const response = await axiosPrivate.post(`/repair-location`, locationData);
     return response.data;
   },
-  updateRepairLocation: async (locationId: string, locationData: any) => {
+  updateRepairLocation: async ({
+    locationId,
+    locationData,
+  }: {
+    locationId: string;
+    locationData: any;
+  }) => {
     const response = await axiosPrivate.put(
       `/repair-location/${locationId}`,
       locationData
     );
     return response.data;
   },
-  deleteRepairLocation: async (locationId: string) => {
+  deleteRepairLocation: async ({ locationId }: { locationId: string }) => {
     const response = await axiosPrivate.delete(
       `/repair-location/${locationId}`
     );

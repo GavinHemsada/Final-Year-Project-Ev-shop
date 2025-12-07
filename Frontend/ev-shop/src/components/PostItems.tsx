@@ -1,8 +1,4 @@
-import {
-  ChatBubbleIcon,
-  EditIcon,
-  TrashIcon,
-} from "@/assets/icons/icons";
+import { ChatBubbleIcon, EditIcon, TrashIcon } from "@/assets/icons/icons";
 import type { Post } from "@/types/post";
 import React from "react";
 import { motion } from "framer-motion";
@@ -12,13 +8,54 @@ const apiURL = import.meta.env.VITE_API_URL;
 export const PostItem: React.FC<{
   post: Post;
   userId: string | null;
+  userRole?: string | null;
   onEdit: (post: Post) => void;
   onDelete: (id: string) => void;
   onView: (post: Post) => void;
   showEditDelete?: boolean;
   formatDate: (dateString: string) => string;
 }> = React.memo(
-  ({ post, userId, onEdit, onDelete, onView, showEditDelete = false, formatDate }) => {
+  ({
+    post,
+    userId,
+    userRole,
+    onEdit,
+    onDelete,
+    onView,
+    showEditDelete = false,
+    formatDate,
+  }) => {
+    // Only show as seller if user has seller role AND has seller info (business_name or shop_logo)
+    const isSeller =
+      post.seller_id &&
+      (post.seller_id.business_name || post.seller_id.shop_logo);
+    const isFinance = post.financial_id && post.financial_id.name;
+    const isUser = !isSeller && !isFinance;
+
+    let displayName = post.user_id?.name;
+    let displayImage = post.user_id?.profile_image;
+
+    // If seller
+    if (isSeller && post.seller_id) {
+      displayName = post.seller_id.business_name || post.user_id.name;
+      displayImage = post.seller_id.shop_logo || post.user_id.profile_image;
+    }
+
+    // If finance (only apply if not seller)
+    else if (isFinance) {
+      displayName = post.financial_id?.name || post.user_id.name;
+      displayImage = post.user_id.profile_image;
+    }
+
+    const isPostByUser = post.user_id?._id === userId && userRole?.includes("user");
+    const isPostBySeller = post.seller_id?._id === userId && userRole?.includes("seller");
+    const isPostByFinance = post.financial_id?._id === userId && userRole?.includes("finance");
+
+    // Check if current user can edit/delete this post
+    // Only allow if: post belongs to user AND user has same role as post creator
+    const canEditDelete =
+      showEditDelete && (isPostByUser || isPostBySeller || isPostByFinance);
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -29,27 +66,51 @@ export const PostItem: React.FC<{
         {/* Post Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            {post.user_id.profile_image ? (
+            {displayImage ? (
               <img
-                src={`${apiURL}${post.user_id.profile_image}`}
-                alt={post.user_id.name}
-                className="h-14 w-14 rounded-full object-cover ring-2 ring-blue-100 dark:ring-blue-900"
+                src={`${apiURL}${displayImage}`}
+                alt={displayName}
+                className={`h-14 w-14 ${
+                  isSeller ? "rounded-lg" : "rounded-full"
+                } object-cover ring-2 ring-blue-100 dark:ring-blue-900`}
               />
             ) : (
-              <div className="h-14 w-14 rounded-full bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 flex items-center justify-center text-white text-lg font-bold shadow-md">
-                {post.user_id.name.charAt(0).toUpperCase()}
+              <div
+                className={`h-14 w-14 ${
+                  isSeller ? "rounded-lg" : "rounded-full"
+                } bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 flex items-center justify-center text-white text-lg font-bold shadow-md`}
+              >
+                {displayName.charAt(0).toUpperCase()}
               </div>
             )}
             <div>
               <p className="font-bold text-gray-900 dark:text-white text-lg">
-                {post.user_id.name}
+                {displayName}
+
+                {isSeller && (
+                  <span className="ml-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">
+                    Seller
+                  </span>
+                )}
+
+                {isFinance && (
+                  <span className="ml-2 text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded-full">
+                    Finance
+                  </span>
+                )}
+
+                {isUser && (
+                  <span className="ml-2 text-xs text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700/40 px-2 py-0.5 rounded-full">
+                    User
+                  </span>
+                )}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {formatDate(post.createdAt)}
               </p>
             </div>
           </div>
-          {showEditDelete && post.user_id._id === userId && (
+          {canEditDelete && (
             <div className="flex gap-2">
               <button
                 onClick={() => onEdit(post)}

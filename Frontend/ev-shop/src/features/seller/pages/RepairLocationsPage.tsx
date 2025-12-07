@@ -3,6 +3,11 @@ import { useAuth } from "@/context/AuthContext";
 import { sellerService } from "../sellerService";
 import type { AlertProps } from "@/types";
 import { Loader } from "@/components/Loader";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/config/queryKeys";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 import {
   PlusCircleIcon,
   EditIcon,
@@ -21,6 +26,9 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { FadeLoader } from "react-spinners";
+import { useToast } from "@/context/ToastContext";
+import type { RepairLocation, RepairLocationFormData } from "@/types";
 
 // Fix for default marker icons in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -43,19 +51,28 @@ const createCustomIcon = (color: string = "red") => {
   });
 };
 
-interface RepairLocation {
-  _id: string;
-  seller_id: string;
-  name: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-  phone?: string;
-  email?: string;
-  operating_hours?: string;
-  description?: string;
-  is_active: boolean;
-}
+const repairLocationSchema = yup.object({
+  name: yup.string().required("Location name is required"),
+  address: yup.string().required("Address is required"),
+  latitude: yup
+    .number()
+    .required("Latitude is required")
+    .min(-90, "Latitude must be between -90 and 90")
+    .max(90, "Latitude must be between -90 and 90"),
+  longitude: yup
+    .number()
+    .required("Longitude is required")
+    .min(-180, "Longitude must be between -180 and 180")
+    .max(180, "Longitude must be between -180 and 180"),
+  phone: yup
+    .string()
+    .matches(/^\+?[0-9\s\-()]{10,15}$/, "Please enter a valid phone number")
+    .optional(),
+  email: yup.string().email("Please enter a valid email address").optional(),
+  operating_hours: yup.string().optional(),
+  description: yup.string().optional(),
+  is_active: yup.boolean().required(),
+});
 
 // Component to handle map clicks
 function MapClickHandler({
@@ -79,109 +96,225 @@ export const RepairLocationsPage: React.FC<{
 }> = ({ setAlert }) => {
   const { getActiveRoleId } = useAuth();
   const sellerId = getActiveRoleId();
-  const [locations, setLocations] = useState<RepairLocation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isMapLoading, setIsMapLoading] = useState(false);
+   const { showToast } = useToast();
   const [editingLocation, setEditingLocation] = useState<RepairLocation | null>(
     null
   );
-  const [formData, setFormData] = useState({
-    name: "",
-    address: "",
-    latitude: 7.8731, // Default to Sri Lanka center
-    longitude: 80.7718,
-    phone: "",
-    email: "",
-    operating_hours: "",
-    description: "",
-    is_active: true,
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setValue,
+    watch,
+    reset,
+  } = useForm<RepairLocationFormData>({
+    resolver: yupResolver(repairLocationSchema) as any,
+    defaultValues: {
+      name: "",
+      address: "",
+      latitude: 7.8731, // Default to Sri Lanka center
+      longitude: 80.7718,
+      phone: "",
+      email: "",
+      operating_hours: "",
+      description: "",
+      is_active: true,
+    },
   });
 
-  // Fetch repair locations
-  useEffect(() => {
-    if (sellerId) {
-      fetchLocations();
-    }
-  }, [sellerId]);
+  const formData = watch();
 
-  const fetchLocations = async () => {
-    if (!sellerId) return;
-    try {
-      setIsLoading(true);
-      const response = await sellerService.getRepairLocations(sellerId);
-      const locationsData = response?.locations || response || [];
-      setLocations(Array.isArray(locationsData) ? locationsData : []);
-    } catch (error: any) {
-      console.error("Failed to fetch repair locations:", error);
+  // Fetch repair locations using React Query
+  const {
+    data: locationsData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.repairLocations(sellerId || ""),
+    queryFn: async () => {
+      if (!sellerId) return [];
+      const response = await sellerService.getRepairLocationsBySeller(sellerId);
+      const locations = response?.locations || response || [];
+      return Array.isArray(locations) ? locations : [];
+    },
+    enabled: !!sellerId,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  const locations: RepairLocation[] = locationsData || [];
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: (locationData: any) =>
+      sellerService.createRepairLocation(locationData),
+    onSuccess: () => {
+      // Invalidate seller's repair locations
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.repairLocations(sellerId || ""),
+      });
+      // Invalidate active repair locations (used in welcome page map)
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.activeRepairLocations,
+      });
+      setAlert?.({
+        id: Date.now(),
+        title: "Success",
+        message: "Repair location added successfully!",
+        type: "success",
+      });
+      resetForm();
+    },
+    onError: (error: any) => {
+      console.error("Failed to create repair location:", error);
+      const errorMessage =
+        error?.response?.data?.message || "Failed to save repair location";
+      setAlert?.({
+        id: Date.now(),
+        title: "Error",
+        message: errorMessage,
+        type: "error",
+      });
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      sellerService.updateRepairLocation({ locationId: id, locationData: data }),
+    onSuccess: () => {
+      // Invalidate seller's repair locations
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.repairLocations(sellerId || ""),
+      });
+      // Invalidate active repair locations (used in welcome page map)
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.activeRepairLocations,
+      });
+      setAlert?.({
+        id: Date.now(),
+        title: "Success",
+        message: "Repair location updated successfully!",
+        type: "success",
+      });
+      resetForm();
+    },
+    onError: (error: any) => {
+      console.error("Failed to update repair location:", error);
+      const errorMessage =
+        error?.response?.data?.message || "Failed to save repair location";
+      setAlert?.({
+        id: Date.now(),
+        title: "Error",
+        message: errorMessage,
+        type: "error",
+      });
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => sellerService.deleteRepairLocation({ locationId: id }),
+    onSuccess: () => {
+      // Invalidate seller's repair locations
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.repairLocations(sellerId || ""),
+      });
+      // Invalidate active repair locations (used in welcome page map)
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.activeRepairLocations,
+      });
+      setAlert?.({
+        id: Date.now(),
+        title: "Success",
+        message: "Repair location deleted successfully!",
+        type: "success",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Failed to delete repair location:", error);
+      setAlert?.({
+        id: Date.now(),
+        title: "Error",
+        message: "Failed to delete repair location",
+        type: "error",
+      });
+    },
+  });
+
+  // Show error alert if query fails
+  useEffect(() => {
+    if (error) {
       setAlert?.({
         id: Date.now(),
         title: "Error",
         message: "Failed to load repair locations",
         type: "error",
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [error, setAlert]);
 
   const handleMapClick = (lat: number, lng: number) => {
     if (!showAddForm && !editingLocation) return;
 
-    setFormData({
-      ...formData,
-      latitude: parseFloat(lat.toFixed(6)),
-      longitude: parseFloat(lng.toFixed(6)),
-    });
+    setValue("latitude", parseFloat(lat.toFixed(6)), { shouldValidate: true });
+    setValue("longitude", parseFloat(lng.toFixed(6)), { shouldValidate: true });
   };
 
   const handleGeocodeAddress = async () => {
-    if (!formData.address) return;
-
+    const address = watch("address");
+    if (!address) {
+      setAlert?.({
+        id: Date.now(),
+        title: "Warning",
+        message: "Please enter an address first",
+        type: "error",
+      });
+      return;
+    }
     try {
+      setIsMapLoading(true);
       // Use OpenStreetMap Nominatim API for geocoding (free, no API key needed)
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          formData.address + ", Sri Lanka"
+          address + ", Sri Lanka"
         )}&limit=1`
       );
       const data = await response.json();
 
       if (data && data.length > 0) {
-        setFormData({
-          ...formData,
-          latitude: parseFloat(data[0].lat),
-          longitude: parseFloat(data[0].lon),
+        setValue("latitude", parseFloat(data[0].lat), { shouldValidate: true });
+        setValue("longitude", parseFloat(data[0].lon), {
+          shouldValidate: true,
         });
-        setAlert?.({
-          id: Date.now(),
-          title: "Success",
-          message: "Location found on map!",
+        showToast?.({
+          text: "Location found on map!",
           type: "success",
         });
       } else {
-        setAlert?.({
-          id: Date.now(),
-          title: "Warning",
-          message:
+        showToast?.({
+          text:
             "Could not find location. Please click on the map to set coordinates.",
           type: "error",
         });
       }
     } catch (error) {
       console.error("Geocoding error:", error);
-      setAlert?.({
-        id: Date.now(),
-        title: "Error",
-        message:
+      showToast?.({
+        text:
           "Failed to geocode address. Please click on the map to set coordinates.",
         type: "error",
       });
+    } finally {
+      setIsMapLoading(false);
     }
   };
 
   const resetForm = () => {
-    setFormData({
+    reset({
       name: "",
       address: "",
       latitude: 7.8731,
@@ -196,70 +329,29 @@ export const RepairLocationsPage: React.FC<{
     setShowAddForm(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: RepairLocationFormData) => {
     if (!sellerId) return;
 
-    if (
-      !formData.name ||
-      !formData.address ||
-      !formData.latitude ||
-      !formData.longitude
-    ) {
-      setAlert?.({
-        id: Date.now(),
-        title: "Error",
-        message: "Please fill in all required fields and set location on map",
-        type: "error",
-      });
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-      if (editingLocation) {
-        await sellerService.updateRepairLocation(editingLocation._id, {
-          ...formData,
+    if (editingLocation) {
+      updateMutation.mutate({
+        id: editingLocation._id,
+        data: {
+          ...data,
           seller_id: sellerId,
-        });
-        setAlert?.({
-          id: Date.now(),
-          title: "Success",
-          message: "Repair location updated successfully!",
-          type: "success",
-        });
-      } else {
-        await sellerService.createRepairLocation({
-          ...formData,
-          seller_id: sellerId,
-        });
-        setAlert?.({
-          id: Date.now(),
-          title: "Success",
-          message: "Repair location added successfully!",
-          type: "success",
-        });
-      }
-      resetForm();
-      fetchLocations();
-    } catch (error: any) {
-      console.error("Failed to save repair location:", error);
-      const errorMessage =
-        error?.response?.data?.message || "Failed to save repair location";
-      setAlert?.({
-        id: Date.now(),
-        title: "Error",
-        message: errorMessage,
-        type: "error",
+        },
       });
-    } finally {
-      setIsSaving(false);
+    } else {
+      createMutation.mutate({
+        ...data,
+        is_active: "true",
+        seller_id: sellerId,
+      });
     }
   };
 
   const handleEdit = (location: RepairLocation) => {
     setEditingLocation(location);
-    setFormData({
+    reset({
       name: location.name,
       address: location.address,
       latitude: location.latitude,
@@ -280,24 +372,7 @@ export const RepairLocationsPage: React.FC<{
       return;
     }
 
-    try {
-      await sellerService.deleteRepairLocation(id);
-      setAlert?.({
-        id: Date.now(),
-        title: "Success",
-        message: "Repair location deleted successfully!",
-        type: "success",
-      });
-      fetchLocations();
-    } catch (error: any) {
-      console.error("Failed to delete repair location:", error);
-      setAlert?.({
-        id: Date.now(),
-        title: "Error",
-        message: "Failed to delete repair location",
-        type: "error",
-      });
-    }
+    deleteMutation.mutate(id);
   };
 
   // Calculate center of all locations for map view
@@ -346,7 +421,7 @@ export const RepairLocationsPage: React.FC<{
               ? "Edit Repair Location"
               : "Add New Repair Location"}
           </h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -354,37 +429,58 @@ export const RepairLocationsPage: React.FC<{
                 </label>
                 <input
                   type="text"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  required
+                  {...register("name")}
                   placeholder="e.g., Main Service Center"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.name ? "border-red-500" : "border-gray-300"
+                  }`}
                 />
+                {errors.name && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.name.message}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Address *
                 </label>
                 <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={formData.address}
-                    onChange={(e) =>
-                      setFormData({ ...formData, address: e.target.value })
-                    }
-                    required
-                    placeholder="e.g., 123 Main St, Colombo"
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      {...register("address")}
+                      placeholder="e.g., 123 Main St, Colombo"
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                        errors.address ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {errors.address && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {errors.address.message}
+                      </p>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={handleGeocodeAddress}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    disabled={isMapLoading}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                     title="Find location on map"
                   >
-                    <MapPinIcon className="h-5 w-5" />
+                    {isMapLoading ? (
+                      <div className="h-5 w-5 flex items-center justify-center scale-75">
+                      <FadeLoader
+                        color="#0062ffff"
+                        height={8}
+                        width={4}
+                        margin={-1}
+                        radius={-1}
+                      />
+                      </div>
+                    ) : (
+                      <MapPinIcon className="h-5 w-5" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -395,17 +491,17 @@ export const RepairLocationsPage: React.FC<{
                 <input
                   type="number"
                   step="any"
-                  value={formData.latitude || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      latitude: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  required
+                  {...register("latitude", { valueAsNumber: true })}
                   placeholder="e.g., 7.8731"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.latitude ? "border-red-500" : "border-gray-300"
+                  }`}
                 />
+                {errors.latitude && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.latitude.message}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -414,17 +510,17 @@ export const RepairLocationsPage: React.FC<{
                 <input
                   type="number"
                   step="any"
-                  value={formData.longitude || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      longitude: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  required
+                  {...register("longitude", { valueAsNumber: true })}
                   placeholder="e.g., 80.7718"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.longitude ? "border-red-500" : "border-gray-300"
+                  }`}
                 />
+                {errors.longitude && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.longitude.message}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -432,13 +528,17 @@ export const RepairLocationsPage: React.FC<{
                 </label>
                 <input
                   type="tel"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
+                  {...register("phone")}
                   placeholder="e.g., +94 11 234 5678"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.phone ? "border-red-500" : "border-gray-300"
+                  }`}
                 />
+                {errors.phone && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.phone.message}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -446,13 +546,17 @@ export const RepairLocationsPage: React.FC<{
                 </label>
                 <input
                   type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
+                  {...register("email")}
                   placeholder="e.g., service@example.com"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.email ? "border-red-500" : "border-gray-300"
+                  }`}
                 />
+                {errors.email && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.email.message}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -460,13 +564,7 @@ export const RepairLocationsPage: React.FC<{
                 </label>
                 <input
                   type="text"
-                  value={formData.operating_hours}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      operating_hours: e.target.value,
-                    })
-                  }
+                  {...register("operating_hours")}
                   placeholder="e.g., Mon-Fri: 9AM-6PM"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
@@ -476,13 +574,9 @@ export const RepairLocationsPage: React.FC<{
                   Active Status
                 </label>
                 <select
-                  value={formData.is_active ? "true" : "false"}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      is_active: e.target.value === "true",
-                    })
-                  }
+                  {...register("is_active", {
+                    setValueAs: (value) => value === "true",
+                  })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 >
                   <option value="true">Active</option>
@@ -495,10 +589,7 @@ export const RepairLocationsPage: React.FC<{
                 Description
               </label>
               <textarea
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                {...register("description")}
                 rows={3}
                 placeholder="Describe services offered at this location..."
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none"
@@ -512,7 +603,10 @@ export const RepairLocationsPage: React.FC<{
               </label>
               <div className="w-full h-64 border-2 border-gray-300 rounded-lg overflow-hidden dark:border-gray-600">
                 <MapContainer
-                  center={[formData.latitude, formData.longitude]}
+                  center={[
+                    formData.latitude || 7.8731,
+                    formData.longitude || 80.7718,
+                  ]}
                   zoom={10}
                   style={{ height: "100%", width: "100%", zIndex: 0 }}
                   className="z-0"
@@ -534,15 +628,26 @@ export const RepairLocationsPage: React.FC<{
                 Click on the map or use the address geocoding button to set
                 coordinates
               </p>
+              {(errors.latitude || errors.longitude) && (
+                <p className="text-red-500 text-xs mt-1">
+                  Please set location coordinates on the map
+                </p>
+              )}
             </div>
 
             <div className="flex gap-3 pt-4">
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={
+                  isSubmitting ||
+                  createMutation.isPending ||
+                  updateMutation.isPending
+                }
                 className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSaving
+                {isSubmitting ||
+                createMutation.isPending ||
+                updateMutation.isPending
                   ? "Saving..."
                   : editingLocation
                   ? "Update Location"

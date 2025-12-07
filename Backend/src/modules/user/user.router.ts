@@ -56,6 +56,46 @@ export const userRouter = (): Router => {
 
   /**
    * @swagger
+   * /user/check-password-null/{email}:
+   *   get:
+   *     summary: Check if user's password is null
+   *     description: Checks if the password for a user identified by their email is null. This is useful for social login users who may not have a password set.
+   *     tags: [Users]
+   *     parameters:
+   *       - in: path
+   *         name: email
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: email
+   *         description: The email of the user to check.
+   *     responses:
+   *       '200':
+   *         description: Password null status retrieved successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 isNull:
+   *                   type: boolean
+   *                   example: true
+   *                   description: True if the user's password is null, false otherwise.
+   *       '404':
+   *         description: User not found.
+   *         $ref: '#/components/schemas/ErrorResponse'
+   *       '500':
+   *         description: Internal server error.
+   *         $ref: '#/components/schemas/ErrorResponse'
+   */
+  router.get("/check-password-null/:email", (req, res) =>
+    userController.checkPasswordNull(req, res)
+  );
+  /**
+   * @swagger
    * /user/{id}:
    *   get:
    *     summary: Get user by ID

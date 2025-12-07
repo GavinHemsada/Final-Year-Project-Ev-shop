@@ -2,6 +2,8 @@ import { IPostRepository } from "./post.repository";
 import { PostDTO, PostReplyDTO } from "../../dtos/post.DTO";
 import { IUserRepository } from "../user/user.repository";
 import CacheService from "../../shared/cache/CacheService";
+import { ISellerRepository } from "../seller/seller.repository";
+import { IFinancialRepository } from "../financial/financial.repository";
 
 /**
  * Defines the interface for the post service, outlining methods for managing forum posts and replies.
@@ -47,13 +49,31 @@ export interface IPostService {
     user_id: string
   ): Promise<{ success: boolean; posts?: any[]; error?: string }>;
   /**
+   * Finds all posts created by a specific seller.
+   * @param seller_id - The ID of the seller.
+   * @returns A promise that resolves to an object containing an array of the seller's posts or an error.
+   */
+  findPostsBySellerId(
+    seller_id: string
+  ): Promise<{ success: boolean; posts?: any[]; error?: string }>;
+  /**
+   * Finds all posts created by a specific financial user.
+   * @param financial_id - The ID of the financial user.
+   * @returns A promise that resolves to an object containing an array of the financial user's posts or an error.
+   */
+  findPostsByFinancialId(
+    financial_id: string
+  ): Promise<{ success: boolean; posts?: any[]; error?: string }>;
+  /**
    * Creates a new post.
    * @param user_id - The ID of the user creating the post.
    * @param postData - The data for the new post.
    * @returns A promise that resolves to an object containing the created post or an error.
    */
   createPost(
-    user_id: string,
+    user_id: string | null,
+    seller_id: string | null,
+    financial_id: string | null,
     postData: PostDTO
   ): Promise<{ success: boolean; post?: any; error?: string }>;
   /**
@@ -71,11 +91,15 @@ export interface IPostService {
    * Only increments if the user hasn't viewed the post today.
    * @param id - The ID of the post.
    * @param user_id - The ID of the user viewing the post.
+   * @param seller_id - Optional seller ID.
+   * @param financial_id - Optional financial ID.
    * @returns A promise that resolves to an object containing the updated post data or an error.
    */
   updatePostViews(
     id: string,
-    user_id: string
+    user_id?: string,
+    seller_id?: string,
+    financial_id?: string
   ): Promise<{
     success: boolean;
     post?: any;
@@ -134,6 +158,22 @@ export interface IPostService {
     user_id: string
   ): Promise<{ success: boolean; replies?: any[]; error?: string }>;
   /**
+   * Finds all replies created by a specific seller.
+   * @param seller_id - The ID of the seller.
+   * @returns A promise that resolves to an object containing an array of the seller's replies or an error.
+   */
+  findRepliesBySellerId(
+    seller_id: string
+  ): Promise<{ success: boolean; replies?: any[]; error?: string }>;
+  /**
+   * Finds all replies created by a specific financial user.
+   * @param financial_id - The ID of the financial user.
+   * @returns A promise that resolves to an object containing an array of the financial user's replies or an error.
+   */
+  findRepliesByFinancialId(
+    financial_id: string
+  ): Promise<{ success: boolean; replies?: any[]; error?: string }>;
+  /**
    * Retrieves all replies from the system.
    * @returns A promise that resolves to an object containing an array of all replies or an error.
    */
@@ -150,6 +190,8 @@ export interface IPostService {
    */
   createReply(
     user_id: string,
+    seller_id: string,
+    financial_id: string,
     replyData: PostReplyDTO
   ): Promise<{ success: boolean; reply?: any; error?: string }>;
   /**
@@ -180,7 +222,9 @@ export interface IPostService {
  */
 export function postService(
   postRepo: IPostRepository,
-  userRepo: IUserRepository
+  userRepo: IUserRepository,
+  sellerRepo: ISellerRepository,
+  financialRepo: IFinancialRepository
 ): IPostService {
   return {
     // Posts
@@ -296,13 +340,85 @@ export function postService(
       }
     },
     /**
+     * Finds all posts created by a specific seller.
+     */
+    findPostsBySellerId: async (seller_id) => {
+      try {
+        const cacheKey = `posts_seller_${seller_id}`;
+        const posts = await CacheService.getOrSet(
+          cacheKey,
+          async () => {
+            const sellerPosts = await postRepo.findPostsBySellerId(seller_id);
+            return sellerPosts ?? [];
+          },
+          3600 // Cache for 1 hour
+        );
+        if (!posts)
+          return { success: false, error: "No posts found for this seller" };
+        return { success: true, posts };
+      } catch (err) {
+        return {
+          success: false,
+          error: "Failed to fetch posts for this seller",
+        };
+      }
+    },
+    /**
+     * Finds all posts created by a specific financial user.
+     */
+    findPostsByFinancialId: async (financial_id) => {
+      try {
+        const cacheKey = `posts_financial_${financial_id}`;
+        const posts = await CacheService.getOrSet(
+          cacheKey,
+          async () => {
+            const financialPosts = await postRepo.findPostsByFinancialId(
+              financial_id
+            );
+            return financialPosts ?? [];
+          },
+          3600 // Cache for 1 hour
+        );
+        if (!posts)
+          return {
+            success: false,
+            error: "No posts found for this financial user",
+          };
+        return { success: true, posts };
+      } catch (err) {
+        return {
+          success: false,
+          error: "Failed to fetch posts for this financial user",
+        };
+      }
+    },
+    /**
      * Creates a new post after verifying the user exists.
      */
-    createPost: async (user_id, postData) => {
+    createPost: async (user_id, seller_id, financial_id, postData) => {
       try {
-        const user = await userRepo.findById(user_id);
-        if (!user) return { success: false, error: "User not found" };
-        const post = await postRepo.createPost({ ...postData, user_id });
+        const checks = [
+          { id: user_id, repo: userRepo, error: "User not found" },
+          { id: seller_id, repo: sellerRepo, error: "Seller not found" },
+          {
+            id: financial_id,
+            repo: financialRepo,
+            error: "Financial user not found",
+          },
+        ];
+
+        for (const item of checks) {
+          if (item.id) {
+            const exists = await item.repo.findById(item.id);
+            if (!exists) return { success: false, error: item.error };
+          }
+        }
+        const post = await postRepo.createPost({
+          ...postData,
+          user_id: user_id || undefined,
+          seller_id: seller_id || undefined,
+          financial_id: financial_id || undefined,
+        });
 
         // Invalidate caches for all posts and the user's posts
         await Promise.all([
@@ -339,9 +455,14 @@ export function postService(
      * Atomically increments the view count of a post.
      * Only increments if the user hasn't viewed the post today.
      */
-    updatePostViews: async (id, user_id) => {
+    updatePostViews: async (id, user_id, seller_id, financial_id) => {
       try {
-        const result = await postRepo.updatePostViews(id, user_id);
+        const result = await postRepo.updatePostViews(
+          id,
+          user_id,
+          seller_id,
+          financial_id
+        );
 
         // If result is false, user has already viewed today
         if (result === false) {
@@ -402,19 +523,34 @@ export function postService(
      */
     deletePost: async (id) => {
       try {
-        const existingPost = await postRepo.findPostById(id);
+        const existingPost = await postRepo.findbyid(id);
         if (!existingPost) return { success: false, error: "Post not found" };
 
         const success = await postRepo.deletePost(id);
-        if (!success) return { success: false, error: "Post not found" };
+        if (!success) return { success: false, error: "Post not Deleted" };
 
         // Invalidate all relevant post and reply caches
-        await Promise.all([
+        const cacheDeletions = [
           CacheService.delete(`post_${id}`),
           CacheService.deletePattern("posts_*"),
-          CacheService.delete(`posts_user_${existingPost.user_id}`),
           CacheService.delete(`replies_post_${id}`),
-        ]);
+        ];
+
+        // Invalidate user-specific caches if applicable
+        if (existingPost.user_id) {
+          const userId = existingPost.user_id.toString();
+          cacheDeletions.push(CacheService.delete(`posts_user_${userId}`));
+        }
+        if (existingPost.seller_id) {
+          const sellerId = existingPost.seller_id.toString();
+          cacheDeletions.push(CacheService.delete(`posts_seller_${sellerId}`));
+        }
+        if (existingPost.financial_id) {
+          const financialId = existingPost.financial_id.toString();
+          cacheDeletions.push(CacheService.delete(`posts_financial_${financialId}`));
+        }
+
+        await Promise.all(cacheDeletions);
 
         return { success: true };
       } catch (err) {
@@ -492,6 +628,61 @@ export function postService(
       }
     },
     /**
+     * Finds all replies created by a specific seller.
+     */
+    findRepliesBySellerId: async (seller_id) => {
+      try {
+        const cacheKey = `replies_seller_${seller_id}`;
+        const replies = await CacheService.getOrSet(
+          cacheKey,
+          async () => {
+            const sellerReplies = await postRepo.findRepliesBySellerId(
+              seller_id
+            );
+            return sellerReplies ?? [];
+          },
+          3600 // Cache for 1 hour
+        );
+        if (!replies)
+          return { success: false, error: "No replies found for this seller" };
+        return { success: true, replies };
+      } catch (err) {
+        return {
+          success: false,
+          error: "Failed to fetch replies for this seller",
+        };
+      }
+    },
+    /**
+     * Finds all replies created by a specific financial user.
+     */
+    findRepliesByFinancialId: async (financial_id) => {
+      try {
+        const cacheKey = `replies_financial_${financial_id}`;
+        const replies = await CacheService.getOrSet(
+          cacheKey,
+          async () => {
+            const financialReplies = await postRepo.findRepliesByFinancialId(
+              financial_id
+            );
+            return financialReplies ?? [];
+          },
+          3600 // Cache for 1 hour
+        );
+        if (!replies)
+          return {
+            success: false,
+            error: "No replies found for this financial user",
+          };
+        return { success: true, replies };
+      } catch (err) {
+        return {
+          success: false,
+          error: "Failed to fetch replies for this financial user",
+        };
+      }
+    },
+    /**
      * Retrieves all replies.
      */
     findAllReplies: async () => {
@@ -514,39 +705,98 @@ export function postService(
     /**
      * Creates a new reply after verifying the user and parent post exist.
      */
-    createReply: async (user_id, replyData) => {
+    createReply: async (
+      user_id?: string,
+      seller_id?: string,
+      financial_id?: string,
+      replyData: any = {}
+    ) => {
       try {
-        const user = await userRepo.findById(user_id);
-        if (!user) return { success: false, error: "User not found" };
-        const post = await postRepo.findPostById(replyData.post_id);
-        if (!post) return { success: false, error: "Post not found" };
-        const reply = await postRepo.createReply({ ...replyData, user_id });
+        // Ensure checks array
+        const checks = [
+          { id: user_id, repo: userRepo, error: "User not found" },
+          { id: seller_id, repo: sellerRepo, error: "Seller not found" },
+          {
+            id: financial_id,
+            repo: financialRepo,
+            error: "Financial user not found",
+          },
+        ];
 
-        // Update post reply count and last_reply_by
+        for (const item of checks) {
+          if (item.id) {
+            const exists = await item.repo.findById(item.id);
+            if (!exists) return { success: false, error: item.error };
+          }
+        }
+
+        if (!replyData || typeof replyData !== "object") {
+          return { success: false, error: "Invalid reply data" };
+        }
+
+        const post = await postRepo.findbyid(replyData.post_id);
+        if (!post) return { success: false, error: "Post not found" };
+
+        const reply = await postRepo.createReply({
+          ...replyData,
+          user_id: user_id || null,
+          seller_id: seller_id || null,
+          financial_id: financial_id || null,
+        });
+
         const currentReplyCount = post.reply_count || 0;
         await Promise.all([
           postRepo.updatePostReplyCount(
             replyData.post_id,
             currentReplyCount + 1
           ),
-          postRepo.updatePostLastReplyBy(replyData.post_id, user_id),
+          postRepo.updatePostLastReplyBy(
+            replyData.post_id,
+            user_id || seller_id || financial_id || ""
+          ),
         ]);
 
         // Invalidate caches for replies and posts
-        await Promise.all([
-          CacheService.delete("replies"),
-          CacheService.delete(`replies_post_${replyData.post_id}`),
-          CacheService.delete(`replies_user_${user_id}`),
-          CacheService.delete(`post_${replyData.post_id}`),
-          CacheService.deletePattern("posts_*"),
-          CacheService.delete(`posts_user_${post.user_id}`),
-        ]);
+        const cacheKeys = [
+          `replies_post_${replyData.post_id}`,
+          `post_${replyData.post_id}`,
+        ];
+
+        // Add user-specific cache keys if applicable
+        if (user_id) {
+          cacheKeys.push(`replies_user_${user_id}`);
+        }
+        if (seller_id) {
+          cacheKeys.push(`replies_seller_${seller_id}`);
+        }
+        if (financial_id) {
+          cacheKeys.push(`replies_financial_${financial_id}`);
+        }
+
+        // Add post owner cache keys if applicable
+        if (post.user_id) {
+          cacheKeys.push(`posts_user_${post.user_id}`);
+        }
+        if (post.seller_id) {
+          const sellerId = post.seller_id.toString();
+          cacheKeys.push(`posts_seller_${sellerId}`);
+        }
+        if (post.financial_id) {
+          const financialId = post.financial_id.toString();
+          cacheKeys.push(`posts_financial_${financialId}`);
+        }
+
+        await Promise.all(cacheKeys.map((key) => CacheService.delete(key)));
+        await CacheService.deletePattern("posts_*");
+        await CacheService.deletePattern("replies_*");
 
         return { success: true, reply };
       } catch (err) {
+        console.error("createReply error:", err);
         return { success: false, error: "Failed to create reply" };
       }
     },
+
     /**
      * Updates an existing reply's data.
      */

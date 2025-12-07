@@ -230,7 +230,7 @@ export function financialService(
         const institution = await CacheService.getOrSet(
           cacheKey,
           async () => {
-            const data = await repo.findInstitutionById(id);
+            const data = await repo.findById(id);
             return data ?? null;
           },
           3600
@@ -317,7 +317,7 @@ export function financialService(
      */
     createProduct: async (data) => {
       try {
-        const institution = await repo.findInstitutionById(data.institution_id);
+        const institution = await repo.findById(data.institution_id);
         if (!institution)
           return { success: false, error: "Institution not found" };
 

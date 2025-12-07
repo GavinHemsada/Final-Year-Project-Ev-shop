@@ -40,6 +40,7 @@ import { IEvController } from "./modules/ev/ev.controller";
 import { evRouter } from "./modules/ev/ev.router";
 import { savedVehicleRouter } from "./modules/savedVehicle/savedVehicle.router";
 import { repairLocationRouter } from "./modules/repairLocation/repairLocation.router";
+import { IRepairLocationController } from "./modules/repairLocation/repairLocation.controller";
 
 // Logging utilities
 import morgan from "morgan";
@@ -222,6 +223,10 @@ apiV1Router.use("/payment", paymentLimiter, protectJWT, paymentRouter());
 // Public EV listings endpoint (for welcome page - no authentication required)
 const evController = container.resolve<IEvController>("EvController");
 apiV1Router.get("/ev/listings", (req, res) => evController.getAllListings(req, res));
+
+// Public repair locations endpoint (for welcome page - no authentication required)
+const repairLocationController = container.resolve<IRepairLocationController>("RepairLocationController");
+apiV1Router.get("/repair-location/active", (req, res) => repairLocationController.getAllActiveLocations(req, res));
 
 // All other EV routes require authentication
 apiV1Router.use("/ev", protectJWT, evRouter());

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { User } from "@/types";
-import { Camera } from "lucide-react";
+import { Camera, AlertTriangle, X } from "lucide-react";
 import { buyerService } from "../buyerService";
 import { useAuth } from "@/context/AuthContext";
 import { Loader } from "@/components/Loader";
@@ -10,6 +10,7 @@ import * as yup from "yup";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
 import type { AlertProps } from "@/types";
+import { useNavigate } from "react-router-dom";
 
 const apiURL = import.meta.env.VITE_API_URL;
 
@@ -54,13 +55,20 @@ const profileSchema = yup.object({
     .required(),
 });
 
-const UserProfile: React.FC<{ user: User; setAlert?: (alert: AlertProps | null) => void }> = React.memo(({ user, setAlert }) => {
+const UserProfile: React.FC<{
+  user: User;
+  checkPassword: boolean;
+  setAlert?: (alert: AlertProps | null) => void;
+}> = React.memo(({ user, setAlert, checkPassword }) => {
   const [email] = useState(user.email);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isChanged, setIsChanged] = useState(false);
+  const [showWarning, setShowWarning] = useState(true);
   const { getUserID } = useAuth();
   const userID = getUserID();
+  const navigate = useNavigate();
+
   const {
     register,
     handleSubmit,
@@ -107,6 +115,8 @@ const UserProfile: React.FC<{ user: User; setAlert?: (alert: AlertProps | null) 
       queryClient.invalidateQueries({
         queryKey: queryKeys.userProfile(userID!),
       });
+      queryClient.invalidateQueries({ queryKey: queryKeys.communityPosts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myPosts(userID!) });
       setAlert?.({
         id: Date.now(),
         title: "Success",
@@ -148,8 +158,41 @@ const UserProfile: React.FC<{ user: User; setAlert?: (alert: AlertProps | null) 
     return () => subscription.unsubscribe();
   }, [watch]);
 
+  const handlePasswordReset = () => {
+    navigate("/auth/forgot-password");
+  };
+
   return (
     <div className="bg-white p-8 rounded-xl shadow-md max-w-6xl mx-auto dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
+      {/* Warning Banner */}
+      {checkPassword && showWarning && (
+        <div className="mb-6 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r-lg relative">
+          <div className="flex items-start">
+            <AlertTriangle className="h-5 w-5 text-red-500 dark:text-red-400 mt-0.5 mr-3 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-red-800 dark:text-red-300 mb-1">
+                Password Not Set
+              </h3>
+              <p className="text-sm text-red-700 dark:text-red-400 mb-2">
+                Please add a password to secure your account.
+              </p>
+              <button
+                onClick={handlePasswordReset}
+                className="text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 underline"
+              >
+                Set Password Now
+              </button>
+            </div>
+            <button
+              onClick={() => setShowWarning(false)}
+              className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-2"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <h1 className="text-3xl font-bold mb-6 dark:text-white">My Profile</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

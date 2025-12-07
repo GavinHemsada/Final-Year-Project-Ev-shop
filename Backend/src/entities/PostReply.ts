@@ -8,6 +8,10 @@ export interface IPostReply extends Document {
   _id: Types.ObjectId;
   /** The ID of the `User` who created the reply. */
   user_id: Types.ObjectId;
+  /** The ID of the `User` who is selling an item in the post. */
+  seller_id: Types.ObjectId;
+  /** The ID of the `Financial` entity related to the post. */
+  financial_id: Types.ObjectId;
   /** The ID of the `Post` this reply belongs to. */
   post_id: Types.ObjectId;
   /** The text content of the reply. */
@@ -18,8 +22,12 @@ export interface IPostReply extends Document {
  * Mongoose schema for the PostReply collection.
  */
 const PostReplySchema = new Schema<IPostReply>({
-  /** A reference to the `User` who created the reply. */
-  user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  /** A reference to the `User` who created the post. */
+  user_id: { type: Schema.Types.ObjectId, ref: 'User' },
+  /** A reference to the `User` who is selling an item in the post. */
+  seller_id: { type: Schema.Types.ObjectId, ref: 'Seller' },
+  /** A reference to the related `Financial` entity. */
+  financial_id: { type: Schema.Types.ObjectId, ref: 'FinancialInstitution' },
   /** A reference to the parent `Post` document. */
   post_id: { type: Schema.Types.ObjectId, ref: 'Post', required: true },
   /** The text content of the reply, which is required. */

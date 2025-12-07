@@ -9,6 +9,10 @@ export interface IPost extends Document {
   _id: Types.ObjectId;
   /** The ID of the `User` who created the post. */
   user_id: Types.ObjectId;
+  /** The ID of the `User` who is selling an item in the post. */
+  seller_id: Types.ObjectId;
+  /** The ID of the `Financial` entity related to the post. */
+  financial_id: Types.ObjectId;
   /** The title of the post. */
   title: string;
   /** The main content/body of the post. */
@@ -26,7 +30,11 @@ export interface IPost extends Document {
  */
 const PostSchema = new Schema<IPost>({
   /** A reference to the `User` who created the post. */
-  user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  user_id: { type: Schema.Types.ObjectId, ref: 'User' },
+  /** A reference to the `User` who is selling an item in the post. */
+  seller_id: { type: Schema.Types.ObjectId, ref: 'Seller' },
+  /** A reference to the related `Financial` entity. */
+  financial_id: { type: Schema.Types.ObjectId, ref: 'FinancialInstitution' },
   /** The title of the post, which is required. */
   title: { type: String, required: true },  
   /** The main content of the post, which is required. */

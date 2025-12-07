@@ -6,6 +6,7 @@ export const queryKeys = {
   orders: (id: string) => ["orders", id],
   evlist: ["evlist"],
   testDrive: (id: string) => ["testDrive", id],
+  checkPassword: (email: string) => ["checkPassword", email],
 
   communityPosts: (search?: string) => ["communityPosts", search || ""],
   communityPost: (id: string) => ["communityPost", id],

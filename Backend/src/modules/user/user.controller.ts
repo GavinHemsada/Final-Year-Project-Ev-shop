@@ -15,6 +15,13 @@ export interface IUserController {
    */
   findAllUsers(req: Request, res: Response): Promise<Response>;
   /**
+   *
+   * @param req - The Express request object.
+   * @param res -
+   * @returns
+   */
+  checkPasswordNull(req: Request, res: Response): Promise<Response>;
+  /**
    * Handles the HTTP request to get a user by their unique ID.
    * @param req - The Express request object, containing the user ID in `req.params`.
    * @param res - The Express response object.
@@ -55,6 +62,20 @@ export function userController(userService: IUserService): IUserController {
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "Error getting all users");
+      }
+    },
+    /**
+     * Checks if the user's password is null.
+     */
+    checkPasswordNull: async (req, res) => {
+      try {
+        // Decode URL-encoded email and trim whitespace/newlines
+        const email = decodeURIComponent(req.params.email).trim();
+        console.log("Controller email:", email);
+        const result = await userService.checkPasswordNull(email);
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "Error checking if password is null");
       }
     },
     /**

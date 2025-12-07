@@ -4,8 +4,10 @@ import {
   UserCircleIcon,
   QuestionMarkCircleIcon,
   LogoutIcon,
+  ExclamationTriangleIcon,
 } from "@/assets/icons/icons";
 import type { ActiveTab } from "@/types";
+import { motion } from "framer-motion";
 
 const apiURL = import.meta.env.VITE_API_URL;
 
@@ -13,12 +15,12 @@ export const ProfileDropdown: React.FC<{
   user: any;
   onLogout: () => void;
   setActiveTab: (tab: ActiveTab) => void;
+  checkPassword: boolean;
 }> = React.memo(
-  ({ user, onLogout, setActiveTab }) => {
-
+  ({ user, onLogout, setActiveTab, checkPassword }) => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-
+    console.log(checkPassword);
     // Close dropdown when clicking outside
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
@@ -86,11 +88,25 @@ export const ProfileDropdown: React.FC<{
                       .join("")
                   : "?"}
               </div>
-            )}
+            )} 
             <div className="hidden md:block text-left">
-              <p className="font-semibold text-sm truncate max-w-[150px]">
-                <span className="dark:text-white">{user.name}</span>
-              </p>
+              <div className="flex items-center gap-1.5">
+                {user.name}
+                {checkPassword === true && isDropdownOpen == false && (
+                  <motion.div
+                    animate={{
+                      scale: [1, 1.2, 1],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    <ExclamationTriangleIcon className="h-4 w-4 text-red-500 dark:text-red-400 flex-shrink-0" />
+                  </motion.div>
+                )}
+              </div>
               <p className="text-xs text-gray-500 truncate max-w-[150px]">
                 <span className="dark:text-gray-400">{user.email}</span>
               </p>
@@ -114,6 +130,20 @@ export const ProfileDropdown: React.FC<{
             >
               <UserCircleIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
               User Profile
+              {checkPassword === true && (
+                  <motion.div
+                    animate={{
+                      scale: [1, 1.2, 1],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    <ExclamationTriangleIcon className="h-4 w-4 text-red-500 dark:text-red-400 flex-shrink-0" />
+                  </motion.div>
+                )}
             </button>
             <button
               onClick={() => handleDropdownItemClick("help")}

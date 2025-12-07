@@ -311,7 +311,9 @@ container.register<IPostService>("PostService", {
   useFactory: (c) =>
     postService(
       c.resolve<IPostRepository>("PostRepository"),
-      c.resolve<IUserRepository>("UserRepository")
+      c.resolve<IUserRepository>("UserRepository"),
+      c.resolve<ISellerRepository>("SellerRepository"),
+      c.resolve<IFinancialRepository>("FinancialRepository")
     ),
 });
 

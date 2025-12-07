@@ -61,9 +61,11 @@ export function repairLocationController(
 
     updateRepairLocation: async (req, res) => {
       try {
+        // Remove seller_id from request body as it should not be changed during update
+        const { seller_id, ...updateData } = req.body;
         const result = await service.updateRepairLocation(
           req.params.id,
-          req.body
+          updateData
         );
         return handleResult(res, result);
       } catch (err) {
@@ -81,4 +83,3 @@ export function repairLocationController(
     },
   };
 }
-

@@ -16,6 +16,7 @@ type HeaderProps = {
   setSearchTerm: (term: string) => void;
   userRole: UserRole[];
   user: any;
+  checkPassword: boolean;
   notifications: any[];
   setActiveTab: (tab: ActiveTab) => void;
   onLogout: () => void;
@@ -29,6 +30,7 @@ export const Header = React.memo(
     setSearchTerm,
     userRole,
     user,
+    checkPassword,
     notifications,
     setActiveTab,
     onLogout,
@@ -155,6 +157,7 @@ export const Header = React.memo(
           {/* Profile */}
           <ProfileDropdown
             user={user}
+            checkPassword={checkPassword}
             onLogout={onLogout}
             setActiveTab={setActiveTab}
           />

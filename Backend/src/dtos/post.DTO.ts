@@ -1,4 +1,4 @@
-import { IsMongoId, IsNotEmpty, IsString, MinLength } from "class-validator";
+import { IsMongoId, IsNotEmpty, IsString, MinLength, ValidateIf } from "class-validator";
 
 /**
  * Data Transfer Object (DTO) for creating a new forum post.
@@ -8,9 +8,22 @@ export class PostDTO {
   /**
    * The MongoDB ObjectId of the user creating the post.
    */
+  @ValidateIf(o => !o.seller_id && !o.financial_id)
   @IsMongoId()
-  user_id!: string;
-
+  user_id?: string;
+  
+  /**
+   * The MongoDB ObjectId of the seller selling the item in the post.
+   */
+  @ValidateIf(o => !o.user_id && !o.financial_id)
+  @IsMongoId()
+  seller_id?: string;
+  /**
+   * The MongoDB ObjectId of the related financial institution.
+   */
+  @ValidateIf(o => !o.user_id && !o.seller_id)
+  @IsMongoId()
+  financial_id?: string;
   /**
    * The title of the post. It must not be empty and should have a minimum length.
    */
@@ -35,8 +48,21 @@ export class PostReplyDTO {
   /**
    * The MongoDB ObjectId of the user creating the reply.
    */
+  @ValidateIf(o => !o.seller_id && !o.financial_id)
   @IsMongoId()
-  user_id!: string;
+  user_id?: string;
+  /**
+   * The MongoDB ObjectId of the seller selling the item in the post.
+   */
+  @ValidateIf(o => !o.user_id && !o.financial_id)
+  @IsMongoId()
+  seller_id?: string;
+  /**
+   * The MongoDB ObjectId of the related financial institution.
+   */
+  @ValidateIf(o => !o.user_id && !o.seller_id)
+  @IsMongoId()
+  financial_id?: string;
   /**
    * The MongoDB ObjectId of the post being replied to.
    */

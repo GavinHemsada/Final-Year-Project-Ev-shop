@@ -39,7 +39,7 @@ export interface IFinancialRepository {
    * @param id - The ID of the institution to find.
    * @returns A promise that resolves to the institution document or null if not found.
    */
-  findInstitutionById(id: string): Promise<IFinancialInstitution | null>;
+  findById(id: string): Promise<IFinancialInstitution | null>;
   /**
    * Finds a financial institution by the associated user's ID.
    * @param id - The ID of the user.
@@ -180,7 +180,7 @@ export const FinancialRepository: IFinancialRepository = {
     return await institution.save();
   }),
   /** Finds a single financial institution by its document ID. */
-  findInstitutionById: withErrorHandling(async (id) =>
+  findById: withErrorHandling(async (id) =>
     FinancialInstitution.findById(id)
   ),
   /** Retrieves all financial institutions. */

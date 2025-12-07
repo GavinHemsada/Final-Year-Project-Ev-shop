@@ -1,7 +1,7 @@
-import React from "react";
+import { useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { CloseIcon } from "@/assets/icons/icons";
-import type { Vehicle, AlertProps } from "@/types";
+import type { CartItem } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { Loader } from "@/components/Loader";
 import { useCart, useRemoveCartItem, useUpdateCartItem } from "@/hooks/useCart";
@@ -9,20 +9,12 @@ import { useToast } from "@/context/ToastContext";
 
 const apiURL = import.meta.env.VITE_API_URL;
 
-interface CartItem {
-  _id: string;
-  listing_id: Vehicle;
-  quantity: number;
-}
-
-const CartPage: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = ({
-  setAlert, // Keep for backward compatibility but prefer toast
-}) => {
+const CartPage = () => {
   const { getUserID } = useAuth();
   const userId = getUserID();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  
+
   // Use React Query hooks
   const { data: cart, isLoading, error } = useCart(userId);
   const removeCartItemMutation = useRemoveCartItem();
@@ -30,53 +22,60 @@ const CartPage: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = ({
 
   const cartItems: CartItem[] = cart?.items || [];
 
-  const onRemove = async (itemId: string) => {
-    if (!userId) return;
+  const onRemove = useCallback(
+    async (itemId: string) => {
+      if (!userId) return;
 
-    try {
-      await removeCartItemMutation.mutateAsync({ itemId, userId });
-      showToast({
-        text: "Item removed from cart",
-        type: "success",
-      });
-    } catch (error: any) {
-      console.error("Failed to remove item:", error);
-      const errorMessage =
-        error?.response?.data?.message || "Failed to remove item";
-      showToast({
-        text: errorMessage,
-        type: "error",
-      });
-    }
-  };
+      try {
+        await removeCartItemMutation.mutateAsync({ itemId, userId });
+        showToast({
+          text: "Item removed from cart",
+          type: "success",
+        });
+      } catch (error: any) {
+        console.error("Failed to remove item:", error);
+        const errorMessage =
+          error?.response?.data?.message || "Failed to remove item";
+        showToast({
+          text: errorMessage,
+          type: "error",
+        });
+      }
+    },
+    [userId, removeCartItemMutation, showToast]
+  );
 
-  const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
-    if (!userId || newQuantity < 1) return;
+  const handleUpdateQuantity = useCallback(
+    async (itemId: string, newQuantity: number) => {
+      if (!userId || newQuantity < 1) return;
 
-    try {
-      await updateCartItemMutation.mutateAsync({
-        itemId,
-        quantity: newQuantity,
-        userId,
-      });
-    } catch (error: any) {
-      console.error("Failed to update quantity:", error);
-      const errorMessage =
-        error?.response?.data?.message || "Failed to update quantity";
-      showToast({
-        text: errorMessage,
-        type: "error",
-      });
-    }
-  };
+      try {
+        await updateCartItemMutation.mutateAsync({
+          itemId,
+          quantity: newQuantity,
+          userId,
+        });
+      } catch (error: any) {
+        console.error("Failed to update quantity:", error);
+        const errorMessage =
+          error?.response?.data?.message || "Failed to update quantity";
+        showToast({
+          text: errorMessage,
+          type: "error",
+        });
+      }
+    },
+    [userId, updateCartItemMutation, showToast]
+  );
 
-  const totalPrice = cartItems.reduce((total, item) => {
-    const vehicle = item.listing_id;
-    if (vehicle && vehicle.price) {
-      return total + vehicle.price * item.quantity;
-    }
-    return total;
-  }, 0);
+  const totalPrice = useMemo(
+    () =>
+      cartItems.reduce((total, item) => {
+        const vehicle = item.listing_id;
+        return vehicle?.price ? total + vehicle.price * item.quantity : total;
+      }, 0),
+    [cartItems]
+  );
 
   // Format the total price back to LKR string
   const formattedTotalPrice = `LKR ${new Intl.NumberFormat("en-US").format(

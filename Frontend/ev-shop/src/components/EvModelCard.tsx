@@ -76,7 +76,7 @@ export const EvModelCard = React.memo(
             />
           )}
 
-          <h2 className="absolute bottom-4 left-4 text-3xl font-bold">
+          <h2 className="absolute bottom-4 left-4 text-3xl font-bold text-white z-10">
             {name}
           </h2>
         </div>

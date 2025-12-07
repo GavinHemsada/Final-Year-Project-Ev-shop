@@ -128,6 +128,13 @@ const SellerDashboard: React.FC = () => {
     setConfirmHandler(null);
   }, []);
 
+  const handleConfirm = useCallback(() => {
+    if (confirmAlert?.onConfirmAction) {
+      confirmAlert.onConfirmAction();
+    }
+    setConfirmAlert(null);
+  }, [confirmAlert]);
+
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
@@ -160,11 +167,16 @@ const SellerDashboard: React.FC = () => {
       case "reviews":
         return <MyReviewsPage setAlert={handleSetAlert} />;
       case "community":
-        return <CommunityPage setAlert={handleSetAlert} />;
+        return <CommunityPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
       case "repairLocations":
         return <RepairLocationsPage setAlert={handleSetAlert} />;
       case "editEvlist":
-        return <EvListingStepper setAlert={handleSetAlert} listingId={editListingId} />;
+        return (
+          <EvListingStepper
+            setAlert={handleSetAlert}
+            listingId={editListingId}
+          />
+        );
       default:
         return (
           <SellerDashboardPage
@@ -204,13 +216,9 @@ const SellerDashboard: React.FC = () => {
             message: confirmAlert.message,
             confirmText: confirmAlert.confirmText,
             cancelText: confirmAlert.cancelText,
+            onConfirmAction: confirmAlert.onConfirmAction,
           }}
-          onConfirm={() => {
-            if (confirmHandler) {
-              confirmHandler();
-            }
-            handleCloseConfirmAlert();
-          }}
+          onConfirm={handleConfirm}
           onCancel={handleCloseConfirmAlert}
         />
       )}

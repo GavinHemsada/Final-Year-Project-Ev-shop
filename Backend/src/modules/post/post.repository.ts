@@ -11,6 +11,9 @@ import { PostView } from "../../entities/PostView";
  */
 export interface IPostRepository {
   // Post methods
+
+  /** @deprecated Use findPostById instead. */
+  findbyid: (id: string) => Promise<IPost | null>;
   /**
    * Finds a single post by its unique ID, including its replies.
    * @param id - The ID of the post to find.
@@ -28,6 +31,18 @@ export interface IPostRepository {
    * @returns A promise that resolves to an array of post documents or null.
    */
   findPostsByUserId(user_id: string): Promise<IPost[] | null>;
+  /**
+   * Finds all posts created by a specific seller, including their replies.
+   * @param seller_id - The ID of the seller.
+   * @returns A promise that resolves to an array of post documents or null.
+   */
+  findPostsBySellerId(seller_id: string): Promise<IPost[] | null>;
+  /**
+   * Finds all posts created by a specific financial user, including their replies.
+   * @param financial_id - The ID of the financial user.
+   * @returns A promise that resolves to an array of post documents or null.
+   */
+  findPostsByFinancialId(financial_id: string): Promise<IPost[] | null>;
   /**
    * Creates a new forum post.
    * @param data - The DTO containing the details for the new post.
@@ -50,9 +65,11 @@ export interface IPostRepository {
    */
   hasUserViewedPostToday(
     post_id: string,
-    user_id: string,
-    view_date: string
-  ): Promise<boolean>;
+    view_date: string,
+    user_id?: string,
+    seller_id?: string,
+    financial_id?: string
+  ): Promise<boolean | null>;
   /**
    * Records a view for a post by a user on a specific date.
    * @param post_id - The ID of the post.
@@ -69,10 +86,17 @@ export interface IPostRepository {
    * Atomically increments the view count for a post by 1.
    * Only increments if the user hasn't viewed the post today.
    * @param id - The ID of the post to update.
-   * @param user_id - The ID of the user viewing the post.
+   * @param user_id - Optional ID of the user viewing the post.
+   * @param seller_id - Optional ID of the seller viewing the post.
+   * @param financial_id - Optional ID of the financial user viewing the post.
    * @returns A promise that resolves to the updated post document or null, or false if already viewed today.
    */
-  updatePostViews(id: string, user_id: string): Promise<IPost | null | false>;
+  updatePostViews(
+    id: string,
+    user_id?: string,
+    seller_id?: string,
+    financial_id?: string
+  ): Promise<IPost | null | false>;
   /**
    * Updates the reply count for a post.
    * @param id - The ID of the post to update.
@@ -117,6 +141,18 @@ export interface IPostRepository {
    */
   findRepliesByUserId(user_id: string): Promise<IPostReply[] | null>;
   /**
+   * Finds all replies created by a specific seller.
+   * @param seller_id - The ID of the seller.
+   * @returns A promise that resolves to an array of reply documents or null.
+   */
+  findRepliesBySellerId(seller_id: string): Promise<IPostReply[] | null>;
+  /**
+   * Finds all replies created by a specific financial user.
+   * @param financial_id - The ID of the financial user.
+   * @returns A promise that resolves to an array of reply documents or null.
+   */
+  findRepliesByFinancialId(financial_id: string): Promise<IPostReply[] | null>;
+  /**
    * Retrieves all replies from the database.
    * @returns A promise that resolves to an array of all reply documents or null.
    */
@@ -152,49 +188,140 @@ export interface IPostRepository {
  */
 export const PostRepository: IPostRepository = {
   // Posts
-  /** Finds a single post by ID and uses an aggregation pipeline to join its replies. */
+  /** @deprecated Use findPostById instead. */
+  findbyid: withErrorHandling(async (id: string) => {
+    return await Post.findById(id);
+  }),
+  /** Finds a single post by ID and uses replies and seller info. */
   findPostById: withErrorHandling(async (id: string) => {
+    const objectId = new Types.ObjectId(id);
+
     const result = await Post.aggregate([
-      { $match: { _id: new Types.ObjectId(id) } },
+      { $match: { _id: objectId } },
+
+      // --- Populate user_id ---
       {
         $lookup: {
-          from: "users", // The collection name for the User model
+          from: "users",
           localField: "user_id",
           foreignField: "_id",
-          as: "author",
+          as: "user_id",
+          pipeline: [{ $project: { name: 1, profile_image: 1 } }],
         },
       },
-      { $unwind: "$author" }, // Deconstruct the author array
+      { $unwind: "$user_id" },
+
+      // --- Populate seller_id ---
       {
         $lookup: {
-          from: "postreplies", // The collection name for the PostReply model
+          from: "sellers",
+          localField: "seller_id",
+          foreignField: "_id",
+          as: "seller_id",
+          pipeline: [{ $project: { business_name: 1, shop_logo: 1 } }],
+        },
+      },
+      { $unwind: { path: "$seller_id", preserveNullAndEmptyArrays: true } },
+
+      // --- Populate financial_id ---
+      {
+        $lookup: {
+          from: "financialinstitutions",
+          localField: "financial_id",
+          foreignField: "_id",
+          as: "financial_id",
+          pipeline: [{ $project: { name: 1 } }],
+        },
+      },
+      { $unwind: { path: "$financial_id", preserveNullAndEmptyArrays: true } },
+
+      // --- Load all replies for this post (JOIN PostReply → replies[] ) ---
+      {
+        $lookup: {
+          from: "postreplies",
           localField: "_id",
           foreignField: "post_id",
           as: "replies",
-        },
-      },
-      {
-        $project: {
-          // Select fields to return, excluding sensitive author info
-          "author.password": 0,
-          "author.email": 0,
+
+          pipeline: [
+            // Populate reply.user_id
+            {
+              $lookup: {
+                from: "users",
+                localField: "user_id",
+                foreignField: "_id",
+                as: "user_id",
+                pipeline: [{ $project: { name: 1, profile_image: 1 } }],
+              },
+            },
+            { $unwind: { path: "$user_id", preserveNullAndEmptyArrays: true } },
+
+            // Populate reply.seller_id
+            {
+              $lookup: {
+                from: "sellers",
+                localField: "seller_id",
+                foreignField: "_id",
+                as: "seller_id",
+                pipeline: [{ $project: { business_name: 1, shop_logo: 1 } }],
+              },
+            },
+            {
+              $unwind: { path: "$seller_id", preserveNullAndEmptyArrays: true },
+            },
+
+            // Populate reply.financial_id
+            {
+              $lookup: {
+                from: "financialinstitutions",
+                localField: "financial_id",
+                foreignField: "_id",
+                as: "financial_id",
+                pipeline: [{ $project: { name: 1 } }],
+              },
+            },
+            {
+              $unwind: {
+                path: "$financial_id",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+          ],
         },
       },
     ]);
-    return result[0] || null;
+
+    return result?.[0] ?? null;
   }),
-  /** Retrieves all posts, sorted by creation date, and populates author details. */
+
+  /** Retrieves all posts, sorted by creation date, and populates author details with seller info. */
   findAllPosts: withErrorHandling(async () => {
     return await Post.find()
       .sort({ createdAt: -1 })
       .populate("user_id", "name profile_image")
+      .populate("seller_id", "business_name shop_logo")
+      .populate("financial_id", "name")
       .populate("last_reply_by", "name profile_image");
   }),
-  /** Retrieves all posts by a specific user, sorted by creation date, and populates author details. */
+  /** Retrieves all posts by a specific user, sorted by creation date, and populates author details with seller info. */
   findPostsByUserId: withErrorHandling(async (user_id: string) => {
     return await Post.find({ user_id: new Types.ObjectId(user_id) })
       .sort({ createdAt: -1 })
-      .populate("user_id", "name profile_image")
+      .populate("user_id", "name profile_image role")
+      .populate("last_reply_by", "name profile_image");
+  }),
+  /** Retrieves all posts by a specific seller, sorted by creation date, and populates author details. */
+  findPostsBySellerId: withErrorHandling(async (seller_id: string) => {
+    return await Post.find({ seller_id: new Types.ObjectId(seller_id) })
+      .sort({ createdAt: -1 })
+      .populate("seller_id", "business_name shop_logo")
+      .populate("last_reply_by", "name profile_image");
+  }),
+  /** Retrieves all posts by a specific financial user, sorted by creation date, and populates author details. */
+  findPostsByFinancialId: withErrorHandling(async (financial_id: string) => {
+    return await Post.find({ financial_id: new Types.ObjectId(financial_id) })
+      .sort({ createdAt: -1 })
+      .populate("financial_id", "name")
       .populate("last_reply_by", "name profile_image");
   }),
   /** Creates a new Post document. */
@@ -206,25 +333,41 @@ export const PostRepository: IPostRepository = {
     return await Post.findByIdAndUpdate(id, data, { new: true });
   }),
   /** Checks if a user has already viewed a post today. */
-  hasUserViewedPostToday: async (
-    post_id: string,
-    user_id: string,
-    view_date: string
-  ): Promise<boolean> => {
-    try {
-      const view = await PostView.findOne({ post_id, user_id, view_date });
+  hasUserViewedPostToday: withErrorHandling(
+    async (
+      post_id: string,
+      view_date: string,
+      user_id?: string,
+      seller_id?: string,
+      financial_id?: string
+    ): Promise<boolean | null> => {
+      const query: any = { post_id, view_date };
+
+      if (user_id) query.user_id = user_id;
+      if (seller_id) query.seller_id = seller_id;
+      if (financial_id) query.financial_id = financial_id;
+
+      const view = await PostView.findOne(query);
+
       return view !== null;
-    } catch (error) {
-      console.error(`Error checking if user viewed post today:`, error);
-      return false; // Return false on error (assume not viewed)
     }
-  },
+  ),
 
   /** Records a view for a post by a user on a specific date. */
   createPostView: withErrorHandling(
-    async (post_id: string, user_id: string, view_date: string) => {
+    async (
+      post_id: string,
+      view_date: string,
+      user_id?: string,
+      seller_id?: string,
+      financial_id?: string
+    ) => {
       try {
-        return await PostView.create({ post_id, user_id, view_date });
+        const query: any = { post_id, view_date };
+        if (user_id) query.user_id = user_id;
+        if (seller_id) query.seller_id = seller_id;
+        if (financial_id) query.financial_id = financial_id;
+        return await PostView.create(query);
       } catch (error: any) {
         // If duplicate key error (unique index violation), return null
         if (error.code === 11000) {
@@ -236,39 +379,45 @@ export const PostRepository: IPostRepository = {
   ),
 
   /** Finds a post by ID and atomically increments its view count if user hasn't viewed today. */
-  updatePostViews: withErrorHandling(async (id: string, user_id: string) => {
-    // Get today's date in YYYY-MM-DD format
-    const today = new Date().toISOString().split("T")[0];
-
-    // Check if user has already viewed this post today
-    const hasViewed = await PostView.findOne({
-      post_id: id,
-      user_id,
-      view_date: today,
-    });
-    if (hasViewed) {
-      // User has already viewed today, don't increment
-      return false;
-    }
-
-    // Create the view record first (this will fail if duplicate due to unique index)
-    try {
-      await PostView.create({ post_id: id, user_id, view_date: today });
-    } catch (error: any) {
-      // If duplicate key error, another request already created it, so don't increment
-      if (error.code === 11000) {
+  updatePostViews: withErrorHandling(
+    async (
+      id: string,
+      user_id?: string,
+      seller_id?: string,
+      financial_id?: string
+    ) => {
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split("T")[0];
+      const query: any = { post_id: id, view_date: today };
+      if (user_id) query.user_id = user_id;
+      if (seller_id) query.seller_id = seller_id;
+      if (financial_id) query.financial_id = financial_id;
+      // Check if user has already viewed this post today
+      const hasViewed = await PostView.findOne(query);
+      if (hasViewed) {
+        // User has already viewed today, don't increment
         return false;
       }
-      throw error;
-    }
 
-    // If view record was created successfully, increment the post's view count
-    return await Post.findByIdAndUpdate(
-      id,
-      { $inc: { views: 1 } },
-      { new: true }
-    );
-  }),
+      // Create the view record first (this will fail if duplicate due to unique index)
+      try {
+        await PostView.create(query);
+      } catch (error: any) {
+        // If duplicate key error, another request already created it, so don't increment
+        if (error.code === 11000) {
+          return false;
+        }
+        throw error;
+      }
+
+      // If view record was created successfully, increment the post's view count
+      return await Post.findByIdAndUpdate(
+        id,
+        { $inc: { views: 1 } },
+        { new: true }
+      );
+    }
+  ),
   /** Finds a post by ID and updates its reply count. */
   updatePostReplyCount: withErrorHandling(
     async (id: string, reply_count: number) => {
@@ -283,31 +432,51 @@ export const PostRepository: IPostRepository = {
   ),
   /** Deletes a post by its document ID. */
   deletePost: withErrorHandling(async (id: string) => {
-    const result = await Post.findByIdAndDelete(id);
-    return result !== null;
+    const objectId = new Types.ObjectId(id);
+    // Concurrently delete the post, its replies, and its views
+    const [deletePostResult] = await Promise.all([
+      Post.findByIdAndDelete(objectId),
+      PostReply.deleteMany({ post_id: objectId }),
+      PostView.deleteMany({ post_id: objectId }),
+    ]);
+    return deletePostResult !== null;
   }),
 
   // Replies
   /** Finds a single reply by its document ID and populates the author's details. */
   findReplyById: withErrorHandling(async (id: string) => {
-    return await PostReply.findById(id).populate(
-      "user_id",
-      "name profile_image"
-    );
+    return await PostReply.findById(id)
+      .populate("user_id", "name profile_image")
+      .populate("seller_id", "business_name shop_logo")
+      .populate("financial_id", "name");
   }),
   /** Finds all replies for a specific post, sorted by creation date, and populates author details. */
   findRepliesByPostId: withErrorHandling(async (post_id: string) => {
     return await PostReply.find({ post_id })
       .sort({ createdAt: -1 })
-      .populate("user_id", "name profile_image");
+      .populate("user_id", "name profile_image")
+      .populate("seller_id", "business_name shop_logo")
+      .populate("financial_id", "name");
   }),
   /** Finds all replies by a specific user, sorted by creation date. */
   findRepliesByUserId: withErrorHandling(async (user_id: string) => {
     return await PostReply.find({ user_id }).sort({ createdAt: -1 });
   }),
+  /** Finds all replies by a specific seller, sorted by creation date. */
+  findRepliesBySellerId: withErrorHandling(async (seller_id: string) => {
+    return await PostReply.find({ seller_id }).sort({ createdAt: -1 });
+  }),
+  /** Finds all replies by a specific financial user, sorted by creation date. */
+  findRepliesByFinancialId: withErrorHandling(async (financial_id: string) => {
+    return await PostReply.find({ financial_id }).sort({ createdAt: -1 });
+  }),
   /** Retrieves all replies across all posts, sorted by creation date. */
   findAllReplies: withErrorHandling(async () => {
-    return await PostReply.find().sort({ createdAt: -1 });
+    return await PostReply.find()
+      .sort({ createdAt: -1 })
+      .populate("user_id", "name profile_image")
+      .populate("seller_id", "business_name shop_logo")
+      .populate("financial_id", "name");
   }),
   /** Creates a new PostReply document. */
   createReply: withErrorHandling(async (data: PostReplyDTO) => {

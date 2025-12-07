@@ -4,7 +4,7 @@ import { ChatBubbleIcon, SearchIcon } from "@/assets/icons/icons";
 import type { AlertProps, Post, PostReply, ConfirmAlertProps } from "@/types";
 import { buyerService } from "../buyerService";
 import { useAuth } from "@/context/AuthContext";
-import { Loader, PageLoader } from "@/components/Loader";
+import { Loader } from "@/components/Loader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
 import { FaUser, FaUsers, FaPlusCircle } from "react-icons/fa";
@@ -33,8 +33,9 @@ export const CommunityPage: React.FC<{
   setAlert?: (alert: AlertProps | null) => void;
   setConfirmAlert?: (confirmAlert: ConfirmAlertProps | null) => void;
 }> = ({ setAlert, setConfirmAlert }) => {
-  const { getUserID } = useAuth();
+  const { getUserID, getActiveRole } = useAuth();
   const userId = getUserID();
+  const userRole = getActiveRole();
   const [activeTab, setActiveTab] = useState<"community" | "myPosts">(
     "community"
   );
@@ -55,7 +56,7 @@ export const CommunityPage: React.FC<{
   const queryClient = useQueryClient();
 
   // Fetch all community posts with search
-  const { data: postsData, isLoading: isLoadingCommunity } = useQuery({
+  const { data: postsData } = useQuery({
     queryKey: queryKeys.communityPosts(searchQuery),
     queryFn: async () => {
       const params = searchQuery ? { search: searchQuery } : {};
@@ -67,7 +68,7 @@ export const CommunityPage: React.FC<{
   });
 
   // Fetch user's own posts
-  const { data: myPostsData, isLoading: isLoadingMyPosts } = useQuery({
+  const { data: myPostsData } = useQuery({
     queryKey: queryKeys.myPosts(userId!),
     queryFn: async () => {
       if (!userId) return [];
@@ -81,8 +82,8 @@ export const CommunityPage: React.FC<{
   const allPosts: Post[] = useMemo(() => postsData || [], [postsData]);
   const myPosts: Post[] = useMemo(() => myPostsData || [], [myPostsData]);
 
-  const isLoading =
-    activeTab === "community" ? isLoadingCommunity : isLoadingMyPosts;
+  // const isLoading =
+  //   activeTab === "community" ? isLoadingCommunity : isLoadingMyPosts;
   const displayedPosts = activeTab === "community" ? allPosts : myPosts;
 
   // Mutations
@@ -298,10 +299,6 @@ export const CommunityPage: React.FC<{
     },
     [userId, setAlert]
   );
-
-  if (isLoading) {
-    return <PageLoader />;
-  }
 
   return (
     <div className="space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen pb-8">
@@ -529,11 +526,7 @@ export const CommunityPage: React.FC<{
 
       {/* Posts Feed */}
       <div className="space-y-6">
-        {isLoading ? (
-          <div className="flex justify-center items-center min-h-[400px]">
-            <PageLoader />
-          </div>
-        ) : displayedPosts.length === 0 ? (
+        {displayedPosts.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -580,6 +573,7 @@ export const CommunityPage: React.FC<{
                 <PostItem
                   post={post}
                   userId={userId}
+                  userRole={userRole}
                   onEdit={handleEditClick}
                   onDelete={handleDeletePost}
                   onView={handleViewPost}
@@ -687,40 +681,68 @@ export const CommunityPage: React.FC<{
                     </p>
                   </div>
                 ) : (
-                  replies.map((reply, index) => (
-                    <motion.div
-                      key={reply._id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="bg-white dark:bg-gray-800 border-l-4 border-blue-500 pl-5 py-4 rounded-r-xl shadow-md"
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        {reply.user_id.profile_image ? (
-                          <img
-                            src={`${apiURL}${reply.user_id.profile_image}`}
-                            alt={reply.user_id.name}
-                            className="h-10 w-10 rounded-full object-cover ring-2 ring-blue-100 dark:ring-blue-900"
-                          />
-                        ) : (
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-md">
-                            {reply.user_id.name.charAt(0).toUpperCase()}
+                  replies.map((reply, index) => {
+                    // Determine author info - handle user, seller, or financial
+                    const isSeller =
+                      reply.seller_id && reply.seller_id.business_name;
+                    const isFinancial =
+                      reply.financial_id && reply.financial_id.name;
+
+                    let authorName = "";
+                    let authorImage: string | undefined = undefined;
+                    let authorInitial = "";
+
+                    if (isSeller && reply.seller_id) {
+                      authorName = reply.seller_id.business_name || "Seller";
+                      authorImage = reply.seller_id.shop_logo;
+                      authorInitial = authorName.charAt(0).toUpperCase();
+                    } else if (isFinancial && reply.financial_id) {
+                      authorName = reply.financial_id.name;
+                      authorInitial = authorName.charAt(0).toUpperCase();
+                    } else if (reply.user_id) {
+                      authorName = reply.user_id.name;
+                      authorImage = reply.user_id.profile_image;
+                      authorInitial = authorName.charAt(0).toUpperCase();
+                    } else {
+                      authorName = "Unknown";
+                      authorInitial = "?";
+                    }
+
+                    return (
+                      <motion.div
+                        key={reply._id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                        className="bg-white dark:bg-gray-800 border-l-4 border-blue-500 pl-5 py-4 rounded-r-xl shadow-md"
+                      >
+                        <div className="flex items-center gap-3 mb-3">
+                          {authorImage ? (
+                            <img
+                              src={`${apiURL}${authorImage}`}
+                              alt={authorName}
+                              className="h-10 w-10 rounded-full object-cover ring-2 ring-blue-100 dark:ring-blue-900"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-md">
+                              {authorInitial}
+                            </div>
+                          )}
+                          <div>
+                            <span className="font-semibold text-gray-900 dark:text-white block">
+                              {authorName}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {formatDate(reply.createdAt)}
+                            </span>
                           </div>
-                        )}
-                        <div>
-                          <span className="font-semibold text-gray-900 dark:text-white block">
-                            {reply.user_id.name}
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatDate(reply.createdAt)}
-                          </span>
                         </div>
-                      </div>
-                      <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                        {reply.content}
-                      </p>
-                    </motion.div>
-                  ))
+                        <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                          {reply.content}
+                        </p>
+                      </motion.div>
+                    );
+                  })
                 )}
               </div>
 

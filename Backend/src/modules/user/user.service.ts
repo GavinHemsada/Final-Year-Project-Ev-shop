@@ -15,7 +15,14 @@ export interface IUserService {
   findById(
     id: string
   ): Promise<{ success: boolean; user?: any; error?: string }>;
-
+  /**
+   * Checks if the user's password is null by email.
+   * @param email - The email of the user to check.
+   * @returns A promise that resolves to an object indicating if the password is null or an error.
+   */
+  checkPasswordNull(
+    email: string
+  ): Promise<{ success: boolean; isNull?: boolean; error?: string }>;
   /**
    * Updates a user's information.
    * @param id - The ID of the user to update.
@@ -75,6 +82,18 @@ export function userService(userRepo: IUserRepository): IUserService {
         return { success: true, users: cachedUsers };
       } catch (err) {
         return { success: false, error: "Failed to fetch users" };
+      }
+    },
+
+    checkPasswordNull: async (email) => {
+      try {
+        const isNull = await userRepo.checkPasswordNull(email);
+        if (isNull === null) {
+          return { success: false, error: "User not found" };
+        }
+        return { success: true, isNull: isNull };
+      } catch (err) {
+        return { success: false, error: "Failed to check password status" };
       }
     },
 

@@ -27,6 +27,18 @@ export interface IPostController {
    */
   findPostsByUserId(req: Request, res: Response): Promise<Response>;
   /**
+   * Handles the HTTP request to get all posts created by a specific seller.
+   * @param req - The Express request object, containing the seller ID in `req.params`.
+   * @param res - The Express response object.
+   */
+  findPostsBySellerId(req: Request, res: Response): Promise<Response>;
+  /**
+   * Handles the HTTP request to get all posts created by a specific financial user.
+   * @param req - The Express request object, containing the financial ID in `req.params`.
+   * @param res - The Express response object.
+   */
+  findPostsByFinancialId(req: Request, res: Response): Promise<Response>;
+  /**
    * Handles the HTTP request to create a new post.
    * @param req - The Express request object, containing post data in the body.
    * @param res - The Express response object.
@@ -82,6 +94,18 @@ export interface IPostController {
    * @param res - The Express response object.
    */
   findRepliesByUserId(req: Request, res: Response): Promise<Response>;
+  /**
+   * Handles the HTTP request to get all replies created by a specific seller.
+   * @param req - The Express request object, containing the seller ID in `req.params`.
+   * @param res - The Express response object.
+   */
+  findRepliesBySellerId(req: Request, res: Response): Promise<Response>;
+  /**
+   * Handles the HTTP request to get all replies created by a specific financial user.
+   * @param req - The Express request object, containing the financial ID in `req.params`.
+   * @param res - The Express response object.
+   */
+  findRepliesByFinancialId(req: Request, res: Response): Promise<Response>;
   /**
    * Handles the HTTP request to retrieve all replies across all posts.
    * @param req - The Express request object.
@@ -159,13 +183,36 @@ export function postController(postService: IPostService): IPostController {
       }
     },
     /**
+     * Retrieves all posts created by a specific seller.
+     */
+    findPostsBySellerId: async (req, res) => {
+      const seller_id = req.params.seller_id;
+      try {
+        const result = await postService.findPostsBySellerId(seller_id);
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "fetching posts by seller id");
+      }
+    },
+    /**
+     * Retrieves all posts created by a specific financial user.
+     */
+    findPostsByFinancialId: async (req, res) => {
+      const financial_id = req.params.financial_id;
+      try {
+        const result = await postService.findPostsByFinancialId(financial_id);
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "fetching posts by financial id");
+      }
+    },
+    /**
      * Creates a new post.
      */
     createPost: async (req, res) => {
-      const user_id = req.body.user_id;
-      const postData = req.body;
+      const { user_id, seller_id, financial_id, ...postData } = req.body;
       try {
-        const result = await postService.createPost(user_id, postData);
+        const result = await postService.createPost(user_id, seller_id, financial_id, postData);
         return handleResult(res, result, 201);
       } catch (err) {
         return handleError(res, err, "creating post");
@@ -191,11 +238,21 @@ export function postController(postService: IPostService): IPostController {
     updatePostViews: async (req, res) => {
       const id = req.params.id;
       const user_id = req.user?.userId; // Get user_id from JWT token (set by protectJWT middleware)
-      if (!user_id) {
-        return res.status(401).json({ success: false, error: "User not authenticated" });
+      const seller_id = req.body?.seller_id; // Optional seller_id from request body
+      const financial_id = req.body?.financial_id; // Optional financial_id from request body
+
+      if (!user_id && !seller_id && !financial_id) {
+        return res
+          .status(401)
+          .json({ success: false, error: "User not authenticated" });
       }
       try {
-        const result = await postService.updatePostViews(id, user_id);
+        const result = await postService.updatePostViews(
+          id,
+          user_id,
+          seller_id,
+          financial_id
+        );
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "updating post views");
@@ -280,6 +337,30 @@ export function postController(postService: IPostService): IPostController {
       }
     },
     /**
+     * Retrieves all replies created by a specific seller.
+     */
+    findRepliesBySellerId: async (req, res) => {
+      const seller_id = req.params.seller_id;
+      try {
+        const result = await postService.findRepliesBySellerId(seller_id);
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "fetching replies by seller id");
+      }
+    },
+    /**
+     * Retrieves all replies created by a specific financial user.
+     */
+    findRepliesByFinancialId: async (req, res) => {
+      const financial_id = req.params.financial_id;
+      try {
+        const result = await postService.findRepliesByFinancialId(financial_id);
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "fetching replies by financial id");
+      }
+    },
+    /**
      * Retrieves a list of all replies from all posts.
      */
     findAllReplies: async (req, res) => {
@@ -294,10 +375,9 @@ export function postController(postService: IPostService): IPostController {
      * Creates a new reply for a post.
      */
     createReply: async (req, res) => {
-      const user_id = req.body.user_id;
-      const replyData = req.body;
+      const { user_id, seller_id, financial_id, ...replyData } = req.body;
       try {
-        const result = await postService.createReply(user_id, replyData);
+        const result = await postService.createReply(user_id, seller_id, financial_id, replyData);
         return handleResult(res, result, 201);
       } catch (err) {
         return handleError(res, err, "creating reply");

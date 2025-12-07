@@ -42,6 +42,7 @@ import { PageLoader } from "@/components/Loader";
 import { buyerService } from "../buyerService";
 import {
   useQueries,
+  useQuery,
   type UseQueryOptions,
   type UseQueryResult,
 } from "@tanstack/react-query";
@@ -133,7 +134,18 @@ const App: React.FC = () => {
           .includes(searchTerm.toLowerCase())
       ),
     [vehicles, searchTerm]
-  );
+  ); 
+
+  const checkpassword = useQuery({
+    queryKey: queryKeys.checkPassword(user?.email!),
+    queryFn: () => buyerService.checkPasswordNull(user!.email!),
+    enabled: !!user?.email,
+    staleTime: 10 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+  const isPasswordNull = checkpassword.data;
 
   const paginatedVehicles = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -150,9 +162,12 @@ const App: React.FC = () => {
     setAlert(null);
   }, []);
 
-  const handleSetConfirmAlert = useCallback((confirmAlertData: ConfirmAlertProps | null) => {
-    setConfirmAlert(confirmAlertData);
-  }, []);
+  const handleSetConfirmAlert = useCallback(
+    (confirmAlertData: ConfirmAlertProps | null) => {
+      setConfirmAlert(confirmAlertData);
+    },
+    []
+  );
 
   const handleConfirm = useCallback(() => {
     if (confirmAlert?.onConfirmAction) {
@@ -178,7 +193,7 @@ const App: React.FC = () => {
           setAlert={handleSetAlert}
         />
       ),
-      profile: <UserProfile user={user!} setAlert={handleSetAlert} />,
+      profile: <UserProfile user={user!} setAlert={handleSetAlert} checkPassword={isPasswordNull} />,
       orders: <OrderHistory setAlert={handleSetAlert} />,
       services: <Services setAlert={handleSetAlert} />,
       financing: <FinancingPage setAlert={handleSetAlert} />,
@@ -192,7 +207,12 @@ const App: React.FC = () => {
       cart: <CartPage />,
       testDrives: <TestDrivesPage setAlert={handleSetAlert} />,
       reviews: <MyReviewsPage setAlert={handleSetAlert} />,
-      community: <CommunityPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />,
+      community: (
+        <CommunityPage
+          setAlert={handleSetAlert}
+          setConfirmAlert={handleSetConfirmAlert}
+        />
+      ),
     }),
     [
       filteredVehicles,
@@ -267,6 +287,7 @@ const App: React.FC = () => {
             userRole={userRole}
             user={user}
             notifications={notifications}
+            checkPassword={isPasswordNull}
             onLogout={handleLogout}
             setActiveTab={handleSetActiveTab}
             onBecomeSellerClick={setSellermodeOpen}

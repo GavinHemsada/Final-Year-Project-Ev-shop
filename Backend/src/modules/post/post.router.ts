@@ -122,6 +122,66 @@ export const postRouter = (): Router => {
 
   /**
    * @swagger
+   * /post/posts/seller/{seller_id}:
+   *   get:
+   *     summary: Get posts by seller ID
+   *     description: Retrieves all posts created by a specific seller.
+   *     tags: [Posts]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: seller_id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the seller whose posts are to be retrieved.
+   *     responses:
+   *       '200':
+   *         description: A list of the seller's posts.
+   *       '401':
+   *         description: Unauthorized.
+   *       '404':
+   *         description: Seller not found or no posts found.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.get("/posts/seller/:seller_id", (req, res) =>
+    postController.findPostsBySellerId(req, res)
+  );
+
+  /**
+   * @swagger
+   * /post/posts/financial/{financial_id}:
+   *   get:
+   *     summary: Get posts by financial ID
+   *     description: Retrieves all posts created by a specific financial user.
+   *     tags: [Posts]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: financial_id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the financial user whose posts are to be retrieved.
+   *     responses:
+   *       '200':
+   *         description: A list of the financial user's posts.
+   *       '401':
+   *         description: Unauthorized.
+   *       '404':
+   *         description: Financial user not found or no posts found.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.get("/posts/financial/:financial_id", (req, res) =>
+    postController.findPostsByFinancialId(req, res)
+  );
+
+  /**
+   * @swagger
    * /post/post/{id}:
    *   get:
    *     summary: Get post by ID
@@ -434,6 +494,66 @@ export const postRouter = (): Router => {
    */
   router.get("/replies/user/:user_id", (req, res) =>
     postController.findRepliesByUserId(req, res)
+  );
+
+  /**
+   * @swagger
+   * /post/replies/seller/{seller_id}:
+   *   get:
+   *     summary: Get replies by seller ID
+   *     description: Retrieves all replies created by a specific seller.
+   *     tags: [Replies]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: seller_id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the seller whose replies are to be retrieved.
+   *     responses:
+   *       '200':
+   *         description: A list of the seller's replies.
+   *       '401':
+   *         description: Unauthorized.
+   *       '404':
+   *         description: Seller not found or no replies found.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.get("/replies/seller/:seller_id", (req, res) =>
+    postController.findRepliesBySellerId(req, res)
+  );
+
+  /**
+   * @swagger
+   * /post/replies/financial/{financial_id}:
+   *   get:
+   *     summary: Get replies by financial ID
+   *     description: Retrieves all replies created by a specific financial user.
+   *     tags: [Replies]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: financial_id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the financial user whose replies are to be retrieved.
+   *     responses:
+   *       '200':
+   *         description: A list of the financial user's replies.
+   *       '401':
+   *         description: Unauthorized.
+   *       '404':
+   *         description: Financial user not found or no replies found.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.get("/replies/financial/:financial_id", (req, res) =>
+    postController.findRepliesByFinancialId(req, res)
   );
 
   /**

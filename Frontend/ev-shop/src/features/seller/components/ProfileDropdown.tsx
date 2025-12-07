@@ -5,12 +5,12 @@ import {
   QuestionMarkCircleIcon,
   LogoutIcon,
 } from "@/assets/icons/icons";
-import type { SellerActiveTab } from "@/types";
+import type { SellerActiveTab, Seller } from "@/types";
 
 const apiURL = import.meta.env.VITE_API_URL;
 
 export const ProfileDropdown: React.FC<{
-  seller?: any;
+  seller?: Seller;
   onLogout: () => void;
   setActiveTab: (tab: SellerActiveTab) => void;
 }> = ({ seller, onLogout, setActiveTab }) => {
@@ -60,12 +60,6 @@ export const ProfileDropdown: React.FC<{
             <img
               src={`${apiURL}${seller.shop_logo}`}
               alt="Shop Logo"
-              className="h-9 w-9 sm:h-10 sm:w-10 rounded-full object-cover"
-            />
-          ) : seller?.user_id?.profile_image ? (
-            <img
-              src={`${apiURL}${seller.user_id.profile_image}`}
-              alt="Seller Avatar"
               className="h-9 w-9 sm:h-10 sm:w-10 rounded-full object-cover"
             />
           ) : (
