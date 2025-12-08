@@ -197,7 +197,7 @@ const App: React.FC = () => {
       orders: <OrderHistory setAlert={handleSetAlert} />,
       services: <Services setAlert={handleSetAlert} />,
       financing: <FinancingPage setAlert={handleSetAlert} />,
-      saved: <SavedVehicles setAlert={handleSetAlert} />,
+      saved: <SavedVehicles />,
       notification: (
         <NotificationPage
           notifications={notifications}

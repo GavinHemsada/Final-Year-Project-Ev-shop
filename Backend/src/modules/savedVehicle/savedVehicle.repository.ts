@@ -84,7 +84,7 @@ export const SavedVehicleRepository: ISavedVehicleRepository = {
           },
           {
             path: "seller_id",
-            select: "business_name user_id",
+            select: "business_name user_id shop_logo",
             populate: {
               path: "user_id",
               select: "profile_image name",

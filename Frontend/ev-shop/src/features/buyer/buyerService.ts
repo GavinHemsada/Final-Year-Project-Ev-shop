@@ -40,7 +40,7 @@ export const buyerService = {
     const response = await axiosPrivate.put(`/cart/items/${itemId}`, {
       quantity,
     });
-    return response.data;
+    return response.data; 
   },
   removeCartItem: async (itemId: string) => {
     const response = await axiosPrivate.delete(`/cart/items/${itemId}`);

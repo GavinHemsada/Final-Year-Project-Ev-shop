@@ -11,6 +11,7 @@ import {
   PhoneIcon,
   EnvelopeIcon,
   ClockIcon,
+  SearchIcon,
 } from "@/assets/icons/icons";
 
 // Fix for default Leaflet icons
@@ -71,6 +72,8 @@ const apiURL = import.meta.env.VITE_API_URL;
 const Services: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = () => {
   const { showToast } = useToast();
   const [repairLocations, setRepairLocations] = useState<RepairLocation[]>([]);
+  const [filteredLocations, setFilteredLocations] = useState<RepairLocation[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoadingLocations, setIsLoadingLocations] = useState(true);
 
   useEffect(() => {
@@ -91,6 +94,7 @@ const Services: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = ()
       }
 
       setRepairLocations(locationsData);
+      setFilteredLocations(locationsData);
     } catch (error: any) {
       console.error("Failed to fetch repair locations:", error);
       const errorMessage =
@@ -100,20 +104,38 @@ const Services: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = ()
         type: "error",
       });
       setRepairLocations([]);
+      setFilteredLocations([]);
     } finally {
       setIsLoadingLocations(false);
     }
   };
 
+  useEffect(() => {
+    if (!searchQuery) {
+      setFilteredLocations(repairLocations);
+      return;
+    }
+
+    const lowerQuery = searchQuery.toLowerCase();
+    const filtered = repairLocations.filter(
+      (loc) =>
+        loc.name.toLowerCase().includes(lowerQuery) ||
+        loc.address.toLowerCase().includes(lowerQuery) ||
+        loc.seller_id?.business_name.toLowerCase().includes(lowerQuery)
+    );
+    setFilteredLocations(filtered);
+  }, [searchQuery, repairLocations]);
+
+
   // Calculate map center based on locations or default to Sri Lanka center
   const defaultCenter: L.LatLngExpression = [7.8731, 80.7718]; // Center of Sri Lanka
   const mapCenter: L.LatLngExpression =
-    repairLocations.length > 0
+    filteredLocations.length > 0
       ? [
-          repairLocations.reduce((sum, loc) => sum + loc.latitude, 0) /
-            repairLocations.length,
-          repairLocations.reduce((sum, loc) => sum + loc.longitude, 0) /
-            repairLocations.length,
+          filteredLocations.reduce((sum, loc) => sum + loc.latitude, 0) /
+            filteredLocations.length,
+          filteredLocations.reduce((sum, loc) => sum + loc.longitude, 0) /
+            filteredLocations.length,
         ]
       : defaultCenter;
 
@@ -156,9 +178,23 @@ const Services: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = ()
 
       {/* Repair Shop Locations Section */}
       <div className="bg-white p-8 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
-        <h2 className="text-3xl font-bold mb-6 dark:text-white">
-          Repair Shop Locations
-        </h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <h2 className="text-3xl font-bold dark:text-white">
+            Repair Shop Locations
+          </h2>
+          <div className="relative w-full md:w-96">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <SearchIcon className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+              placeholder="Search by name, shop, or address..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
         <p className="text-gray-600 mb-6 dark:text-gray-400">
           Find authorized repair shops near you. All locations are verified and active.
         </p>
@@ -167,10 +203,12 @@ const Services: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = ()
           <div className="flex justify-center items-center py-20">
             <Loader size={60} color="#4f46e5" />
           </div>
-        ) : repairLocations.length === 0 ? (
+        ) : filteredLocations.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-gray-500 dark:text-gray-400">
-              No repair shop locations available at the moment.
+              {repairLocations.length === 0
+                ? "No repair shop locations available at the moment."
+                : "No locations match your search."}
             </p>
           </div>
         ) : (
@@ -178,8 +216,9 @@ const Services: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = ()
             {/* Map View */}
             <div className="w-full h-96 border-2 border-gray-300 rounded-lg overflow-hidden dark:border-gray-600">
               <MapContainer
+                key={searchQuery} // Force re-render on search change to update center
                 center={mapCenter}
-                zoom={repairLocations.length > 1 ? 8 : 10}
+                zoom={filteredLocations.length > 1 ? 8 : 10}
                 scrollWheelZoom={true}
                 className="h-full w-full"
               >
@@ -187,7 +226,7 @@ const Services: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = ()
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                {repairLocations.map((location) => (
+                {filteredLocations.map((location) => (
                   <Marker
                     key={location._id}
                     position={[location.latitude, location.longitude]}
@@ -223,7 +262,7 @@ const Services: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = ()
 
             {/* Locations List */}
             <div className="space-y-4 max-h-96 overflow-y-auto">
-              {repairLocations.map((location) => (
+              {filteredLocations.map((location) => (
                 <div
                   key={location._id}
                   className="border border-gray-200 p-4 rounded-lg hover:shadow-md transition-shadow dark:border-gray-700 dark:bg-gray-900"

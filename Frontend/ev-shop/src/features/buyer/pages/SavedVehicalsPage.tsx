@@ -1,100 +1,72 @@
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { HeartIcon } from "@/assets/icons/icons";
-import type { AlertProps, Vehicle } from "@/types";
+import type { Vehicle } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { buyerService } from "../buyerService";
 import { LazyVehicleCard } from "@/components/EvModelCard";
 import { Loader } from "@/components/Loader";
-import { useToast } from "@/context/ToastContext";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/config/queryKeys";
 
-const SavedVehicles: React.FC<{
-  setAlert?: (alert: AlertProps | null) => void; // Keep for backward compatibility but prefer toast
-}> = ({ setAlert }) => {
+const SavedVehicles: React.FC = () => {
   const { getUserID } = useAuth();
   const userId = getUserID();
-  const { showToast } = useToast();
-  const [savedVehicles, setSavedVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (userId) {
-      fetchSavedVehicles();
-    } else {
-      setLoading(false);
-    }
-  }, [userId]);
-
-  const fetchSavedVehicles = async () => {
-    if (!userId) return;
-
-    try {
-      setLoading(true);
-      const response = await buyerService.getSavedVehicles(userId);
-
-      // handleResult unwraps the response, so response is directly the savedVehicles array
-      let savedVehiclesData: any[] = [];
-
+  const {
+    data: savedVehiclesData,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: queryKeys.savedVehicles(userId!),
+    queryFn: () => buyerService.getSavedVehicles(userId!),
+    enabled: !!userId,
+    select: (response: any) => {
+      let data: any[] = [];
       if (Array.isArray(response)) {
-        // Response is directly the array (unwrapped by handleResult)
-        savedVehiclesData = response;
+        data = response;
       } else if (response && Array.isArray(response.savedVehicles)) {
-        // Response has the wrapper structure (fallback)
-        savedVehiclesData = response.savedVehicles;
-      } else if (response && response.success && Array.isArray(response.savedVehicles)) {
-        // Response has success wrapper (fallback)
-        savedVehiclesData = response.savedVehicles;
+        data = response.savedVehicles;
       }
+      return (
+        data
+          .filter((saved: any) => saved && saved.listing_id)
+          .map((saved: any) => ({
+            ...saved.listing_id,
+            _id: saved.listing_id._id || saved.listing_id.id,
+          }))
+          .filter(Boolean) || []
+      );
+    },
+  });
 
-      // Map saved vehicles to Vehicle type format
-      const vehicles: Vehicle[] = savedVehiclesData
-        .filter((saved: any) => saved && saved.listing_id) // Filter out any null/undefined entries
-        .map((saved: any) => {
-          const listing = saved.listing_id;
-          if (!listing) return null;
+  const savedVehicles: Vehicle[] = useMemo(
+    () => savedVehiclesData || [],
+    [savedVehiclesData]
+  );
 
-          return {
-            ...listing,
-            _id: listing._id || listing.id,
-          };
-        })
-        .filter((v: Vehicle | null) => v !== null) as Vehicle[];
-
-      setSavedVehicles(vehicles);
-    } catch (error: any) {
-      console.error("Failed to fetch saved vehicles:", error);
-      const errorMessage = error?.response?.data?.message || "Failed to load saved vehicles";
-      showToast({
-        text: errorMessage,
-        type: "error",
-      });
-      setSavedVehicles([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemoveSaved = async (listingId: string) => {
-    if (!userId) return;
-
-    try {
-      await buyerService.removeSavedVehicle(userId, listingId);
-      // If no error thrown, assume success
-      // Remove from local state
-      setSavedVehicles((prev) => prev.filter((v) => v._id !== listingId));
-      showToast({
-        text: "Vehicle removed from saved",
-        type: "success",
-      });
-    } catch (error: any) {
-      console.error("Failed to remove saved vehicle:", error);
-      const errorMessage =
-        error?.response?.data?.message || "Failed to remove saved vehicle";
-      showToast({
-        text: errorMessage,
-        type: "error",
-      });
-    }
-  };
+  // const removeMutation = useMutation({
+  //   mutationFn: (listingId: string) =>
+  //     buyerService.removeSavedVehicle(userId!, listingId),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({
+  //       queryKey: queryKeys.savedVehicles(userId!),
+  //     });
+  //     setAlert?.({
+  //       id: Date.now(),
+  //       title: "Success",
+  //       message: "Vehicle removed from saved list.",
+  //       type: "success",
+  //     });
+  //   },
+  //   onError: (error: any) => {
+  //     setAlert?.({
+  //       id: Date.now(),
+  //       title: "Error",
+  //       message: error?.response?.data?.message || "Failed to remove vehicle.",
+  //       type: "error",
+  //     });
+  //   },
+  // });
 
   if (!userId) {
     return (
@@ -111,7 +83,7 @@ const SavedVehicles: React.FC<{
     );
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="bg-white p-8 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
         <h1 className="text-3xl font-bold mb-6 dark:text-white">
@@ -119,6 +91,19 @@ const SavedVehicles: React.FC<{
         </h1>
         <div className="flex justify-center items-center py-16">
           <Loader size={40} color="#4f46e5" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="bg-white p-8 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
+        <h1 className="text-3xl font-bold mb-6 dark:text-white">
+          Saved Vehicles
+        </h1>
+        <div className="text-center py-16 text-red-500">
+          <p>Failed to load saved vehicles. Please try again later.</p>
         </div>
       </div>
     );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { sellerService } from "../sellerService";
 import type { AlertProps } from "@/types";
@@ -16,6 +16,9 @@ import {
   PhoneIcon,
   EnvelopeIcon,
   ClockIcon,
+  SearchIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "@/assets/icons/icons";
 import {
   MapContainer,
@@ -98,11 +101,13 @@ export const RepairLocationsPage: React.FC<{
   const sellerId = getActiveRoleId();
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
-  const [isMapLoading, setIsMapLoading] = useState(false);
-   const { showToast } = useToast();
+  const { showToast } = useToast();
   const [editingLocation, setEditingLocation] = useState<RepairLocation | null>(
     null
   );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const locationsPerPage = 2;
 
   const {
     register,
@@ -147,6 +152,66 @@ export const RepairLocationsPage: React.FC<{
 
   const locations: RepairLocation[] = locationsData || [];
 
+  // Filter locations based on search query
+  const filteredLocations = useMemo(() => {
+    if (!searchQuery.trim()) return locations;
+    const query = searchQuery.toLowerCase();
+    return locations.filter(
+      (location) =>
+        location.name.toLowerCase().includes(query) ||
+        location.address.toLowerCase().includes(query) ||
+        (location.phone && location.phone.toLowerCase().includes(query)) ||
+        (location.email && location.email.toLowerCase().includes(query)) ||
+        (location.description &&
+          location.description.toLowerCase().includes(query))
+    );
+  }, [locations, searchQuery]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredLocations.length / locationsPerPage);
+  const startIndex = (currentPage - 1) * locationsPerPage;
+  const paginatedLocations = filteredLocations.slice(
+    startIndex,
+    startIndex + locationsPerPage
+  );
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  // Geocoding mutation
+  const geocodeMutation = useMutation({
+    mutationFn: async (address: string) => {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          address + ", Sri Lanka"
+        )}&limit=1`
+      );
+      if (!response.ok) throw new Error("Failed to fetch geocoding data");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data && data.length > 0) {
+        setValue("latitude", parseFloat(data[0].lat), { shouldValidate: true });
+        setValue("longitude", parseFloat(data[0].lon), {
+          shouldValidate: true,
+        });
+        showToast?.({ text: "Location found on map!", type: "success" });
+      } else {
+        showToast?.({
+          text: "Could not find location. Please click on the map to set coordinates.",
+          type: "error",
+        });
+      }
+    },
+    onError: () =>
+      showToast?.({
+        text: "Failed to geocode address. Please click on the map to set coordinates.",
+        type: "error",
+      }),
+  });
+
   // Create mutation
   const createMutation = useMutation({
     mutationFn: (locationData: any) =>
@@ -184,11 +249,14 @@ export const RepairLocationsPage: React.FC<{
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
-      sellerService.updateRepairLocation({ locationId: id, locationData: data }),
+      sellerService.updateRepairLocation({
+        locationId: id,
+        locationData: data,
+      }),
     onSuccess: () => {
       // Invalidate seller's repair locations
       queryClient.invalidateQueries({
-        queryKey: queryKeys.repairLocations(sellerId || ""),
+        queryKey: queryKeys.repairLocations(sellerId!),
       });
       // Invalidate active repair locations (used in welcome page map)
       queryClient.invalidateQueries({
@@ -200,7 +268,6 @@ export const RepairLocationsPage: React.FC<{
         message: "Repair location updated successfully!",
         type: "success",
       });
-      resetForm();
     },
     onError: (error: any) => {
       console.error("Failed to update repair location:", error);
@@ -213,11 +280,15 @@ export const RepairLocationsPage: React.FC<{
         type: "error",
       });
     },
+    onSettled: () => {
+      resetForm();
+    },
   });
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => sellerService.deleteRepairLocation({ locationId: id }),
+    mutationFn: (id: string) =>
+      sellerService.deleteRepairLocation({ locationId: id }),
     onSuccess: () => {
       // Invalidate seller's repair locations
       queryClient.invalidateQueries({
@@ -267,50 +338,13 @@ export const RepairLocationsPage: React.FC<{
   const handleGeocodeAddress = async () => {
     const address = watch("address");
     if (!address) {
-      setAlert?.({
-        id: Date.now(),
-        title: "Warning",
-        message: "Please enter an address first",
-        type: "error",
+      showToast?.({
+        text: "Please enter an address first",
+        type: "warning",
       });
       return;
     }
-    try {
-      setIsMapLoading(true);
-      // Use OpenStreetMap Nominatim API for geocoding (free, no API key needed)
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          address + ", Sri Lanka"
-        )}&limit=1`
-      );
-      const data = await response.json();
-
-      if (data && data.length > 0) {
-        setValue("latitude", parseFloat(data[0].lat), { shouldValidate: true });
-        setValue("longitude", parseFloat(data[0].lon), {
-          shouldValidate: true,
-        });
-        showToast?.({
-          text: "Location found on map!",
-          type: "success",
-        });
-      } else {
-        showToast?.({
-          text:
-            "Could not find location. Please click on the map to set coordinates.",
-          type: "error",
-        });
-      }
-    } catch (error) {
-      console.error("Geocoding error:", error);
-      showToast?.({
-        text:
-          "Failed to geocode address. Please click on the map to set coordinates.",
-        type: "error",
-      });
-    } finally {
-      setIsMapLoading(false);
-    }
+    geocodeMutation.mutate(address);
   };
 
   const resetForm = () => {
@@ -375,15 +409,17 @@ export const RepairLocationsPage: React.FC<{
     deleteMutation.mutate(id);
   };
 
-  // Calculate center of all locations for map view
+  // Calculate center of paginated locations for map view
   const getMapCenter = () => {
-    if (locations.length === 0) {
+    if (paginatedLocations.length === 0) {
       return [7.8731, 80.7718] as [number, number]; // Default to Sri Lanka center
     }
     const avgLat =
-      locations.reduce((sum, loc) => sum + loc.latitude, 0) / locations.length;
+      paginatedLocations.reduce((sum, loc) => sum + loc.latitude, 0) /
+      paginatedLocations.length;
     const avgLng =
-      locations.reduce((sum, loc) => sum + loc.longitude, 0) / locations.length;
+      paginatedLocations.reduce((sum, loc) => sum + loc.longitude, 0) /
+      paginatedLocations.length;
     return [avgLat, avgLng] as [number, number];
   };
 
@@ -464,19 +500,19 @@ export const RepairLocationsPage: React.FC<{
                   <button
                     type="button"
                     onClick={handleGeocodeAddress}
-                    disabled={isMapLoading}
+                    disabled={geocodeMutation.isPending}
                     className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                     title="Find location on map"
                   >
-                    {isMapLoading ? (
+                    {geocodeMutation.isPending ? (
                       <div className="h-5 w-5 flex items-center justify-center scale-75">
-                      <FadeLoader
-                        color="#0062ffff"
-                        height={8}
-                        width={4}
-                        margin={-1}
-                        radius={-1}
-                      />
+                        <FadeLoader
+                          color="#0062ffff"
+                          height={8}
+                          width={4}
+                          margin={-1}
+                          radius={-1}
+                        />
                       </div>
                     ) : (
                       <MapPinIcon className="h-5 w-5" />
@@ -665,16 +701,32 @@ export const RepairLocationsPage: React.FC<{
         </div>
       )}
 
+      {/* Search Bar */}
+      {!showAddForm && locations.length > 0 && (
+        <div className="bg-white p-4 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
+          <div className="relative">
+            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search locations by name, address, phone, email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Locations List with Map */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
         {/* Map View */}
         <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
           <h2 className="text-xl font-bold mb-4 dark:text-white">Map View</h2>
           <div className="w-full h-96 border-2 border-gray-300 rounded-lg overflow-hidden dark:border-gray-600">
-            {locations.length > 0 ? (
+            {paginatedLocations.length > 0 ? (
               <MapContainer
                 center={getMapCenter()}
-                zoom={locations.length === 1 ? 12 : 8}
+                zoom={paginatedLocations.length === 1 ? 12 : 8}
                 style={{ height: "100%", width: "100%", zIndex: 0 }}
                 className="z-0"
               >
@@ -682,7 +734,7 @@ export const RepairLocationsPage: React.FC<{
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                {locations.map((location) => (
+                {paginatedLocations.map((location) => (
                   <Marker
                     key={location._id}
                     position={[location.latitude, location.longitude]}
@@ -709,98 +761,168 @@ export const RepairLocationsPage: React.FC<{
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700">
                 <p className="text-gray-500 dark:text-gray-400">
-                  No locations to display. Add a location to see it on the map.
+                  {searchQuery
+                    ? "No locations found matching your search."
+                    : "No locations to display. Add a location to see it on the map."}
                 </p>
               </div>
             )}
           </div>
-          {locations.length > 0 && (
+          {paginatedLocations.length > 0 && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              Showing {locations.length} location
-              {locations.length !== 1 ? "s" : ""} on map
+              Showing {paginatedLocations.length} of {filteredLocations.length}{" "}
+              location
+              {filteredLocations.length !== 1 ? "s" : ""} on map
             </p>
           )}
         </div>
 
         {/* Locations List */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold dark:text-white">Your Locations</h2>
-          {locations.length === 0 ? (
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold dark:text-white">
+              Your Locations
+            </h2>
+            {filteredLocations.length > 0 && (
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {filteredLocations.length} total
+              </span>
+            )}
+          </div>
+          {filteredLocations.length === 0 ? (
             <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
               <p className="text-gray-500 text-center py-10 dark:text-gray-400">
-                No repair locations added yet. Click "Add Location" to get
-                started.
+                {searchQuery
+                  ? "No locations found matching your search."
+                  : "No repair locations added yet. Click 'Add Location' to get started."}
               </p>
             </div>
           ) : (
-            locations.map((location) => (
-              <div
-                key={location._id}
-                className="bg-white p-4 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                      {location.name}
-                    </h3>
-                    <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      <MapPinIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                      <span>{location.address}</span>
+            <>
+              {paginatedLocations.map((location) => (
+                <div
+                  key={location._id}
+                  className="bg-white p-4 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                        {location.name}
+                      </h3>
+                      <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        <MapPinIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <span>{location.address}</span>
+                      </div>
+                      {location.phone && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+                          <PhoneIcon className="h-4 w-4" />
+                          <span>{location.phone}</span>
+                        </div>
+                      )}
+                      {location.email && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+                          <EnvelopeIcon className="h-4 w-4" />
+                          <span>{location.email}</span>
+                        </div>
+                      )}
+                      {location.operating_hours && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+                          <ClockIcon className="h-4 w-4" />
+                          <span>{location.operating_hours}</span>
+                        </div>
+                      )}
+                      {location.description && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                          {location.description}
+                        </p>
+                      )}
+                      <div className="mt-2">
+                        <span
+                          className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                            location.is_active
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
+                          }`}
+                        >
+                          {location.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </div>
                     </div>
-                    {location.phone && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-                        <PhoneIcon className="h-4 w-4" />
-                        <span>{location.phone}</span>
-                      </div>
-                    )}
-                    {location.email && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-                        <EnvelopeIcon className="h-4 w-4" />
-                        <span>{location.email}</span>
-                      </div>
-                    )}
-                    {location.operating_hours && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-                        <ClockIcon className="h-4 w-4" />
-                        <span>{location.operating_hours}</span>
-                      </div>
-                    )}
-                    {location.description && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                        {location.description}
-                      </p>
-                    )}
-                    <div className="mt-2">
-                      <span
-                        className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                          location.is_active
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                            : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
-                        }`}
+                    <div className="flex gap-2 ml-4">
+                      <button
+                        onClick={() => handleEdit(location)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors dark:text-blue-400 dark:hover:bg-blue-900/30"
+                        title="Edit location"
                       >
-                        {location.is_active ? "Active" : "Inactive"}
-                      </span>
+                        <EditIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(location._id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-red-400 dark:hover:bg-red-900/30"
+                        title="Delete location"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
                     </div>
-                  </div>
-                  <div className="flex gap-2 ml-4">
-                    <button
-                      onClick={() => handleEdit(location)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors dark:text-blue-400 dark:hover:bg-blue-900/30"
-                      title="Edit location"
-                    >
-                      <EditIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(location._id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-red-400 dark:hover:bg-red-900/30"
-                      title="Delete location"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
                   </div>
                 </div>
-              </div>
-            ))
+              ))}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(1, prev - 1))
+                    }
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeftIcon className="h-5 w-5" />
+                  </button>
+                  <div className="flex items-center gap-2">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (page) => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-10 h-10 rounded-lg font-semibold transition-colors ${
+                            currentPage === page
+                              ? "bg-blue-600 text-white dark:bg-blue-700"
+                              : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      )
+                    )}
+                  </div>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRightIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Results Info */}
+              {filteredLocations.length > 0 && (
+                <div className="text-center text-sm text-gray-500 dark:text-gray-400 pt-2">
+                  Showing {startIndex + 1}-
+                  {Math.min(
+                    startIndex + locationsPerPage,
+                    filteredLocations.length
+                  )}{" "}
+                  of {filteredLocations.length} location
+                  {filteredLocations.length !== 1 ? "s" : ""}
+                  {searchQuery && ` matching "${searchQuery}"`}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

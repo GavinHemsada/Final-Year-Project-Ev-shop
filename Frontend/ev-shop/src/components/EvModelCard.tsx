@@ -2,15 +2,17 @@ import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { itemVariants, cardHover } from "./animations/variants"; // Adjust path as needed
 import { HeartIcon } from "@/assets/icons/icons";
-import type { Vehicle, AlertProps } from "@/types";
+import type { Vehicle } from "@/types";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay, Pagination } from "swiper/modules";
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo } from "react";
 import { useInView } from "react-intersection-observer";
 import { useAuth } from "@/context/AuthContext";
 import { buyerService } from "@/features/buyer/buyerService";
 import { useAddToCart } from "@/hooks/useCart";
 import { useToast } from "@/context/ToastContext";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/config/queryKeys";
 
 const apiURL = import.meta.env.VITE_API_URL;
 
@@ -142,41 +144,71 @@ const swiperModules = [Navigation, Autoplay, Pagination];
 export const VehicleCard: React.FC<{
   vehicle: Vehicle;
   className?: string;
-  style?: React.CSSProperties;
-  setAlert?: (alert: AlertProps | null) => void; // Keep for backward compatibility but prefer toast
-}> = ({ vehicle, className, style, setAlert }) => {
+  style?: React.CSSProperties;// Keep for backward compatibility but prefer toast
+}> = ({ vehicle, className, style}) => {
   const { model_id, images, seller_id } = vehicle;
   const { getUserID } = useAuth();
   const userId = getUserID();
-  const [isSaved, setIsSaved] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const addToCartMutation = useAddToCart();
   const { showToast } = useToast();
+  // React Query for Saved Status
+  const { data: isSaved = false } = useQuery({
+    queryKey: queryKeys.isVehicleSaved(userId || "", vehicle._id),
+    queryFn: async () => {
+      if (!userId) return false;
+      const response = await buyerService.checkIfVehicleSaved(userId, vehicle._id);
+      if (typeof response === "boolean") return response;
+      return response?.isSaved || false;
+    },
+    enabled: !!userId && !!vehicle._id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-  // Check if vehicle is saved on mount
-  useEffect(() => {
-    if (userId && vehicle._id) {
-      buyerService
-        .checkIfVehicleSaved(userId, vehicle._id)
-        .then((response) => {
-          // handleResult unwraps the response and returns just the isSaved boolean
-          // So response is directly the boolean value
-          if (typeof response === "boolean") {
-            setIsSaved(response);
-          } else if (response && typeof response.isSaved === "boolean") {
-            // Fallback in case response is still wrapped
-            setIsSaved(response.isSaved);
-          }
-        })
-        .catch((error) => {
-          console.error("Error checking saved status:", error);
-          // Silently fail - user might not be logged in
-        });
-    }
-  }, [userId, vehicle._id]);
+  const queryClient = useQueryClient();
+
+  const toggleSaveMutation = useMutation({
+    mutationFn: async () => {
+      if (!userId) throw new Error("User not authenticated");
+      if (isSaved) {
+        return buyerService.removeSavedVehicle(userId, vehicle._id);
+      } else {
+        return buyerService.saveVehicle(userId, vehicle._id);
+      }
+    },
+    onMutate: async () => {
+        // Optimistic Update
+        await queryClient.cancelQueries({ queryKey: queryKeys.isVehicleSaved(userId || "", vehicle._id) });
+        const previousStatus = queryClient.getQueryData(queryKeys.isVehicleSaved(userId || "", vehicle._id));
+        queryClient.setQueryData(queryKeys.isVehicleSaved(userId || "", vehicle._id), !isSaved);
+        return { previousStatus };
+    },
+    onSuccess: () => {
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.isVehicleSaved(userId || "", vehicle._id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.savedVehicles(userId || "") });
+      
+      showToast({
+        text: isSaved ? "Vehicle removed from saved list!" : "Vehicle added to saved list!",
+        type: "success",
+      });
+    },
+    onError: (error: any, _, context) => {
+        // Rollback
+        if (context?.previousStatus !== undefined) {
+             queryClient.setQueryData(queryKeys.isVehicleSaved(userId || "", vehicle._id), context.previousStatus);
+        }
+      console.error("Failed to toggle save:", error);
+      const errorMessage =
+        error?.response?.data?.message || "Failed to update saved status";
+      showToast({
+        text: errorMessage,
+        type: "error",
+      });
+    },
+  });
 
   // Handle save/unsave
-  const handleSaveToggle = async (e: React.MouseEvent) => {
+  const handleSaveToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -188,35 +220,10 @@ export const VehicleCard: React.FC<{
       return;
     }
 
-    setIsSaving(true);
-    try {
-      if (isSaved) {
-        await buyerService.removeSavedVehicle(userId, vehicle._id);
-        setIsSaved(false);
-        showToast({
-          text: "Vehicle removed from saved list!",
-          type: "success",
-        });
-      } else {
-        await buyerService.saveVehicle(userId, vehicle._id);
-        setIsSaved(true);
-        showToast({
-          text: "Vehicle added to saved list!",
-          type: "success",
-        });
-      }
-    } catch (error: any) {
-      console.error("Failed to toggle save:", error);
-      const errorMessage =
-        error?.response?.data?.message || "Failed to update saved status";
-      showToast({
-        text: errorMessage,
-        type: "error",
-      });
-    } finally {
-      setIsSaving(false);
-    }
+    toggleSaveMutation.mutate();
   };
+
+  const isSaving = toggleSaveMutation.isPending;
 
   // Memoize image URLs to prevent recreation
   const imageUrls = useMemo(
@@ -241,11 +248,12 @@ export const VehicleCard: React.FC<{
   const sellerShopName = seller_id?.business_name || "Seller";
 
   // Get seller logo (prefer shop_logo, fallback to user profile_image)
-  const sellerLogo = seller_id?.shop_logo
-    ? `${apiURL}${seller_id.shop_logo}`
-    : seller_id?.user_id?.profile_image
-    ? `${apiURL}${seller_id.user_id.profile_image}`
-    : null;
+  const sellerLogo = `${apiURL}${seller_id.shop_logo}`;
+  // seller_id?.shop_logo
+  //   ? `${apiURL}${seller_id.shop_logo}`
+    // : seller_id?.user_id?.profile_image
+    // ? `${apiURL}${seller_id.user_id.profile_image}`
+    // : null;
 
   // Memoize image slides
   const imageSlides = useMemo(
@@ -439,8 +447,7 @@ export const LazyVehicleCard: React.FC<{
   vehicle: Vehicle;
   className?: string;
   style?: React.CSSProperties;
-  setAlert?: (alert: AlertProps | null) => void;
-}> = ({ vehicle, className, style, setAlert }) => {
+}> = ({ vehicle, className, style }) => {
   const { ref, inView } = useInView({
     triggerOnce: true, // Only load the card once
     rootMargin: "200px 0px", // Start loading 200px *before* it enters the screen
@@ -452,7 +459,7 @@ export const LazyVehicleCard: React.FC<{
         Otherwise, render the cheap, lightweight SkeletonCard.
       */}
       {inView ? (
-        <VehicleCard vehicle={vehicle} setAlert={setAlert} />
+        <VehicleCard vehicle={vehicle} />
       ) : (
         <SkeletonCard />
       )}
