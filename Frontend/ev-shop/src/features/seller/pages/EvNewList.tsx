@@ -5,7 +5,8 @@ import { EvCheckIcon } from "@/assets/icons/icons";
 import { FormSelectField } from "@/components/FormSelect";
 import { FormInputField } from "@/components/FormInput";
 import { StepContainer } from "@/components/StepContainer";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectActiveRoleId } from "@/context/authSlice";
 import { ListingType, VehicleCondition } from "@/types/enum";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -129,7 +130,7 @@ const EvListschema = yup.object({
 });
 
 export default function EvListingStepper({ setAlert }: { setAlert?: (alert: AlertProps | null) => void } = { setAlert: undefined }) {
-  const { getActiveRoleId } = useAuth();
+  const sellerId = useAppSelector(selectActiveRoleId);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [evBrands, setEvBrands] = useState<Brand[]>([]);
   const [evCatogorys, setEvCatogorys] = useState<categorie[]>([]);
@@ -270,10 +271,9 @@ export default function EvListingStepper({ setAlert }: { setAlert?: (alert: Aler
       console.log(modelResult);
 
       const modelid = modelResult._id;
-      const sellerid = getActiveRoleId();
 
       const listingdata = new FormData();
-      listingdata.append("seller_id", sellerid!);
+      listingdata.append("seller_id", sellerId!);
       listingdata.append("model_id", modelid);
       listingdata.append("listing_type", data.listing_type);
       listingdata.append("condition", data.condition);

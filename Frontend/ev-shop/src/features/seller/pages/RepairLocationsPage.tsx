@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectActiveRoleId } from "@/context/authSlice";
 import { sellerService } from "../sellerService";
 import type { AlertProps } from "@/types";
 import { Loader } from "@/components/Loader";
@@ -97,8 +98,7 @@ function MapClickHandler({
 export const RepairLocationsPage: React.FC<{
   setAlert?: (alert: AlertProps | null) => void;
 }> = ({ setAlert }) => {
-  const { getActiveRoleId } = useAuth();
-  const sellerId = getActiveRoleId();
+  const sellerId = useAppSelector(selectActiveRoleId);
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
   const { showToast } = useToast();

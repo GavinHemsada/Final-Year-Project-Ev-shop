@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId } from "@/context/authSlice";
 import { useCart } from "@/hooks/useCart";
 import { buyerService } from "../buyerService";
 import { Loader } from "@/components/Loader";
@@ -18,8 +19,7 @@ interface CartItem {
 }
 
 const CheckoutPage: React.FC = () => {
-  const { getUserID } = useAuth();
-  const userId = getUserID();
+  const userId = useAppSelector(selectUserId);
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { data: cart, isLoading: cartLoading } = useCart(userId);

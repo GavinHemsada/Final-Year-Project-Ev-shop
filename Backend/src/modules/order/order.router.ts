@@ -57,6 +57,33 @@ export const orderRouter = (): Router => {
   router.post("/", validateDto(CreateOrderDTO), (req, res) =>
     controller.createOrder(req, res)
   );
+  /**
+   * @swagger
+   * /order:
+   *   get:
+   *     summary: Get all orders
+   *     description: Retrieves a list of all orders in the system. Requires admin privileges.
+   *     tags: [Orders]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       '200':
+   *         description: A list of all orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success: { type: boolean, example: true }
+   *                 orders: { type: array, items: { type: object } } # Ideally $ref to an Order schema
+   *       '401':
+   *         description: Unauthorized.
+   *       '403':
+   *         description: Forbidden.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.get("/", (req, res) => controller.getAllOrders(req, res));
 
   /**
    * @swagger

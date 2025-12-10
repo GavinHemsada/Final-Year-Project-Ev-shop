@@ -10,3 +10,4 @@ export * from "./seller";
 export * from "./repirelocation";
 export * from "./cart";
 export * from "./post";
+export * from "./review";

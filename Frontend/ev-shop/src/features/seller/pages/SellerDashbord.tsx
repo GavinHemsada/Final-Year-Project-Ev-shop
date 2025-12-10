@@ -6,7 +6,9 @@ import type {
   AlertProps,
   ConfirmAlertProps,
 } from "@/types";
-import { useAuth } from "@/context/AuthContext";
+import { authService } from "@/features/auth/authService"
+import { useAppSelector, useAppDispatch } from "@/hooks/useAppSelector";
+import { logout, selectUserId, selectRoles, setSellerId  } from "@/context/authSlice";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "../components/Sidebar";
 import { Header } from "../components/Header";
@@ -31,7 +33,7 @@ import EvListingStepper from "./EvNewList";
 import { StatCard } from "../components/StatsCards";
 import { sellerService } from "../sellerService";
 import type { Vehicle } from "@/types/ev";
-import { useQueries, type UseQueryOptions } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
 
 const notifications: Notification[] = [
@@ -52,60 +54,45 @@ const SellerDashboard: React.FC = () => {
   const [confirmHandler, setConfirmHandler] = useState<(() => void) | null>(
     null
   );
-  const { getUserID, logout, getRoles, setSellerId, getActiveRoleId } =
-    useAuth();
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const roles = getRoles();
+  const roles = useAppSelector(selectRoles);
+  const userID = useAppSelector(selectUserId);
 
-  const userID = getUserID();
-
-  const results = useQueries({
-    queries: [
-      {
-        queryKey: queryKeys.sellerProfile(userID!),
-        queryFn: () => sellerService.getSellerProfile(userID!),
-        enabled: !!userID,
-        staleTime: 10 * 60 * 1000,
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: false,
-        // workaround: cast to UseQueryOptions
-      },
-      {
-        queryKey: ["sellerEvlist", getActiveRoleId()],
-        queryFn: (): Promise<Vehicle[]> =>
-          sellerService.getSellerEvList(getActiveRoleId()!),
-        enabled: !!getActiveRoleId(),
-        staleTime: 10 * 60 * 1000,
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: false,
-      } as UseQueryOptions<
-        Vehicle[],
-        Error,
-        Vehicle[],
-        [string, string | null]
-      >,
-    ],
+  const sellerProfile = useQuery({
+    queryKey: queryKeys.sellerProfile(userID!),
+    queryFn: () => sellerService.getSellerProfile(userID!),
+    enabled: !!userID,
+    staleTime: 10 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
-  // Manually watch seller profile to set sellerId
-
+  const seller = sellerProfile.data;
+  const sellerId = seller?._id;
   useEffect(() => {
-    const sellerProfile = results[0].data;
-    if (sellerProfile && sellerProfile._id) {
-      setSellerId(sellerProfile._id);
+    if (seller && seller._id) {
+      dispatch(setSellerId(seller._id));
     }
-  }, [results[0].data]);
+  }, [seller]);
+
+  const sellerEvList = useQuery({
+  queryKey: ["sellerEvlist", sellerId],
+  queryFn: () => sellerService.getSellerEvList(sellerId!),
+  enabled: !!sellerId, // DEPENDENT QUERY
+  staleTime: 10 * 60 * 1000,
+  refetchOnMount: false,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+});
 
   useEffect(() => {
     if (roles) setUserRole(roles);
   }, [roles]);
-  const [sellerProfileQuery, evListQuery] = results;
 
-  const seller = sellerProfileQuery.data;
-  const listings = evListQuery.data || [];
-
+  const listings = sellerEvList.data || [];
+  console.log(listings);
   // Callback to handle alerts from child components
   const handleSetAlert = useCallback((alertData: AlertProps | null) => {
     setAlert(alertData);
@@ -174,7 +161,6 @@ const SellerDashboard: React.FC = () => {
         return (
           <EvListingStepper
             setAlert={handleSetAlert}
-            listingId={editListingId}
           />
         );
       default:
@@ -190,8 +176,9 @@ const SellerDashboard: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    if (logout) logout();
+  const handleLogout = async() => {
+    await authService.logOut();
+    dispatch(logout());
     navigate("/auth/login");
   };
 

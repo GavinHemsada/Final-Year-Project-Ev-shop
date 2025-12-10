@@ -7,7 +7,8 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay, Pagination } from "swiper/modules";
 import React, { useMemo } from "react";
 import { useInView } from "react-intersection-observer";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId } from "@/context/authSlice";
 import { buyerService } from "@/features/buyer/buyerService";
 import { useAddToCart } from "@/hooks/useCart";
 import { useToast } from "@/context/ToastContext";
@@ -147,8 +148,7 @@ export const VehicleCard: React.FC<{
   style?: React.CSSProperties;// Keep for backward compatibility but prefer toast
 }> = ({ vehicle, className, style}) => {
   const { model_id, images, seller_id } = vehicle;
-  const { getUserID } = useAuth();
-  const userId = getUserID();
+  const userId = useAppSelector(selectUserId);
   const addToCartMutation = useAddToCart();
   const { showToast } = useToast();
   // React Query for Saved Status
@@ -249,11 +249,6 @@ export const VehicleCard: React.FC<{
 
   // Get seller logo (prefer shop_logo, fallback to user profile_image)
   const sellerLogo = `${apiURL}${seller_id.shop_logo}`;
-  // seller_id?.shop_logo
-  //   ? `${apiURL}${seller_id.shop_logo}`
-    // : seller_id?.user_id?.profile_image
-    // ? `${apiURL}${seller_id.user_id.profile_image}`
-    // : null;
 
   // Memoize image slides
   const imageSlides = useMemo(
@@ -305,11 +300,15 @@ export const VehicleCard: React.FC<{
     navigate(`/user/vehicle/${vehicle._id}`);
   };
 
+  const handleBuyNowClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate(`/user/vehicle/${vehicle._id}`);
+  };
+
   return (
     <div
       className={`bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700 cursor-pointer ${className}`}
       style={style}
-      onClick={handleCardClick}
     >
       {/* 🔹 Image Slider */}
       <Swiper
@@ -326,7 +325,7 @@ export const VehicleCard: React.FC<{
       </Swiper>
 
       {/* 🔹 Card Body */}
-      <div className="p-6">
+      <div className="p-6" onClick={handleCardClick}>
         {/* Seller Info Section */}
         <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
           <div className="flex-shrink-0">
@@ -433,8 +432,10 @@ export const VehicleCard: React.FC<{
           >
             {addToCartMutation.isPending ? "Adding..." : "Add to Cart"}
           </button>
-          <button className="flex-1 bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300 transition-all duration-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
-            Book Test Drive
+          <button className="flex-1 bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300 transition-all duration-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+          onClick={handleBuyNowClick}
+          >
+            Buy Now
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId, setActiveRole, addNewRole } from "@/context/authSlice";
 import { CloseIcon } from "@/assets/icons/icons";
 import { buyerService } from "../buyerService";
 import { Loader } from "@/components/Loader";
@@ -22,7 +23,9 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
     contact_phone: "",
   });
 
-  const { getUserID, addnewRole, setActiveRole } = useAuth();
+  const dispatch = useAppDispatch();
+  const userId = useAppSelector(selectUserId);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState("");
@@ -98,7 +101,7 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
     // Construct the payload based on the DTO
     const institutionData = {
       ...formData,
-      user_id: getUserID(), // Add the required user_id from context
+      user_id: userId, // Add the required user_id from context
     };
 
     try {

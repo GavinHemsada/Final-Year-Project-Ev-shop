@@ -94,7 +94,15 @@ export const OrderRepository: IOrderRepository = {
 
   /** Finds all orders for a specific user, populating listing and seller details, sorted by most recent. */
   findByUserId: withErrorHandling(async (userId) => {
-    return await Order.find({ user_id: new Types.ObjectId(userId) })
+    const trimmedUserId = userId?.trim();
+    if (!trimmedUserId) {
+      throw new Error("User ID is required");
+    }
+    // Validate ObjectId format
+    if (!Types.ObjectId.isValid(trimmedUserId)) {
+      throw new Error(`Invalid user ID format: ${trimmedUserId}`);
+    }
+    return await Order.find({ user_id: new Types.ObjectId(trimmedUserId) })
       .populate("listing_id")
       .populate("seller_id", "business_name")
       .sort({ order_date: -1 });
@@ -102,7 +110,7 @@ export const OrderRepository: IOrderRepository = {
 
   /** Finds all orders for a specific seller, populating user and listing details, sorted by most recent. */
   findBySellerId: withErrorHandling(async (sellerId) => {
-    return await Order.find({ seller_id: new Types.ObjectId(sellerId) })
+    return await Order.find({ seller_id: new Types.ObjectId(sellerId.trim())})
       .populate("user_id", "name email")
       .populate("listing_id")
       .sort({ order_date: -1 });
@@ -110,7 +118,7 @@ export const OrderRepository: IOrderRepository = {
 
   /** Retrieves all orders, sorted by most recent. */
   findAll: withErrorHandling(async () => {
-    return await Order.find().sort({ order_date: -1 });
+    return await Order.find();
   }),
 
   /** Finds an order by ID and updates it with new data. */

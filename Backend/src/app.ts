@@ -52,6 +52,7 @@ import { initializeMonitoring } from "./monitoring";
 // Swagger documentation setup
 import { swaggerSpec } from "./config/swagger.config";
 import swaggerUi from "swagger-ui-express";
+import { refreshRedis } from "./config/redis";
 
 // Initialize the Express application
 const app: Express = express();
@@ -285,6 +286,10 @@ app.use(
   })
 );
 
+app.get("/redisRefresh", (req, res) => {
+  refreshRedis();
+  res.send("Redis refreshed");
+});
 // Global Error Handling Middleware
 // This middleware catches any errors that occur during request processing
 app.use(

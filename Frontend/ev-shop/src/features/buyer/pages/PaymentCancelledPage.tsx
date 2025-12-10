@@ -12,7 +12,7 @@ const PaymentCancelledPage: React.FC = () => {
   useEffect(() => {
     showToast({
       text: "Payment was cancelled.",
-      type: "info",
+      type: "warning",
     });
   }, [showToast]);
 
@@ -58,4 +58,3 @@ const PaymentCancelledPage: React.FC = () => {
 };
 
 export default PaymentCancelledPage;
-

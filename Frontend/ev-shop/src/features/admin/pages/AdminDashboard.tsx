@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import type { AdminActiveTab, AlertProps, ConfirmAlertProps } from "@/types";
-import { useAuth } from "@/context/AuthContext";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId, logout } from "@/context/authSlice";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "../components/Sidebar";
 import { Header } from "../components/Header";
@@ -22,10 +23,10 @@ const AdminDashboard: React.FC = () => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [confirmAlert, setConfirmAlert] = useState<ConfirmAlertProps | null>(null);
-  const { getUserID, logout } = useAuth();
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const userID = getUserID();
+  const userID = useAppSelector(selectUserId);
 
   const handleSetAlert = (alert: AlertProps | null) => {
     setAlert(alert);
@@ -72,7 +73,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleLogout = () => {
-    if (logout) logout();
+    if (logout) dispatch(logout());
     navigate("/auth/login");
   };
 

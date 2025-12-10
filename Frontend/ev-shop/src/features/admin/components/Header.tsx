@@ -2,7 +2,8 @@ import { SwitchIcon } from "@/assets/icons/icons";
 import { NotificationDropdown } from "./NotificationDropdown";
 import type { AdminActiveTab } from "@/types";
 import { ProfileDropdown } from "./ProfileDropdown";
-import { useAuth } from "@/context/AuthContext";
+import { useAppDispatch } from "@/hooks/useAppSelector";
+import { setActiveRole } from "@/context/authSlice";
 import { useNavigate } from "react-router-dom";
 import { PageLoader } from "@/components/Loader";
 import { useState } from "react";
@@ -21,14 +22,14 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   onLogout,
 }) => {
-  const { setActiveRole } = useAuth();
+  const dispatch = useAppDispatch();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const switchRoleAndNavigate = async (role: UserRole, path: string) => {
     setLoading(true);
     try {
-      const result = await setActiveRole(role);
+      const result = await dispatch(setActiveRole(role));
       if (result) {
         navigate(path);
       }

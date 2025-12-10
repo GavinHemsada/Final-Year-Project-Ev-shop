@@ -259,7 +259,7 @@ export const EvRepository: IEvRepository = {
       })
       .populate({
         path: "seller_id",
-        select: "business_name user_id shop_logo",
+        select: "business_name user_id shop_logo street_address",
         populate: {
           path: "user_id",
           select: "profile_image name",
@@ -282,7 +282,7 @@ export const EvRepository: IEvRepository = {
       })
       .populate({
         path: "seller_id",
-        select: "business_name user_id shop_logo",
+        select: "business_name user_id shop_logo street_address",
         populate: {
           path: "user_id",
           select: "profile_image name",
@@ -303,7 +303,7 @@ export const EvRepository: IEvRepository = {
       })
       .populate({
         path: "seller_id",
-        select: "business_name user_id shop_logo",
+        select: "business_name user_id shop_logo street_address",
         populate: {
           path: "user_id",
           select: "profile_image name",

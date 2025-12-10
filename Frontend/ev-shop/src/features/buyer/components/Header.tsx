@@ -3,7 +3,8 @@ import { ShoppingCartIcon, SearchIcon, SwitchIcon } from "@/assets/icons/icons";
 import { NotificationDropdown } from "./NotificationDropdown";
 import type { UserRole, ActiveTab } from "@/types";
 import { ProfileDropdown } from "./ProfileDropdown";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector, useAppDispatch } from "@/hooks/useAppSelector";
+import { selectUserId, setActiveRole } from "@/context/authSlice";
 import { useNavigate } from "react-router-dom";
 import { PageLoader } from "@/components/Loader";
 import { useState, useCallback } from "react";
@@ -38,10 +39,10 @@ export const Header = React.memo(
     onBecomeFinancerClick,
   }: HeaderProps) => {
     console.log(userRole);
-    const { setActiveRole, getUserID } = useAuth();
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-    const userId = getUserID();
+    const userId = useAppSelector(selectUserId);
+    const dispatch = useAppDispatch();
     
     // Use React Query hook for cart count - no polling needed!
     const cartItemCount = useCartCount(userId);
@@ -50,7 +51,7 @@ export const Header = React.memo(
       async (role: UserRole, path: string) => {
         setLoading(true);
         try {
-          const result = await setActiveRole(role);
+          const result = await dispatch(setActiveRole(role));
           if (result) {
             navigate(path);
           }
@@ -60,7 +61,7 @@ export const Header = React.memo(
           setLoading(false);
         }
       },
-      [setActiveRole, navigate]
+      [dispatch, navigate]
     );
 
     const newUser =

@@ -1,5 +1,6 @@
 import type { Order, AlertProps } from "@/types";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId } from "@/context/authSlice";
 import { useQuery } from "@tanstack/react-query";
 import { buyerService } from "../buyerService";
 import { PageLoader } from "@/components/Loader";
@@ -20,19 +21,14 @@ const getStatusChip = (status: Order["order_status"]): string => {
 };
 
 const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = () => {
-  const { getUserID } = useAuth();
-  const userId = getUserID();
+  const userId = useAppSelector(selectUserId);
 
-  const { data: orders, isLoading, error } = useQuery({
+  const { data: orders, error } = useQuery({
     queryKey: ["userOrders", userId],
     queryFn: () => buyerService.getUserOrders(userId!),
     enabled: !!userId,
   });
-
-  if (isLoading) {
-    return <div className="p-8 flex justify-center"><PageLoader /></div>;
-  }
-
+  console.log(orders);
   if (error) {
     return (
       <div className="p-8 text-center text-red-500 bg-white dark:bg-gray-800 rounded-xl shadow-md">

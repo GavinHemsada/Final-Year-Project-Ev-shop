@@ -63,6 +63,21 @@ export const disconnectRedis = async () => {
 };
 
 /**
+ * @function refreshRedis
+ * @async
+ * @description Flushes all data from the Redis cache.
+ * Useful for clearing stale data during development or maintenance.
+ */
+export const refreshRedis = async () => {
+  try {
+    await redisClient.flushAll();
+    console.log("Redis cache refreshed (FLUSH ALL)");
+  } catch (err) {
+    console.error("Error refreshing Redis:", err);
+  }
+};
+
+/**
  * @exports redisClient
  * @description The default Redis client instance for performing cache operations.
  */

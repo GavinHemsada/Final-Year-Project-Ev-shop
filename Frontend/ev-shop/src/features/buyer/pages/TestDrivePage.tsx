@@ -5,7 +5,8 @@ import {
   CalendarIcon,
   ClockIcon,
 } from "@/assets/icons/icons";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId } from "@/context/authSlice";
 import type { AlertProps } from "@/types";
 import { buyerService } from "../buyerService";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,8 +18,7 @@ import { queryKeys } from "@/config/queryKeys";
 export const TestDrivesPage: React.FC<{
   setAlert?: (alert: AlertProps | null) => void;
 }> = ({ setAlert }) => {
-  const { getUserID } = useAuth();
-  const userId = getUserID();
+  const userId = useAppSelector(selectUserId);
   const queryClient = useQueryClient();
 
   // Fetch available slots

@@ -6,7 +6,8 @@ import type {
   AlertProps,
   ConfirmAlertProps,
 } from "@/types";
-import { useAuth } from "@/context/AuthContext";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId, logout, selectRoles, setFinanceId, selectActiveRoleId } from "@/context/authSlice";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "../components/Sidebar";
 import { Header } from "../components/Header";
@@ -42,12 +43,11 @@ const FinancialDashboard: React.FC = () => {
   const [confirmHandler, setConfirmHandler] = useState<(() => void) | null>(
     null
   );
-  const { getUserID, logout, getRoles, setFinancialId, getActiveRoleId } =
-    useAuth();
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const roles = getRoles();
+  const roles = useAppSelector(selectRoles);
 
-  const userID = getUserID();
+  const userID = useAppSelector(selectUserId);
 
   const results = useQueries({
     queries: [
@@ -61,20 +61,20 @@ const FinancialDashboard: React.FC = () => {
         refetchOnReconnect: false,
       },
       {
-        queryKey: ["financialProducts", getActiveRoleId()],
+        queryKey: ["financialProducts", useAppSelector(selectActiveRoleId)],
         queryFn: () =>
-          financialService.getProductsByInstitution(getActiveRoleId()!),
-        enabled: !!getActiveRoleId(),
+          financialService.getProductsByInstitution(useAppSelector(selectActiveRoleId)!),
+        enabled: !!useAppSelector(selectActiveRoleId),
         staleTime: 10 * 60 * 1000,
         refetchOnMount: false,
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
       },
       {
-        queryKey: ["financialApplications", getActiveRoleId()],
+        queryKey: ["financialApplications", useAppSelector(selectActiveRoleId)],
         queryFn: () =>
-          financialService.getApplicationsByInstitution(getActiveRoleId()!),
-        enabled: !!getActiveRoleId(),
+          financialService.getApplicationsByInstitution(useAppSelector(selectActiveRoleId)!),
+        enabled: !!useAppSelector(selectActiveRoleId),
         staleTime: 10 * 60 * 1000,
         refetchOnMount: false,
         refetchOnWindowFocus: false,
@@ -86,9 +86,9 @@ const FinancialDashboard: React.FC = () => {
   useEffect(() => {
     const institutionProfile = results[0].data;
     if (institutionProfile && institutionProfile.institution?._id) {
-      setFinancialId(institutionProfile.institution._id);
+      dispatch(setFinanceId(institutionProfile.institution._id));
     }
-  }, [results[0].data, setFinancialId]);
+  }, [results[0].data, dispatch]);
 
   useEffect(() => {
     if (roles) setUserRole(roles);

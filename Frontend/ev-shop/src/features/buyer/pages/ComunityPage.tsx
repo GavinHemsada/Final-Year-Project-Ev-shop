@@ -3,7 +3,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChatBubbleIcon, SearchIcon } from "@/assets/icons/icons";
 import type { AlertProps, Post, PostReply, ConfirmAlertProps } from "@/types";
 import { buyerService } from "../buyerService";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId, selectActiveRole } from "@/context/authSlice";
 import { Loader } from "@/components/Loader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
@@ -33,9 +34,8 @@ export const CommunityPage: React.FC<{
   setAlert?: (alert: AlertProps | null) => void;
   setConfirmAlert?: (confirmAlert: ConfirmAlertProps | null) => void;
 }> = ({ setAlert, setConfirmAlert }) => {
-  const { getUserID, getActiveRole } = useAuth();
-  const userId = getUserID();
-  const userRole = getActiveRole();
+  const userId = useAppSelector(selectUserId);
+  const userRole = useAppSelector(selectActiveRole);
   const [activeTab, setActiveTab] = useState<"community" | "myPosts">(
     "community"
   );

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
+import {useAppSelector } from "@/hooks/useAppSelector";
+import { selectActiveRoleId } from "@/context/authSlice"; 
 import { financialService } from "../financialService";
 import type { AlertProps } from "@/types";
 import { Loader } from "@/components/Loader";
@@ -7,8 +8,7 @@ import { Loader } from "@/components/Loader";
 export const ApplicationsPage: React.FC<{
   setAlert?: (alert: AlertProps | null) => void;
 }> = ({ setAlert }) => {
-  const { getActiveRoleId } = useAuth();
-  const institutionId = getActiveRoleId();
+  const institutionId = useAppSelector(selectActiveRoleId);
   const [applications, setApplications] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

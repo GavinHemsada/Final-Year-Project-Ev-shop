@@ -2,13 +2,13 @@ import React, { useState, useEffect } from "react";
 import {
   CarIcon,
   CalendarIcon,
-  ClockIcon,
   PlusCircleIcon,
   EditIcon,
   TrashIcon,
   CloseIcon,
 } from "@/assets/icons/icons";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId } from "@/context/authSlice";
 import { sellerService } from "../sellerService";
 import type { AlertProps } from "@/types";
 import { Loader } from "@/components/Loader";
@@ -43,8 +43,7 @@ interface EvModel {
 export const TestDrivesPage: React.FC<{
   setAlert?: (alert: AlertProps | null) => void;
 }> = ({ setAlert }) => {
-  const { getUserID } = useAuth();
-  const userId = getUserID();
+  const userId = useAppSelector(selectUserId);
   const [slots, setSlots] = useState<TestDriveSlot[]>([]);
   const [models, setModels] = useState<EvModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);

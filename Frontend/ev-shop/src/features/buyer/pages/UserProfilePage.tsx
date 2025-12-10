@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import type { User } from "@/types";
 import { Camera, AlertTriangle, X } from "lucide-react";
 import { buyerService } from "../buyerService";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId } from "@/context/authSlice";
 import { Loader } from "@/components/Loader";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -65,8 +66,7 @@ const UserProfile: React.FC<{
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isChanged, setIsChanged] = useState(false);
   const [showWarning, setShowWarning] = useState(true);
-  const { getUserID } = useAuth();
-  const userID = getUserID();
+  const userID = useAppSelector(selectUserId);
   const navigate = useNavigate();
 
   const {

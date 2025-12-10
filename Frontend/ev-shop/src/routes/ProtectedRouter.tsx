@@ -1,7 +1,11 @@
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import type { ReactNode } from "react";
 import type { UserRole } from "@/types";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import {
+  selectUser,
+  selectActiveRole,
+} from "@/context/authSlice";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -12,7 +16,8 @@ export default function ProtectedRoute({
   children,
   allowedRoles,
 }: ProtectedRouteProps) {
-  const { user, getActiveRole } = useAuth();
+  const user = useAppSelector(selectUser);
+  const role = useAppSelector(selectActiveRole);
 
   // Not logged in → redirect to login
   if (!user) {
@@ -21,9 +26,8 @@ export default function ProtectedRoute({
 
   // Check if user has at least one allowed role
   // const hasAccess = user.roles.filter((r) => allowedRoles.includes(r));
-  const role = getActiveRole();
   const hasAccess = allowedRoles.includes(role!);
-  console.log(getActiveRole());
+  console.log(role);
   console.log(hasAccess);
   // if (hasAccess.length === 0) {
   //   return <Navigate to="/unauthorized" replace />;

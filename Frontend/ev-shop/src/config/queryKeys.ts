@@ -6,6 +6,8 @@ export const queryKeys = {
   orders: (id: string) => ["orders", id],
   evlist: ["evlist"],
   testDrive: (id: string) => ["testDrive", id],
+  activeTestDriveSlots: ["activeTestDriveSlots"],
+  customerTestDrives: (id: string) => ["customerTestDrives", id],
   checkPassword: (email: string) => ["checkPassword", email],
 
   communityPosts: (search?: string) => ["communityPosts", search || ""],
@@ -18,6 +20,7 @@ export const queryKeys = {
     userId,
     listingId,
   ],
+
   vehicleById: (id: string) => ["vehicle", id],
   postReplies: (postId: string) => ["postReplies", postId],
   // seller

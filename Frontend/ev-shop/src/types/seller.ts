@@ -7,6 +7,11 @@ export type Seller = {
   shop_logo: string;
   rating: number;
   total_reviews: number;
+  street_address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
 };
 
 export interface SellerProfile {
@@ -24,4 +29,9 @@ export interface SellerProfile {
   shop_logo?: string;
   rating?: number;
   total_reviews: number;
+  street_address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
 }

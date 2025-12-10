@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId } from "@/context/authSlice";
 import { sellerService } from "../sellerService";
 import type { AlertProps, SellerProfile } from "@/types";
 import { Loader, PageLoader } from "@/components/Loader";
@@ -17,16 +18,21 @@ import { queryKeys } from "@/config/queryKeys";
 export const SellerProfilePage: React.FC<{
   setAlert?: (alert: AlertProps | null) => void;
 }> = ({ setAlert }) => {
-  const { getUserID } = useAuth();
+  const userId = useAppSelector(selectUserId);
   const queryClient = useQueryClient();
-  const userId = getUserID();
   const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isChanged, setIsChanged] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     business_name: "",
     description: "",
     website: "",
+    street_address: "",
+    city: "",
+    state: "",
+    postal_code: "",
+    country: "",
   });
 
   // Fetch seller profile using React Query
@@ -94,6 +100,11 @@ export const SellerProfilePage: React.FC<{
         business_name: profile.business_name || "",
         description: profile.description || "",
         website: profile.website || "",
+        street_address: profile.street_address || "",
+        city: profile.city || "",
+        state: profile.state || "",
+        postal_code: profile.postal_code || "",
+        country: profile.country || "",
       });
       if (profile.shop_logo) {
         setLogoPreview(`${import.meta.env.VITE_API_URL}${profile.shop_logo}`);
@@ -129,9 +140,31 @@ export const SellerProfilePage: React.FC<{
     }
   };
 
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.business_name.trim()) newErrors.business_name = "Business name is required";
+    if (!formData.street_address.trim()) newErrors.street_address = "Street address is required";
+    if (!formData.city.trim()) newErrors.city = "City is required";
+    if (!formData.state.trim()) newErrors.state = "State is required";
+    if (!formData.postal_code.trim()) newErrors.postal_code = "Zip code is required";
+    if (!formData.country.trim()) newErrors.country = "Country is required";
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?._id) return;
+    if (!validate()) {
+      setAlert?.({
+        id: Date.now(),
+        title: "Validation Error",
+        message: "Please fill in all required fields.",
+        type: "error",
+      });
+      return;
+    }
 
     const formDataToSend = new FormData();
     formDataToSend.append("business_name", formData.business_name);
@@ -141,6 +174,12 @@ export const SellerProfilePage: React.FC<{
     if (formData.website) {
       formDataToSend.append("website", formData.website);
     }
+    formDataToSend.append("street_address", formData.street_address);
+    formDataToSend.append("city", formData.city);
+    formDataToSend.append("state", formData.state);
+    formDataToSend.append("postal_code", formData.postal_code);
+    formDataToSend.append("country", formData.country);
+
     if (selectedLogo) {
       formDataToSend.append("shop_logo", selectedLogo);
     }
@@ -284,6 +323,94 @@ export const SellerProfilePage: React.FC<{
             placeholder="Describe your business, services, and what makes you unique..."
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none"
           />
+        </div>
+
+        {/* Address Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-b border-gray-100 dark:border-gray-700 py-4">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Street Address *
+            </label>
+            <input
+              type="text"
+              value={formData.street_address}
+              onChange={(e) => {
+                setFormData({ ...formData, street_address: e.target.value });
+                setIsChanged(true);
+              }}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            />
+            {errors.street_address && <p className="text-red-500 text-xs mt-1">{errors.street_address}</p>}
+          </div>
+
+          <div>
+             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              City *
+            </label>
+            <input
+              type="text"
+              value={formData.city}
+              onChange={(e) => {
+                setFormData({ ...formData, city: e.target.value });
+                setIsChanged(true);
+              }}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            />
+             {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
+          </div>
+
+          <div>
+             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              State *
+            </label>
+            <input
+              type="text"
+              value={formData.state}
+              onChange={(e) => {
+                setFormData({ ...formData, state: e.target.value });
+                setIsChanged(true);
+              }}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            />
+             {errors.state && <p className="text-red-500 text-xs mt-1">{errors.state}</p>}
+          </div>
+
+          <div>
+             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Zip Code *
+            </label>
+            <input
+              type="text"
+              value={formData.postal_code}
+              onChange={(e) => {
+                setFormData({ ...formData, postal_code: e.target.value });
+                setIsChanged(true);
+              }}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            />
+             {errors.postal_code && <p className="text-red-500 text-xs mt-1">{errors.postal_code}</p>}
+          </div>
+
+          <div>
+             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Country *
+            </label>
+            <input
+              type="text"
+              value={formData.country}
+              onChange={(e) => {
+                setFormData({ ...formData, country: e.target.value });
+                setIsChanged(true);
+              }}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            />
+             {errors.country && <p className="text-red-500 text-xs mt-1">{errors.country}</p>}
+          </div>
         </div>
 
         <div>

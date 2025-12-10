@@ -23,6 +23,19 @@ export interface ISeller extends Document {
   rating?: number;
   /** The total number of reviews the seller has received. */
   total_reviews: number;
+  /** The physical address of the seller's business. */
+  street_address: string;
+   /** City where the business is located. */
+  city: string;
+
+  /** State / province / district. */
+  state: string;
+
+  /** Postal or ZIP code. */
+  postal_code: string;
+
+  /** Country name. */
+  country: string;
 }
 
 /**
@@ -46,6 +59,16 @@ const SellerSchema = new Schema<ISeller>(
     rating: { type: Number, min: 0, max: 5 },
     /** The total count of reviews received by the seller, defaulting to 0. */
     total_reviews: { type: Number, default: 0 },
+    /** The physical address of the seller's business. */
+    street_address: { type: String},
+    /** City where the business is located. */
+    city: { type: String },
+    /** State / province / district. */
+    state: { type: String },
+    /** Postal or ZIP code. */
+    postal_code: { type: String },
+    /** Country name. */
+    country: { type: String },
   },
   { timestamps: true }
 );

@@ -2,7 +2,8 @@ import { useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { CloseIcon } from "@/assets/icons/icons";
 import type { CartItem } from "@/types";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId } from "@/context/authSlice";
 import { Loader } from "@/components/Loader";
 import { useCart, useRemoveCartItem, useUpdateCartItem } from "@/hooks/useCart";
 import { useToast } from "@/context/ToastContext";
@@ -10,8 +11,7 @@ import { useToast } from "@/context/ToastContext";
 const apiURL = import.meta.env.VITE_API_URL;
 
 const CartPage = () => {
-  const { getUserID } = useAuth();
-  const userId = getUserID();
+  const userId = useAppSelector(selectUserId);
   const navigate = useNavigate();
   const { showToast } = useToast();
 

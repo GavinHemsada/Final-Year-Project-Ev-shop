@@ -12,7 +12,8 @@ import { Loader, PageLoader } from "@/components/Loader";
 import { Alert } from "@/components/MessageAlert";
 
 // Import authentication context and related types.
-import { useAuth } from "@/context/AuthContext";
+import { useAppDispatch } from "@/hooks/useAppSelector";
+import { setActiveRole, setUserData } from "@/context/authSlice";
 import type { UserRole } from "@/types";
 
 // Import React hooks for state, side-effects, and navigation.
@@ -54,8 +55,8 @@ const LoginPage = () => {
     message: string;
     type: "success" | "error";
   } | null>(null);
-  // Access the setUserData function from the authentication context.
-  const { setUserData, setActiveRole } = useAuth();
+  // Access the setUserData function from the authentication slice.
+  const dispatch = useAppDispatch();
   // Hook for programmatic navigation.
   const nav = useNavigate();
 
@@ -104,8 +105,8 @@ const LoginPage = () => {
         .flatMap((r: any) => r.split(","))
         .map((r: any) => r.trim()) as UserRole[];
       // On success, set user data in the context.
-      setUserData(respons.user, roleList, { userid: respons.userid });
-      setActiveRole(roleList[0]);
+      dispatch(setUserData({userid: respons.userid, roles: roleList, ids: {userid: respons.userid} } ));
+      dispatch(setActiveRole(roleList[0])); 
       showMessage("Login Successful", respons.message, "success");
       // Redirect to the user dashboard after a short delay.
       setTimeout(() => {

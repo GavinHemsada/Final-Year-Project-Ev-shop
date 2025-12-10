@@ -41,6 +41,7 @@ export type Vehicle = {
       name?: string;
     };
     shop_logo?: string;
+    street_address?: string;
   };
 
   model_id: {

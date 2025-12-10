@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId, setActiveRole, addNewRole } from "@/context/authSlice";
 import { CloseIcon } from "@/assets/icons/icons";
 import { buyerService } from "../buyerService";
 import { Loader } from "@/components/Loader";
@@ -10,10 +11,16 @@ import type { AlertProps } from "@/types";
  * Renders as a modal overlay.
  */
 const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: AlertProps | null) => void }> = ({ onClose, setAlert }) => {
-  const { getUserID, addnewRole, setActiveRole } = useAuth();
+  const dispatch = useAppDispatch();
+  const userId = useAppSelector(selectUserId);
 
   const [formData, setFormData] = useState({
     business_name: "",
+    street_address: "",
+    city: "",
+    state: "",
+    postal_code: "",
+    country: "",
     license_number: "",
     description: "",
     website: "",
@@ -46,6 +53,29 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
       newErrors.business_name = "Business name is required.";
     }
 
+    if (!formData.street_address.trim()) {
+      newErrors.street_address = "Street address is required.";
+    }
+
+    if (!formData.city.trim()) {
+      newErrors.city = "City is required.";
+    }
+
+    if (!formData.state.trim()) {
+      newErrors.state = "State is required.";
+    }
+
+    if (!formData.country.trim()) {
+      newErrors.country = "Country is required.";
+    }
+
+    if (!formData.postal_code.trim()) {
+      newErrors.postal_code = "Postal code is required.";
+    } else if (!/^\d+$/.test(formData.postal_code.trim())) {
+        // Simple numeric check for postal code, can be adjusted based on requirements
+      newErrors.postal_code = "Postal code must be numeric.";
+    }
+
     // Validate website URL if provided
     if (formData.website.trim()) {
       try {
@@ -73,7 +103,7 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
 
     const sellerData = {
       ...formData,
-      user_id: getUserID(),
+      user_id: userId,
     };
     console.log("Submitting seller application:", sellerData);
 
@@ -85,13 +115,18 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
         message: "Successfully register for new Seller",
         type: "success",
       });
-      addnewRole("seller");
-      setActiveRole("seller");
+      dispatch(addNewRole("seller"));
+      dispatch(setActiveRole("seller"));
       setSuccessMessage("Application submitted successfully!");
       navigate("/seller/dashboard");
       // Clear the form on success
       setFormData({
         business_name: "",
+        street_address: "",
+        city: "",
+        state: "",
+        postal_code: "",
+        country: "",
         license_number: "",
         description: "",
         website: "",
@@ -165,6 +200,134 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
                 </p>
               )}
             </div>
+
+             {/* Address Section */}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Street Address */}
+              <div className="md:col-span-2">
+                <label
+                  htmlFor="street_address"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+                >
+                  Street Address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="street_address"
+                  name="street_address"
+                  type="text"
+                  value={formData.street_address}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                  placeholder="e.g., 123 Main St"
+                />
+                {errors.street_address && (
+                  <p className="mt-1 text-xs text-red-500">
+                    {errors.street_address}
+                  </p>
+                )}
+              </div>
+
+               {/* City */}
+               <div>
+                  <label
+                    htmlFor="city"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+                  >
+                    City <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="city"
+                    name="city"
+                    type="text"
+                    value={formData.city}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                    placeholder="e.g., New York"
+                  />
+                  {errors.city && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.city}
+                    </p>
+                  )}
+               </div>
+
+                {/* State */}
+                <div>
+                  <label
+                    htmlFor="state"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+                  >
+                    State <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="state"
+                    name="state"
+                    type="text"
+                    value={formData.state}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                    placeholder="e.g., NY"
+                  />
+                  {errors.state && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.state}
+                    </p>
+                  )}
+                </div>
+
+                {/* Postal Code */}
+                 <div>
+                  <label
+                    htmlFor="postal_code"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+                  >
+                    Zip Code <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="postal_code"
+                    name="postal_code"
+                    type="text"
+                    value={formData.postal_code}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                    placeholder="e.g., 10001"
+                  />
+                  {errors.postal_code && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.postal_code}
+                    </p>
+                  )}
+                 </div>
+
+                 {/* Country */}
+                 <div>
+                  <label
+                    htmlFor="country"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+                  >
+                    Country <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="country"
+                    name="country"
+                    type="text"
+                    value={formData.country}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                    placeholder="e.g., USA"
+                  />
+                  {errors.country && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.country}
+                    </p>
+                  )}
+                 </div>
+             </div>
 
             {/* License Number */}
             <div>

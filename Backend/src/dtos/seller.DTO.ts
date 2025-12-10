@@ -37,6 +37,28 @@ export class SellerDTO {
   @IsOptional()
   @IsUrl()
   website?: string;
+  /**
+   * The physical address of the seller's business.
+   */
+  @IsString()
+  street_address!: string;
+  /**
+   * City where the business is located.
+   */
+  @IsString()
+  city!: string;
+
+  /** State / province / district. */
+  @IsString()
+  state!: string;
+
+  /** Postal or ZIP code. */
+  @IsString()
+  postal_code!: string;
+
+  /** Country name. */
+  @IsString()
+  country!: string;
 }
 
 /**
@@ -64,4 +86,29 @@ export class UpdateSellerDTO {
   @IsOptional()
   @IsUrl()
   website?: string;
+  /**
+   * The new physical address for the seller's business.
+   */
+  @IsOptional()
+  @IsString()
+  street_address?: string;
+  /** City where the business is located. */
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  /** State / province / district. */
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  /** Postal or ZIP code. */
+  @IsOptional()
+  @IsString()
+  postal_code?: string;
+
+  /** Country name. */
+  @IsOptional()
+  @IsString()
+  country?: string;
 }

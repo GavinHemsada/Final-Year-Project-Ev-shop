@@ -15,6 +15,12 @@ export interface IOrderService {
   createOrder(
     data: CreateOrderDTO
   ): Promise<{ success: boolean; order?: any; error?: string }>;
+
+  /**
+   * Retrieves all orders.
+   * @returns A promise that resolves to an object containing an array of all orders or an error.
+   */
+  getAllOrders(): Promise<{ success: boolean; orders?: any[]; error?: string }>;
   /**
    * Retrieves an order by its unique ID.
    * @param id - The ID of the order to find.
@@ -91,6 +97,27 @@ export function orderService(repo: IOrderRepository): IOrderService {
         return { success: false, error: "Failed to create order" };
       }
     },
+    /**
+     * Retrieves all orders without caching.
+     * This method fetches the complete list of orders directly from the repository.
+     */
+    getAllOrders: async () => {
+      try {
+        const cacheKey = `orders_all`;
+        const orders = await CacheService.getOrSet(
+          cacheKey,
+          async () => {
+            const orders = await repo.findAll();
+            return orders ?? [];
+          },
+          3600 // Cache for 1 hour
+        );
+        if (!orders) return { success: false, error: "No orders found" };
+        return { success: true, orders };
+      } catch (err) {
+        return { success: false, error: "Failed to fetch orders" };
+      }
+    },
 
     /**
      * Finds a single order by its ID, using a cache-aside pattern.
@@ -121,20 +148,30 @@ export function orderService(repo: IOrderRepository): IOrderService {
      */
     getOrdersByUserId: async (userId) => {
       try {
-        const cacheKey = `orders_user_${userId}`;
+        if (!userId || !userId.trim()) {
+          return { success: false, error: "User ID is required" };
+        }
+        const trimmedUserId = userId.trim();
+
+        const cacheKey = `orders_user_${trimmedUserId}`;
         // Attempt to get from cache, otherwise fetch from repository and set cache.
         const orders = await CacheService.getOrSet(
           cacheKey,
           async () => {
-            const ordersData = await repo.findByUserId(userId);
+            const ordersData = await repo.findByUserId(trimmedUserId);
             return ordersData ?? [];
           },
           3600 // Cache for 1 hour
         );
         if (!orders) return { success: false, error: "No orders found" };
+        // Return success even if array is empty (user has no orders)
         return { success: true, orders };
-      } catch (err) {
-        return { success: false, error: "Failed to fetch orders" };
+      } catch (err: any) {
+        console.error("getOrdersByUserId error:", err);
+        return {
+          success: false,
+          error: err?.message || "Failed to fetch orders",
+        };
       }
     },
 

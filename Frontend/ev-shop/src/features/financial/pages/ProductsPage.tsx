@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
+import {useAppSelector } from "@/hooks/useAppSelector";
+import { selectActiveRoleId } from "@/context/authSlice"; 
 import { financialService } from "../financialService";
 import type { AlertProps } from "@/types";
 import { Loader } from "@/components/Loader";
@@ -8,8 +9,7 @@ import { PlusCircleIcon, EditIcon, TrashIcon } from "@/assets/icons/icons";
 export const ProductsPage: React.FC<{
   setAlert?: (alert: AlertProps | null) => void;
 }> = ({ setAlert }) => {
-  const { getActiveRoleId } = useAuth();
-  const institutionId = getActiveRoleId();
+  const institutionId = useAppSelector(selectActiveRoleId);
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

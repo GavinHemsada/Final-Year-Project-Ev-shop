@@ -20,7 +20,7 @@ export const ListingsTable: React.FC<{
     modelId: string;
   } | null>(null);
   const queryClient = useQueryClient();
-
+  console.log(listings);
   const handleConfirmDelete = async () => {
     if (!selectedListing) return;
 
@@ -34,7 +34,6 @@ export const ListingsTable: React.FC<{
     setSelectedListing({ listingId, modelId });
 
     setConfirmAlert?.({
-      id: Date.now(),
       title: "Confirm",
       message: "Are you sure you want to delete this listing?",
       confirmText: "Delete",

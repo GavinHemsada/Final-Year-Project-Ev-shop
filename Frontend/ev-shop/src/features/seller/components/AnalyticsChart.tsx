@@ -11,7 +11,8 @@ import {
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { sellerService } from "../sellerService";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectActiveRoleId } from "@/context/authSlice";
 import { Loader } from "@/components/Loader";
 import { queryKeys } from "@/config/queryKeys";
 
@@ -22,8 +23,7 @@ interface ChartDataPoint {
 }
 
 export const AnalyticsChart: React.FC = () => {
-  const { getActiveRoleId } = useAuth();
-  const sellerId = getActiveRoleId();
+  const sellerId = useAppSelector(selectActiveRoleId);
 
   const { data: ordersData, isLoading, error } = useQuery({
     queryKey: queryKeys.sellerOrders(sellerId!),

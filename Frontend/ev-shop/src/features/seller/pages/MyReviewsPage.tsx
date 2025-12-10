@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId } from "@/context/authSlice";
 import { CalendarIcon, ReviewsIcon } from "@/assets/icons/icons";
 import type { AlertProps } from "@/types";
 
@@ -69,7 +70,7 @@ export const MyReviewsPage: React.FC<{ setAlert?: (alert: AlertProps | null) => 
     (any & { model_name: string; slot_id: { model_id: string } })[]
   >([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { getUserID } = useAuth();
+  const sellerId = useAppSelector(selectUserId);
 
   useEffect(() => {
     // In a real app, you would fetch the user's bookings and filter for those with reviews.
@@ -93,7 +94,7 @@ export const MyReviewsPage: React.FC<{ setAlert?: (alert: AlertProps | null) => 
     // Using mock data for now
     setReviews(mockBookingsWithReviews);
     setIsLoading(false);
-  }, [getUserID]);
+  }, [sellerId]);
 
   const handleDeleteReview = (bookingId: string) => {
     // This would call DELETE /api/test-drive/ratings/{bookingId}

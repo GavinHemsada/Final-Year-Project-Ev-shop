@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { HeartIcon } from "@/assets/icons/icons";
 import type { Vehicle } from "@/types";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId } from "@/context/authSlice";
 import { buyerService } from "../buyerService";
 import { LazyVehicleCard } from "@/components/EvModelCard";
 import { Loader } from "@/components/Loader";
@@ -9,8 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
 
 const SavedVehicles: React.FC = () => {
-  const { getUserID } = useAuth();
-  const userId = getUserID();
+  const userId = useAppSelector(selectUserId);
 
   const {
     data: savedVehiclesData,
@@ -43,30 +43,6 @@ const SavedVehicles: React.FC = () => {
     () => savedVehiclesData || [],
     [savedVehiclesData]
   );
-
-  // const removeMutation = useMutation({
-  //   mutationFn: (listingId: string) =>
-  //     buyerService.removeSavedVehicle(userId!, listingId),
-  //   onSuccess: () => {
-  //     queryClient.invalidateQueries({
-  //       queryKey: queryKeys.savedVehicles(userId!),
-  //     });
-  //     setAlert?.({
-  //       id: Date.now(),
-  //       title: "Success",
-  //       message: "Vehicle removed from saved list.",
-  //       type: "success",
-  //     });
-  //   },
-  //   onError: (error: any) => {
-  //     setAlert?.({
-  //       id: Date.now(),
-  //       title: "Error",
-  //       message: error?.response?.data?.message || "Failed to remove vehicle.",
-  //       type: "error",
-  //     });
-  //   },
-  // });
 
   if (!userId) {
     return (

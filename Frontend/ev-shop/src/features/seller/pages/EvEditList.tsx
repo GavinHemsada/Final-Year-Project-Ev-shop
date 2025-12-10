@@ -12,7 +12,8 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Alert } from "@/components/MessageAlert";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectActiveRoleId } from "@/context/authSlice";
 import { Loader } from "@/components/Loader";
 
 // Schema is slightly modified for editing
@@ -137,8 +138,7 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
   const listingId = propListingId || paramListingId;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { getActiveRoleId } = useAuth();
-  const sellerId = getActiveRoleId();
+  const sellerId = useAppSelector(selectActiveRoleId);
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [modelId, setModelId] = useState<string | null>(null);

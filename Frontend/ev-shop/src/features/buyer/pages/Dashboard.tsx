@@ -47,7 +47,8 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector, useAppDispatch } from "@/hooks/useAppSelector";
+import { selectRoles, selectUserId, logout } from "@/context/authSlice";
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
@@ -63,13 +64,15 @@ const App: React.FC = () => {
     null
   );
 
-  const { getUserID, logout, getRoles } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const userID = getUserID();
-  const userRole = useMemo(() => getRoles() || [], [getRoles]);
+  const userID = useAppSelector(selectUserId);
+  const roles = useAppSelector(selectRoles);
+  console.log(userID);
+  const userRole = useMemo(() => roles || [], [roles]);
   const itemsPerPage = 9;
 
+  const dispatch = useAppDispatch();
   // Page load state
   useEffect(() => {
     if (document.readyState === "complete") setLoading(false);
@@ -258,12 +261,12 @@ const App: React.FC = () => {
   }, []);
   const handleLogout = useCallback(async () => {
     try {
-      if (logout) await logout();
+      await dispatch(logout());
       navigate("/auth/login");
     } catch (err) {
       console.error(err);
     }
-  }, [logout, navigate]);
+  }, [dispatch, navigate]);
 
   if (loading || isLoading) return <PageLoader />;
 

@@ -13,6 +13,12 @@ export interface IOrderController {
    */
   createOrder(req: Request, res: Response): Promise<Response>;
   /**
+   * Handles the HTTP request to get all orders.
+   * @param req - The Express request object.
+   * @param res - The Express response object.
+   */
+  getAllOrders(req: Request, res: Response): Promise<Response>;
+  /**
    * Handles the HTTP request to get an order by its unique ID.
    * @param req - The Express request object, containing the order ID in `req.params`.
    * @param res - The Express response object.
@@ -64,6 +70,18 @@ export function orderController(service: IOrderService): IOrderController {
         return handleError(res, err, "createOrder");
       }
     },
+
+    /**
+     * Retrieves all orders in the system.
+     */
+    getAllOrders: async (req, res) => {
+      try {
+        const result = await service.getAllOrders();
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "getAllOrders");
+      }
+    },
     /**
      * Retrieves a single order by its ID.
      */
@@ -80,7 +98,16 @@ export function orderController(service: IOrderService): IOrderController {
      */
     getOrdersByUserId: async (req, res) => {
       try {
-        const result = await service.getOrdersByUserId(req.params.userId);
+        // Decode URL-encoded characters (like %0A for newline) and trim whitespace
+        const userId = decodeURIComponent(req.params.userId || "").trim();
+        if (!userId) {
+          return handleError(
+            res,
+            new Error("User ID is required"),
+            "getOrdersByUserId"
+          );
+        }
+        const result = await service.getOrdersByUserId(userId);
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "getOrdersByUserId");

@@ -1,26 +1,23 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Autoplay, Pagination } from "swiper/modules";
-import { HeartIcon, ArrowLeftIcon } from "@/assets/icons/icons";
+import { Navigation, Autoplay, Pagination, Thumbs } from "swiper/modules";
+import { HeartIcon, ArrowLeftIcon, InfoIcon } from "@/assets/icons/icons";
 import { buyerService } from "../buyerService";
 import { useAddToCart } from "@/hooks/useCart";
-import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectUserId } from "@/context/authSlice";
 import { useToast } from "@/context/ToastContext";
 import type { Vehicle } from "@/types";
-import { Loader } from "@/components/Loader";
 
 const apiURL = import.meta.env.VITE_API_URL;
-const swiperModules = [Navigation, Autoplay, Pagination];
+const swiperModules = [Navigation, Autoplay, Pagination, Thumbs];
 
 const VehicleDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { getUserID } = useAuth();
-  const userId = getUserID();
+  const userId = useAppSelector(selectUserId);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const addToCartMutation = useAddToCart();
@@ -31,7 +28,6 @@ const VehicleDetailsPage: React.FC = () => {
     const fetchVehicle = async () => {
       if (!id) return;
       try {
-        setLoading(true);
         const response = await buyerService.getVehicleById(id);
         // handleResult unwraps the response, so response is directly the listing object
         if (response && response._id) {
@@ -50,8 +46,6 @@ const VehicleDetailsPage: React.FC = () => {
           type: "error",
         });
         setTimeout(() => navigate("/user/dashboard"), 2000);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -165,7 +159,7 @@ const VehicleDetailsPage: React.FC = () => {
         user_id: userId,
         listing_id: vehicle._id,
         seller_id: vehicle.seller_id._id,
-        total_amount: vehicle.price || 0,
+        total_amount: 50000, // Advance payment amount
       };
 
       const order = await buyerService.placeOrder(orderData);
@@ -179,7 +173,7 @@ const VehicleDetailsPage: React.FC = () => {
       const paymentData = {
         order_id: order._id,
         payment_type: "purchase",
-        amount: vehicle.price || 0,
+        amount: 50000, // Charge only the advance payment
         returnUrl: `${frontendUrl}/user/payment/return`,
         cancelUrl: `${frontendUrl}/user/payment/cancel`,
       };
@@ -200,9 +194,10 @@ const VehicleDetailsPage: React.FC = () => {
       // Submit form to PayHere
       const PAYHERE_SANDBOX_URL = "https://sandbox.payhere.lk/pay/checkout";
       const PAYHERE_LIVE_URL = "https://www.payhere.lk/pay/checkout";
-      const payHereUrl = import.meta.env.VITE_PAYHERE_MODE === "live" 
-        ? PAYHERE_LIVE_URL 
-        : PAYHERE_SANDBOX_URL;
+      const payHereUrl =
+        import.meta.env.VITE_PAYHERE_MODE === "live"
+          ? PAYHERE_LIVE_URL
+          : PAYHERE_SANDBOX_URL;
 
       const form = document.createElement("form");
       form.method = "POST";
@@ -223,7 +218,9 @@ const VehicleDetailsPage: React.FC = () => {
     } catch (error: any) {
       console.error("Buy now error:", error);
       const errorMessage =
-        error?.response?.data?.message || error?.message || "Failed to process purchase";
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to process purchase";
       showToast({
         text: errorMessage,
         type: "error",
@@ -249,18 +246,12 @@ const VehicleDetailsPage: React.FC = () => {
 
   // Get seller info
   const sellerShopName = vehicle?.seller_id?.business_name || "Seller";
-  const sellerProfileImage = vehicle?.seller_id?.user_id?.profile_image
-    ? `${apiURL}${vehicle.seller_id.user_id.profile_image}`
+  const sellerProfileImage = vehicle?.seller_id?.shop_logo
+    ? `${apiURL}${vehicle.seller_id.shop_logo}`
     : null;
 
-  if (loading) {
-    return (
-      <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700 min-h-screen flex items-center justify-center">
-        <Loader size={60} color="#4f46e5" />
-      </div>
-    );
-  }
-
+  const sellerAddress = vehicle?.seller_id?.street_address;
+  console.log(vehicle)
   if (!vehicle) {
     return (
       <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
@@ -309,7 +300,9 @@ const VehicleDetailsPage: React.FC = () => {
                       <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-md">
                         <img
                           src={brandLogoUrl}
-                          alt={`${vehicle.model_id?.brand_id?.brand_name || "Brand"} logo`}
+                          alt={`${
+                            vehicle.model_id?.brand_id?.brand_name || "Brand"
+                          } logo`}
                           className="h-12 w-auto max-w-[120px] object-contain"
                         />
                       </div>
@@ -320,7 +313,9 @@ const VehicleDetailsPage: React.FC = () => {
             </Swiper>
           ) : (
             <div className="h-96 w-full bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-              <p className="text-gray-500 dark:text-gray-400">No images available</p>
+              <p className="text-gray-500 dark:text-gray-400">
+                No images available
+              </p>
             </div>
           )}
         </div>
@@ -354,7 +349,9 @@ const VehicleDetailsPage: React.FC = () => {
                     } dark:text-gray-500 dark:hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed`}
                     title={isSaved ? "Remove from saved" : "Save vehicle"}
                   >
-                    <HeartIcon className={`h-6 w-6 ${isSaved ? "fill-current" : ""}`} />
+                    <HeartIcon
+                      className={`h-6 w-6 ${isSaved ? "fill-current" : ""}`}
+                    />
                   </button>
                 )}
               </div>
@@ -367,28 +364,43 @@ const VehicleDetailsPage: React.FC = () => {
 
             {/* Seller Info */}
             <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Sold by</p>
-              <div className="flex items-center gap-3">
-                {sellerProfileImage ? (
-                  <img
-                    src={sellerProfileImage}
-                    alt={sellerShopName}
-                    className="h-12 w-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600"
-                  />
-                ) : (
-                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-lg font-bold">
-                    {sellerShopName.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div>
-                  <p className="font-semibold text-gray-900 dark:text-white">
-                    {sellerShopName}
-                  </p>
-                  {vehicle.seller_id?.user_id?.name && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {vehicle.seller_id.user_id.name}
-                    </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                Sold by
+              </p>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {sellerProfileImage ? (
+                    <img
+                      src={sellerProfileImage}
+                      alt={sellerShopName}
+                      className="h-12 w-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-lg font-bold">
+                      {sellerShopName.charAt(0).toUpperCase()}
+                    </div>
                   )}
+
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      {sellerShopName}
+                    </p>
+                    {vehicle.seller_id?.user_id?.name && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {vehicle.seller_id.user_id.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-1">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Address
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                    {sellerAddress}
+                  </p>
                 </div>
               </div>
             </div>
@@ -400,7 +412,9 @@ const VehicleDetailsPage: React.FC = () => {
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Range</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                    Range
+                  </p>
                   <p className="text-lg font-semibold text-gray-900 dark:text-white">
                     {vehicle.model_id?.range_km || "N/A"} km
                   </p>
@@ -414,7 +428,9 @@ const VehicleDetailsPage: React.FC = () => {
                   </p>
                 </div>
                 <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Condition</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                    Condition
+                  </p>
                   <p className="text-lg font-semibold text-gray-900 dark:text-white">
                     {vehicle.condition || "N/A"}
                   </p>
@@ -431,7 +447,9 @@ const VehicleDetailsPage: React.FC = () => {
                 )}
                 {vehicle.color && (
                   <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Color</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                      Color
+                    </p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-white">
                       {vehicle.color}
                     </p>
@@ -472,8 +490,31 @@ const VehicleDetailsPage: React.FC = () => {
                     {formattedPrice}
                   </div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {vehicle.listing_type === "ForSale" ? "For Sale" : "For Rent"}
+                    {vehicle.listing_type === "ForSale"
+                      ? "For Sale"
+                      : "For Rent"}
                   </p>
+                </div>
+
+                {/* Advance Payment Info Box */}
+                <div className="mt-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg dark:bg-blue-900/20 dark:border-blue-400">
+                  <div className="flex items-start gap-3">
+                    <InfoIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-blue-800 dark:text-blue-300">
+                        Advance Payment Required
+                      </h4>
+                      <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                        <strong>Address:{sellerAddress} </strong>
+                        <br />
+                        To secure the vehicle, you must make an advance payment
+                        of <strong>LKR 50,000</strong>. After this payment, you
+                        must complete the full payment and collect the vehicle
+                        within <strong>7 days</strong>. Failure to do so will
+                        result in the cancellation of the advance payment.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -513,4 +554,3 @@ const VehicleDetailsPage: React.FC = () => {
 };
 
 export default VehicleDetailsPage;
-

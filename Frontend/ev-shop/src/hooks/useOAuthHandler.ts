@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { useAppDispatch } from "@/hooks/useAppSelector";
+import { setActiveRole, setUserData } from "@/context/authSlice";
 import type { UserRole } from "@/types";
 import { authService } from "@/features/auth/authService";
 
@@ -8,7 +9,7 @@ export const useOAuthHandler = (
   action: "login" | "register",
   showMessage: (title: string, mesage: string, type?: string) => void
 ) => {
-  const { setUserData, setActiveRole } = useAuth();
+  const dispatch = useAppDispatch();
   const nav = useNavigate();
 
   // Handle OAuth callback
@@ -27,8 +28,8 @@ export const useOAuthHandler = (
     }
 
     if (userId) {
-      setUserData(userId, roleList, { userid: userId });
-      setActiveRole(roleList[0]);
+      dispatch(setUserData({userid: userId, roles: roleList, ids: {userid: userId} }));
+      dispatch(setActiveRole(roleList[0]));
       showMessage("OAuth authentication successful!", "Redirecting...", "success");
       setTimeout(() => {
         nav("/user/dashboard", { replace: true });
