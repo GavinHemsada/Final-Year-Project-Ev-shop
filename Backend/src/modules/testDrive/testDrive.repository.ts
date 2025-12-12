@@ -146,35 +146,43 @@ export const TestDriveRepository: ITestDriveRepository = {
 
   /** Finds a single TestDriveSlot by its document ID. */
   findSlotById: withErrorHandling(async (id) => {
-    return await TestDriveSlot.findById(id);
+    return await TestDriveSlot.findById(id).populate({
+      path: "model_id", select: "model_name model_logo"
+    }).populate({
+      path: "seller_id", select: "seller_name seller_logo"
+    })
   }),
 
   /** Finds all active TestDriveSlots, sorted by their available date. */
   findAllSlots: withErrorHandling(async () => {
     return await TestDriveSlot.find({ is_active: true }).sort({
       available_date: 1,
-    });
+    }).populate({
+      path: "model_id", select: "model_name model_logo"
+    }).populate({
+      path: "seller_id", select: "seller_name seller_logo"
+    })
   }),
 
   /** Finds all TestDriveSlots for a given seller, sorted by most recent. */
   findSlotsBySeller: withErrorHandling(async (sellerId) => {
     return await TestDriveSlot.find({
       seller_id: new Types.ObjectId(sellerId),
+    }).populate({
+      path: "model_id", select: "model_name model_logo"
+    }).populate({
+      path: "seller_id", select: "seller_name seller_logo"
     })
-      .populate({
-        path: "model_id",
-        populate: [
-          { path: "brand_id", select: "brand_name brand_logo" },
-          { path: "category_id", select: "category_name" },
-        ],
-      })
-      .sort({ available_date: -1 });
   }),
   /** Finds all active TestDriveSlots, sorted by their available date. */
   findActiveSlots: withErrorHandling(async () => {
     return await TestDriveSlot.find({ is_active: true }).sort({
       available_date: 1,
-    });
+    }).populate({
+      path: "model_id", select: "model_name model_logo"
+    }).populate({
+      path: "seller_id", select: "seller_name seller_logo"
+    })
   }),
   /** Finds a TestDriveSlot by ID and updates it with new data. */
   updateSlot: withErrorHandling(async (id, data) => {

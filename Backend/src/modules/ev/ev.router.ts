@@ -6,6 +6,7 @@ import {
   EvModelDTO,
   VehicleListingDTO,
   UpdateVehicleListingDTO,
+  QuickUpdateListingDTO,
 } from "../../dtos/ev.DTO";
 import { IEvController } from "./ev.controller";
 import { container } from "../../di/container";
@@ -680,6 +681,54 @@ export const evRouter = (): Router => {
     upload.array("images", 5),
     validateDto(UpdateVehicleListingDTO),
     (req, res) => controller.updateListing(req, res)
+  );
+
+  /**
+   * @swagger
+   * /ev/listings/{id}/quick-update:
+   *   patch:
+   *     summary: Quick update listing status and quantity
+   *     description: Updates only the status and/or quantity of a listing. Used for inline editing in the listings table.
+   *     tags: [EV Listings]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the listing to update.
+   *     requestBody:
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               status:
+   *                 type: string
+   *                 enum: [active, inactive, sold]
+   *                 example: "active"
+   *               number_of_ev:
+   *                 type: number
+   *                 minimum: 1
+   *                 example: 5
+   *     responses:
+   *       '200':
+   *         description: Listing updated successfully.
+   *       '400':
+   *         description: Bad request.
+   *       '401':
+   *         description: Unauthorized.
+   *       '404':
+   *         description: Listing not found.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.patch(
+    "/listings/:id/quick-update",
+    validateDto(QuickUpdateListingDTO),
+    (req, res) => controller.quickUpdateListing(req, res)
   );
 
   /**

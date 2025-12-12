@@ -28,6 +28,7 @@ export const queryKeys = {
   sellerOrders: (id: string) => ["sellerOrders", id],
   sellerEvlist: (id: string) => ["sellerEvlist", id],
   sellerTestDrive: (id: string) => ["sellerTestDrive", id],
+  listingForEdit: (listingId: string) => ["listingForEdit", listingId],
   repairLocations: (sellerId: string) => ["repairLocations", sellerId],
   activeRepairLocations: ["activeRepairLocations"],
   testDriveSlots: (sellerId: string) => ["testDriveSlots", sellerId],

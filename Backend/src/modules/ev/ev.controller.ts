@@ -135,6 +135,12 @@ export interface IEvController {
    */
   updateListing(req: Request, res: Response): Promise<Response>;
   /**
+   * Handles the HTTP request to quickly update listing status and/or quantity.
+   * @param req - The Express request object, containing the listing ID and update data.
+   * @param res - The Express response object.
+   */
+  quickUpdateListing(req: Request, res: Response): Promise<Response>;
+  /**
    * Handles the HTTP request to delete an EV listing.
    * @param req - The Express request object, containing the listing ID in `req.params`.
    * @param res - The Express response object.
@@ -392,6 +398,20 @@ export function evController(service: IEvService): IEvController {
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "updateListing");
+      }
+    },
+    /**
+     * Quickly updates listing status and/or quantity.
+     */
+    quickUpdateListing: async (req, res) => {
+      try {
+        const result = await service.quickUpdateListing(
+          req.params.id,
+          req.body
+        );
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "quickUpdateListing");
       }
     },
     /**

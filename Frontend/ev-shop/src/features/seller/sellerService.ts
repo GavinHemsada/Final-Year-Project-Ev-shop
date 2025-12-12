@@ -42,6 +42,16 @@ export const sellerService = {
     );
     return response.data;
   },
+  quickUpdateListing: async (
+    listingId: string,
+    data: { status?: string; number_of_ev?: number }
+  ) => {
+    const response = await axiosPrivate.patch(
+      `/ev/listings/${listingId}/quick-update`,
+      data
+    );
+    return response.data;
+  },
   deleteListing: async (id: string) => {
     const response = await axiosPrivate.delete(`/ev/listings/${id}`);
     return response.data;

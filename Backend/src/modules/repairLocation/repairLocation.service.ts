@@ -57,20 +57,6 @@ export function repairLocationService(
   repo: IRepairLocationRepository
 ): IRepairLocationService {
   return {
-    createRepairLocation: async (data) => {
-      const location = await repo.create(data);
-      if (!location) {
-        // Or throw a custom error
-        throw new Error("Failed to create repair location");
-      }
-
-      // Invalidate caches
-      await CacheService.delete(`repair_locations_${data.seller_id}`);
-      await CacheService.delete("repair_locations_active");
-
-      return { success: true, location };
-    },
-
     getRepairLocationsBySeller: async (sellerId) => {
       const cacheKey = `repair_locations_${sellerId}`;
       const locations = await CacheService.getOrSet(
@@ -79,9 +65,10 @@ export function repairLocationService(
           const data = await repo.findBySellerId(sellerId);
           return data ?? [];
         },
-        3600
+        3600 // Cache for 1 hour
       );
-
+      
+      console.log("Fetched locations from service:", locations);
       return { success: true, locations };
     },
 
@@ -115,10 +102,57 @@ export function repairLocationService(
       return { success: true, location };
     },
 
+    createRepairLocation: async (data) => {
+      // Check if location with same coordinates already exists for this seller
+      const existingLocation = await repo.findByCoordinates?.(
+        data.latitude,
+        data.longitude,
+        data.seller_id
+      );
+
+      if (existingLocation) {
+        return {
+          success: false,
+          error:
+            "A repair location with these coordinates already exists. Please use different coordinates.",
+        };
+      }
+
+      const location = await repo.create(data);
+      if (!location) {
+        // Or throw a custom error
+        throw new Error("Failed to create repair location");
+      }
+
+      // Invalidate caches
+      await CacheService.delete(`repair_locations_${data.seller_id}`);
+      await CacheService.delete("repair_locations_active");
+
+      return { success: true, location };
+    },
+
     updateRepairLocation: async (id, data) => {
       const existingLocation = await repo.findById(id);
       if (!existingLocation) {
         return { success: false, error: "Repair location not found" };
+      }
+
+      // Check if coordinates are being updated
+      if (data.latitude !== undefined && data.longitude !== undefined) {
+        // Check if another location with same coordinates exists (excluding current location)
+        const duplicateLocation = await repo.findByCoordinates?.(
+          data.latitude,
+          data.longitude,
+          existingLocation.seller_id._id.toString()
+        );
+
+        if (duplicateLocation && duplicateLocation._id.toString() !== id) {
+          return {
+            success: false,
+            error:
+              "A repair location with these coordinates already exists. Please use different coordinates.",
+          };
+        }
       }
 
       const location = await repo.update(id, data);
@@ -126,12 +160,9 @@ export function repairLocationService(
         // Or throw a custom error
         throw new Error("Failed to update repair location");
       }
-
       // Invalidate caches
       await CacheService.delete(`repair_location_${id}`);
-      await CacheService.delete(
-        `repair_locations_${existingLocation.seller_id}`
-      );
+      await CacheService.delete(`repair_locations_${existingLocation.seller_id._id}`);
       await CacheService.delete("repair_locations_active");
 
       return { success: true, location };
@@ -151,9 +182,7 @@ export function repairLocationService(
 
       // Invalidate caches
       await CacheService.delete(`repair_location_${id}`);
-      await CacheService.delete(
-        `repair_locations_${existingLocation.seller_id}`
-      );
+      await CacheService.delete(`repair_locations_${existingLocation.seller_id._id}`);
       await CacheService.delete("repair_locations_active");
 
       return { success: true };

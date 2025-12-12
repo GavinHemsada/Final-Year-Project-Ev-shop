@@ -30,6 +30,7 @@ import {
   DollarSignIcon,
 } from "@/assets/icons/icons";
 import EvListingStepper from "./EvNewList";
+import EvListingEditStepper from "./EvEditList";
 import { StatCard } from "../components/StatsCards";
 import { sellerService } from "../sellerService";
 import type { Vehicle } from "@/types/ev";
@@ -49,9 +50,6 @@ const SellerDashboard: React.FC = () => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [confirmAlert, setConfirmAlert] = useState<ConfirmAlertProps | null>(
-    null
-  );
-  const [confirmHandler, setConfirmHandler] = useState<(() => void) | null>(
     null
   );
   const dispatch = useAppDispatch();
@@ -78,7 +76,7 @@ const SellerDashboard: React.FC = () => {
   }, [seller]);
 
   const sellerEvList = useQuery({
-  queryKey: ["sellerEvlist", sellerId],
+  queryKey: queryKeys.sellerEvlist(sellerId!),
   queryFn: () => sellerService.getSellerEvList(sellerId!),
   enabled: !!sellerId, // DEPENDENT QUERY
   staleTime: 10 * 60 * 1000,
@@ -102,25 +100,23 @@ const SellerDashboard: React.FC = () => {
     setAlert(null);
   }, []);
 
-  const handleSetConfirmAlert = useCallback(
-    (confirmData: ConfirmAlertProps | null, handler?: () => void) => {
-      setConfirmAlert(confirmData);
-      setConfirmHandler(handler || null);
-    },
-    []
-  );
+ const handleSetConfirmAlert = useCallback(
+     (confirmAlertData: ConfirmAlertProps | null) => {
+       setConfirmAlert(confirmAlertData);
+     },
+     []
+   );
 
   const handleCloseConfirmAlert = useCallback(() => {
     setConfirmAlert(null);
-    setConfirmHandler(null);
   }, []);
 
   const handleConfirm = useCallback(() => {
-    if (confirmAlert?.onConfirmAction) {
-      confirmAlert.onConfirmAction();
-    }
-    setConfirmAlert(null);
-  }, [confirmAlert]);
+      if (confirmAlert?.onConfirmAction) {
+        confirmAlert.onConfirmAction();
+      }
+      setConfirmAlert(null);
+    }, [confirmAlert]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -130,6 +126,7 @@ const SellerDashboard: React.FC = () => {
             sellerid={seller?._id}
             listing={listings}
             setActiveTab={setActiveTab}
+            setEditListingId={setEditListingId}
             setAlert={handleSetAlert}
             setConfirmAlert={handleSetConfirmAlert}
           />
@@ -150,17 +147,17 @@ const SellerDashboard: React.FC = () => {
           />
         );
       case "testDrives":
-        return <TestDrivesPage setAlert={handleSetAlert} />;
+        return <TestDrivesPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
       case "reviews":
         return <MyReviewsPage setAlert={handleSetAlert} />;
       case "community":
         return <CommunityPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
       case "repairLocations":
-        return <RepairLocationsPage setAlert={handleSetAlert} />;
+        return <RepairLocationsPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
       case "editEvlist":
         return (
-          <EvListingStepper
-            setAlert={handleSetAlert}
+          <EvListingEditStepper
+            listingId={editListingId}
           />
         );
       default:
@@ -169,6 +166,7 @@ const SellerDashboard: React.FC = () => {
             sellerid={seller?._id}
             listing={listings}
             setActiveTab={setActiveTab}
+            setEditListingId={setEditListingId}
             setAlert={handleSetAlert}
             setConfirmAlert={handleSetConfirmAlert}
           />
@@ -272,12 +270,13 @@ const SellerDashboardPage: React.FC<{
   sellerid: string;
   listing: Vehicle[];
   setActiveTab: (tab: SellerActiveTab) => void;
+  setEditListingId?: (id: string | null) => void;
   setAlert?: (alert: AlertProps | null) => void;
   setConfirmAlert?: (
     alert: ConfirmAlertProps | null,
     handler?: () => void
   ) => void;
-}> = ({ sellerid, setActiveTab, listing, setAlert, setConfirmAlert }) => (
+}> = ({ sellerid, setActiveTab, listing, setEditListingId, setAlert, setConfirmAlert }) => (
   <>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <StatCard
@@ -310,6 +309,7 @@ const SellerDashboardPage: React.FC<{
         sellerid={sellerid}
         listings={listing}
         setActiveTab={setActiveTab}
+        setEditListingId={setEditListingId}
         setAlert={setAlert}
         setConfirmAlert={setConfirmAlert}
       />

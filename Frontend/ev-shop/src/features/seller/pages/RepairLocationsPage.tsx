@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { selectActiveRoleId } from "@/context/authSlice";
 import { sellerService } from "../sellerService";
-import type { AlertProps } from "@/types";
+import type { AlertProps, ConfirmAlertProps } from "@/types";
 import { Loader } from "@/components/Loader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
@@ -96,8 +96,9 @@ function MapClickHandler({
  * A page for sellers to manage their repair locations on a map.
  */
 export const RepairLocationsPage: React.FC<{
-  setAlert?: (alert: AlertProps | null) => void;
-}> = ({ setAlert }) => {
+  setAlert?: (alert: AlertProps | null) => void; 
+  setConfirmAlert?: (alert: ConfirmAlertProps | null) => void;
+}> = ({ setAlert, setConfirmAlert }) => {
   const sellerId = useAppSelector(selectActiveRoleId);
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
@@ -147,11 +148,12 @@ export const RepairLocationsPage: React.FC<{
       return Array.isArray(locations) ? locations : [];
     },
     enabled: !!sellerId,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   const locations: RepairLocation[] = locationsData || [];
-
+  console.log(locations);
   // Filter locations based on search query
   const filteredLocations = useMemo(() => {
     if (!searchQuery.trim()) return locations;
@@ -253,13 +255,13 @@ export const RepairLocationsPage: React.FC<{
         locationId: id,
         locationData: data,
       }),
-    onSuccess: () => {
-      // Invalidate seller's repair locations
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      // Force refetch seller's repair locations
+      await queryClient.refetchQueries({
         queryKey: queryKeys.repairLocations(sellerId!),
       });
       // Invalidate active repair locations (used in welcome page map)
-      queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: queryKeys.activeRepairLocations,
       });
       setAlert?.({
@@ -397,16 +399,21 @@ export const RepairLocationsPage: React.FC<{
       is_active: location.is_active,
     });
     setShowAddForm(true);
+    
+    // Scroll to top of page to show the edit form
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDelete = async (id: string) => {
-    if (
-      !window.confirm("Are you sure you want to delete this repair location?")
-    ) {
-      return;
-    }
-
-    deleteMutation.mutate(id);
+    setConfirmAlert?.({
+      title: "Confirm Delete",
+      message: "Are you sure you want to delete this repair location?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      onConfirmAction() {
+        deleteMutation.mutate(id);
+      },
+    });
   };
 
   // Calculate center of paginated locations for map view
@@ -440,6 +447,7 @@ export const RepairLocationsPage: React.FC<{
             onClick={() => {
               resetForm();
               setShowAddForm(true);
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600"
           >

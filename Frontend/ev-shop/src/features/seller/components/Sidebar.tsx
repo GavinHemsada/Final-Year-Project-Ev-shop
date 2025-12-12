@@ -3,11 +3,10 @@ import {
   ShoppingCartIcon,
   HeartIcon,
   ReviewsIcon,
-  CommunityIcon, // Import the new UsersIcon
+  CommunityIcon,
   KeyIcon,
   ChevronRightIcon,
   ChevronLeftIcon,
-  UserIcon,
   ServiceIcon,
 } from "@/assets/icons/icons";
 import type { SellerActiveTab } from "@/types";
@@ -93,13 +92,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon={<ShoppingCartIcon className="h-5 w-5" />}
           active={activeTab === "orders"}
           onClick={() => setActiveTab("orders")}
-          isExpanded={isExpanded}
-        />
-        <SidebarLink
-          text="Profile"
-          icon={<UserIcon className="h-5 w-5" />}
-          active={activeTab === "profile"}
-          onClick={() => setActiveTab("profile")}
           isExpanded={isExpanded}
         />
         <SidebarLink

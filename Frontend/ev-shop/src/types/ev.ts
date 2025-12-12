@@ -116,3 +116,53 @@ export interface EvListingFormData {
   // Step 4
   images: File[];
 }
+
+export interface TestEvBrand {
+  _id: string;
+  brand_name: string;
+  brand_logo: string;
+}
+
+export interface TestEvCategory {
+  _id: string;
+  category_name: string;
+}
+
+export interface TestEvModel {
+  _id: string;
+  model_name: string;
+  brand_id: TestEvBrand;
+  category_id?: TestEvCategory;
+  year: number;
+  motor_type: string;
+  battery_capacity_kwh: number;
+  charging_time_hours: number;
+  range_km: number;
+  seating_capacity: number;
+  price_range: string;
+  features: string[];
+  specifications: string[];
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
+export interface TestDriveSlot {
+  _id: string;
+  seller_id: string;
+  location: string;
+  model_id: TestEvModel;
+  available_date: string;
+  max_bookings: number;
+  is_active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+export interface EvModel {
+  _id: string;
+  model_name: string;
+  brand_id?: {
+    brand_name: string;
+  };
+}

@@ -15,6 +15,7 @@ import { Alert } from "@/components/MessageAlert";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { selectActiveRoleId } from "@/context/authSlice";
 import { Loader } from "@/components/Loader";
+import { queryKeys } from "@/config/queryKeys";
 
 // Schema is slightly modified for editing
 const EvListEditSchema = yup.object({
@@ -108,26 +109,42 @@ const EvListEditSchema = yup.object({
     )
     .test(
       "fileDimensions",
-      "Each image must be at most 800×450 pixels.",
+      "Each image must fit within 800×450 pixels (landscape) or 450×800 pixels (portrait).",
       async (value) => {
-        if (!value) return true;
+        if (!value || value.length === 0) return true;
+        
         const checks = await Promise.all(
           value.map(
             (file: File) =>
-              new Promise((resolve) => {
+              new Promise<boolean>((resolve) => {
                 // Check if it's a new File, not an existing URL string
                 if (!file.name) return resolve(true);
+                
                 const img = new Image();
                 img.src = URL.createObjectURL(file);
+                
                 img.onload = () => {
-                  const valid = img.width <= 800 && img.height <= 450;
+                  const { width, height } = img;
+                  // Allow images that fit within 800×450 in either orientation
+                  const valid = (width <= 800 && height <= 600) || (width <= 600 && height <= 800);
+                  
                   URL.revokeObjectURL(img.src);
+                  
+                  if (!valid) {
+                    console.warn(`Image rejected: ${width}×${height} pixels (max: 800×450 or 450×800)`);
+                  }
+                  
                   resolve(valid);
                 };
-                img.onerror = () => resolve(false);
+                
+                img.onerror = () => {
+                  URL.revokeObjectURL(img.src);
+                  resolve(false);
+                };
               })
           )
         );
+        
         return checks.every((valid) => valid);
       }
     ),
@@ -150,7 +167,7 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
     handleSubmit,
     setValue,
     trigger,
-    formState: { errors },
+    formState: { errors, isDirty },
     watch,
     reset, // NEW: To populate form
   } = useForm<EvListingFormData>({
@@ -185,7 +202,7 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
 
   // React Query: Fetch brands and categories
   const { data: brandsData } = useQuery({
-    queryKey: ["evBrands"],
+    queryKey: queryKeys.evBrands,
     queryFn: async () => {
       const result = await sellerService.getAllEvBrand();
       return result.map((brand: any) => ({
@@ -197,7 +214,7 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
   });
 
   const { data: categoriesData } = useQuery({
-    queryKey: ["evCategories"],
+    queryKey: queryKeys.evCategories,
     queryFn: async () => {
       const result = await sellerService.getAllEvCateogry();
       return result.map((category: any) => ({
@@ -213,7 +230,7 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
 
   // React Query: Fetch listing data for editing
   const { data: listingData, isLoading: isLoadingListing, error: listingError } = useQuery({
-    queryKey: ["listingForEdit", listingId],
+    queryKey: queryKeys.listingForEdit(listingId!),
     queryFn: async () => {
       if (!listingId) throw new Error("Listing ID is required");
       try {
@@ -309,9 +326,9 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
         "charging_time_hours",
         "motor_type",
         "seating_capacity",
-        "price_range", // NEW: Added
-        "specifications", // NEW: Added
-        "features", // NEW: Added
+        "price_range",
+        "specifications",
+        "features",
       ],
       3: [
         "listing_type",
@@ -326,8 +343,6 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
     };
 
     const fieldsToValidate = stepFields[currentStep];
-    if (!fieldsToValidate) return true;
-
     const valid = await trigger(fieldsToValidate);
     return valid;
   };
@@ -400,10 +415,13 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
       );
       listingdata.append("number_of_ev", data.number_of_ev.toString());
 
-      // Handle NEW images
-      data.images.forEach((file) => {
-        listingdata.append("images", file);
-      });
+      // Handle NEW images - only append if there are new images uploaded
+      // If no new images, don't include images field to preserve existing images
+      if (data.images && data.images.length > 0) {
+        data.images.forEach((file) => {
+          listingdata.append("images", file);
+        });
+      }
 
       // Execute mutations
       await updateModelMutation.mutateAsync({ modelId, modelData: modeldata });
@@ -414,10 +432,10 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
 
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({
-        queryKey: ["listingForEdit", listingId],
+        queryKey: queryKeys.listingForEdit(listingId),
       });
       if (sellerId) {
-        queryClient.invalidateQueries({ queryKey: ["sellerEvlist", sellerId] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.sellerEvlist(sellerId) });
       }
 
       setAlertMessage({
@@ -426,11 +444,7 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
         message: "Listing updated successfully!",
         type: "success",
       });
-
-      // Redirect after success
-      setTimeout(() => {
-        navigate("/seller/dashboard");
-      }, 2000);
+      navigate("/seller/dashboard");
     } catch (error: any) {
       setAlertMessage({
         id: Date.now(),
@@ -458,12 +472,7 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
               <FormSelectField
                 label="Category"
                 {...register("category_id")}
-                disabled={!formData.brand_id}
-                options={
-                  formData.brand_id
-                    ? [{ id: "", name: "Select a category" }, ...evCategories]
-                    : [{ id: "", name: "Select a brand first" }]
-                }
+                options={[{ id: "", name: "Select a category" }, ...evCategories]}
                 error={errors.category_id?.message}
               />
             </div>
@@ -666,7 +675,7 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
                   }
 
                   const newImages = [...currentImages, ...files];
-                  setValue("images", newImages, { shouldValidate: true });
+                  setValue("images", newImages, { shouldValidate: true, shouldDirty: true });
                   e.target.value = "";
                 }}
                 className="block w-full text-sm text-gray-500
@@ -705,6 +714,7 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
                             );
                             setValue("images", newImages, {
                               shouldValidate: true,
+                              shouldDirty: true,
                             });
                           }}
                           className="absolute top-1 right-1 bg-red-500 text-white rounded-full text-xs p-1 opacity-0 group-hover:opacity-100 transition"
@@ -863,6 +873,15 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
                   </p>
                 )}
               </div>
+              
+              {/* Info message about button state */}
+              {!isDirty && (
+                <div className="mt-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    ℹ️ no changes detected.
+                  </p>
+                </div>
+              )}
             </div>
           </StepContainer>
         );
@@ -977,7 +996,7 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
             {currentStep === 5 ? (
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !isDirty}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isSubmitting ? (
@@ -992,7 +1011,10 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
             ) : (
               <button
                 type="button"
-                onClick={nextStep}
+                onClick={(e) => {
+                  e.preventDefault();
+                  nextStep();
+                }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md"
               >
                 Next

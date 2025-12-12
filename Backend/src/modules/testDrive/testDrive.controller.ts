@@ -192,6 +192,9 @@ export function testDriveController(
     deleteSlot: async (req, res) => {
       try {
         const result = await service.deleteSlot(req.params.id);
+        if(!result.success) {
+          return handleResult(res, result, 400);
+        }
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "deleting slot");

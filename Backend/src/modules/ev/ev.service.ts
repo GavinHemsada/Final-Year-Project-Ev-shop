@@ -4,6 +4,7 @@ import {
   EvModelDTO,
   VehicleListingDTO,
   UpdateVehicleListingDTO,
+  QuickUpdateListingDTO,
 } from "../../dtos/ev.DTO";
 import { IEvRepository } from "./ev.repository";
 import {
@@ -208,6 +209,16 @@ export interface IEvService {
     id: string,
     data: UpdateVehicleListingDTO,
     file?: Express.Multer.File[]
+  ): Promise<{ success: boolean; listing?: any; error?: string }>;
+  /**
+   * Quickly updates listing status and/or quantity.
+   * @param id - The ID of the listing to update.
+   * @param data - The quick update data (status and/or number_of_ev).
+   * @returns A promise that resolves to an object containing the updated listing data or an error.
+   */
+  quickUpdateListing(
+    id: string,
+    data: QuickUpdateListingDTO
   ): Promise<{ success: boolean; listing?: any; error?: string }>;
   /**
    * Deletes a vehicle listing by its unique ID.
@@ -756,6 +767,32 @@ export function evService(
           images: url,
         };
         const listing = await repo.updateListing(id, updateData);
+        if (!listing)
+          return { success: false, error: "Failed to update listing" };
+
+        // Invalidate relevant caches
+        await Promise.all([
+          CacheService.delete(`listing_${id}`),
+          CacheService.deletePattern("listings_*"),
+          CacheService.delete(`listings_seller_${listing.seller_id}`),
+        ]);
+
+        return { success: true, listing };
+      } catch (err) {
+        return { success: false, error: "Failed to update listing" };
+      }
+    },
+    /**
+     * Quickly updates listing status and/or quantity without handling images.
+     * Invalidates all caches related to this listing.
+     */
+    quickUpdateListing: async (id, data) => {
+      try {
+        const existing = await repo.findListingById?.(id);
+        if (!existing) return { success: false, error: "Listing not found" };
+        
+        // Only update the fields provided in data
+        const listing = await repo.updateListing(id, data);
         if (!listing)
           return { success: false, error: "Failed to update listing" };
 

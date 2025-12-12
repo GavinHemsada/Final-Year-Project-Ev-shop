@@ -26,10 +26,6 @@ import {
   FinancialRepository,
 } from "../modules/financial/financial.repository";
 import {
-  IMaintenanceRecordRepository,
-  MaintenanceRecordRepository,
-} from "../modules/maintenance_record/maintenanceRecord.repository";
-import {
   INotificationRepository,
   NotificationRepository,
 } from "../modules/notification/notification.repository";
@@ -82,10 +78,6 @@ import {
   financialService,
 } from "../modules/financial/financial.service";
 import {
-  IMaintenanceRecordService,
-  maintenanceRecordService,
-} from "../modules/maintenance_record/maintenanceRecord.service";
-import {
   INotificationService,
   notificationService,
 } from "../modules/notification/notification.service";
@@ -136,10 +128,6 @@ import {
   IFinancialController,
   financialController,
 } from "../modules/financial/financial.controller";
-import {
-  IMaintenanceRecordController,
-  maintenanceRecordController,
-} from "../modules/maintenance_record/maintenanceRecord.controller";
 import {
   INotificationController,
   notificationController,
@@ -207,10 +195,6 @@ container.register<IEvRepository>("EvRepository", { useValue: EvRepository });
 container.register<IFinancialRepository>("FinancialRepository", {
   useValue: FinancialRepository,
 });
-container.register<IMaintenanceRecordRepository>(
-  "MaintenanceRecordRepository",
-  { useValue: MaintenanceRecordRepository }
-);
 container.register<INotificationRepository>("NotificationRepository", {
   useValue: NotificationRepository,
 });
@@ -275,14 +259,6 @@ container.register<IFinancialService>("FinancialService", {
     financialService(
       c.resolve<IFinancialRepository>("FinancialRepository"),
       c.resolve<IUserRepository>("UserRepository")
-    ),
-});
-
-container.register<IMaintenanceRecordService>("MaintenanceRecordService", {
-  useFactory: (c) =>
-    maintenanceRecordService(
-      c.resolve<IMaintenanceRecordRepository>("MaintenanceRecordRepository"),
-      c.resolve<ISellerRepository>("SellerRepository")
     ),
 });
 
@@ -383,16 +359,6 @@ container.register<IFinancialController>("FinancialController", {
   useFactory: (c) =>
     financialController(c.resolve<IFinancialService>("FinancialService")),
 });
-
-container.register<IMaintenanceRecordController>(
-  "MaintenanceRecordController",
-  {
-    useFactory: (c) =>
-      maintenanceRecordController(
-        c.resolve<IMaintenanceRecordService>("MaintenanceRecordService")
-      ),
-  }
-);
 
 container.register<INotificationController>("NotificationController", {
   useFactory: (c) =>

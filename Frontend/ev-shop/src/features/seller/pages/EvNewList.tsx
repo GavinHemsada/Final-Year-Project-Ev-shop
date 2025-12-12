@@ -11,6 +11,8 @@ import { ListingType, VehicleCondition } from "@/types/enum";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/config/queryKeys";
 
 const EvListschema = yup.object({
   // Step 1
@@ -129,8 +131,9 @@ const EvListschema = yup.object({
     ),
 });
 
-export default function EvListingStepper({ setAlert }: { setAlert?: (alert: AlertProps | null) => void } = { setAlert: undefined }) {
+export default function EvListingStepper({ setAlert }: { setAlert?: (alert: AlertProps | null) => void }) {
   const sellerId = useAppSelector(selectActiveRoleId);
+  const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [evBrands, setEvBrands] = useState<Brand[]>([]);
   const [evCatogorys, setEvCatogorys] = useState<categorie[]>([]);
@@ -142,6 +145,7 @@ export default function EvListingStepper({ setAlert }: { setAlert?: (alert: Aler
     trigger,
     formState: { errors },
     watch,
+    reset,
   } = useForm<EvListingFormData>({
     resolver: yupResolver(EvListschema) as any,
     mode: "onChange",
@@ -268,7 +272,6 @@ export default function EvListingStepper({ setAlert }: { setAlert?: (alert: Aler
         features: data.features,
       };
       const modelResult = await sellerService.createnewModel(modeldata);
-      console.log(modelResult);
 
       const modelid = modelResult._id;
 
@@ -288,7 +291,26 @@ export default function EvListingStepper({ setAlert }: { setAlert?: (alert: Aler
       });
 
       const listingResult = await sellerService.createListing(listingdata);
-      console.log(listingResult);
+      if (!listingResult) {
+        setAlert?.({
+          id: Date.now(),
+          type: "error",
+          message: "Failed to create listing",
+        }); 
+      } else {
+        // Invalidate the seller listings query to refresh the dashboard
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.sellerEvlist(sellerId!),
+        });
+        
+        setAlert?.({
+          id: Date.now(),
+          type: "success",
+          message: "Listing created successfully",
+        });
+        reset();
+        setCurrentStep(1);
+      }
     } catch (error) {
       console.error("Error submitting form:", error);
     }

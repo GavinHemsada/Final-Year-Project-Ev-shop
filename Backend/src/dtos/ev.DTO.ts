@@ -247,9 +247,61 @@ export class UpdateVehicleListingDTO {
   condition?: VehicleCondition;
 
   /**
+   * The updated battery health percentage (0-100).
+   */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  battery_health?: number;
+
+  /**
+   * The updated color of the vehicle.
+   */
+  @IsOptional()
+  @IsString()
+  color?: string;
+
+  /**
+   * The updated registration year of the vehicle.
+   */
+  @IsOptional()
+  @IsNumber()
+  registration_year?: number;
+
+  /**
+   * The updated number of units available for this listing.
+   */
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  number_of_ev?: number;
+
+  /**
    * The updated status of the listing (e.g., "Available", "Sold"). This field is optional.
    */
   @IsOptional()
   @IsString()
   status?: string;
+}
+
+/**
+ * Data Transfer Object (DTO) for quick updates to listing status and quantity.
+ * Used for inline editing in the listings table.
+ */
+export class QuickUpdateListingDTO {
+  /**
+   * The updated status of the listing (e.g., "active", "inactive", "sold").
+   */
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  /**
+   * The updated number of units available for this listing.
+   */
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  number_of_ev?: number;
 }

@@ -43,13 +43,17 @@ export const TestDrivesPage: React.FC<{
   });
 
   const slots = useMemo(() => {
-    return slotsData?.success ? slotsData.slots || [] : slotsData || [];
+    const result = slotsData?.success ? slotsData.slots || [] : slotsData || [];
+    console.log("Slots data received:", slotsData);
+    console.log("Processed slots:", result);
+    return result;
   }, [slotsData]);
 
   const bookings = useMemo(() => {
     if (!bookingsData) return [];
     if (bookingsData.success && bookingsData.bookings) return bookingsData.bookings;
     if (Array.isArray(bookingsData)) return bookingsData;
+    console.log("Bookings data received:", bookingsData);
     return [];
   }, [bookingsData]);
 

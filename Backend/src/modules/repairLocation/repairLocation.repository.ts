@@ -27,6 +27,14 @@ export interface IRepairLocationRepository {
    */
   findActiveLocations(): Promise<IRepairLocation[] | null>;
   /**
+   * Finds repair locations by coordinates (latitude and longitude).
+   */
+  findByCoordinates(
+    latitude: number,
+    longitude: number,
+    sellerId: string
+  ): Promise<IRepairLocation | null>;
+  /**
    * Updates an existing repair location.
    */
   update(
@@ -68,6 +76,16 @@ export const RepairLocationRepository: IRepairLocationRepository = {
       })
       .sort({ createdAt: -1 });
   }),
+
+  findByCoordinates: withErrorHandling(
+    async (latitude: number, longitude: number, sellerId: string) => {
+      return await RepairLocation.findOne({
+        latitude,
+        longitude,
+        seller_id: new Types.ObjectId(sellerId),
+      });
+    }
+  ),
 
   update: withErrorHandling(async (id: string, data) => {
     return await RepairLocation.findByIdAndUpdate(id, data, { new: true });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   CarIcon,
   CalendarIcon,
@@ -8,46 +8,23 @@ import {
   CloseIcon,
 } from "@/assets/icons/icons";
 import { useAppSelector } from "@/hooks/useAppSelector";
-import { selectUserId } from "@/context/authSlice";
+import { selectActiveRoleId } from "@/context/authSlice";
 import { sellerService } from "../sellerService";
-import type { AlertProps } from "@/types";
+import type { AlertProps, TestDriveSlot, EvModel, ConfirmAlertProps } from "@/types";
 import { Loader } from "@/components/Loader";
-
-interface TestDriveSlot {
-  _id: string;
-  seller_id: string;
-  location: string;
-  model_id: {
-    _id: string;
-    model_name: string;
-    brand_id?: {
-      brand_name: string;
-    };
-  };
-  available_date: string;
-  max_bookings: number;
-  is_active: boolean;
-}
-
-interface EvModel {
-  _id: string;
-  model_name: string;
-  brand_id?: {
-    brand_name: string;
-  };
-}
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/config/queryKeys";
 
 /**
  * A page for sellers to manage test drive slots.
  */
 export const TestDrivesPage: React.FC<{
   setAlert?: (alert: AlertProps | null) => void;
-}> = ({ setAlert }) => {
-  const userId = useAppSelector(selectUserId);
-  const [slots, setSlots] = useState<TestDriveSlot[]>([]);
-  const [models, setModels] = useState<EvModel[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [sellerId, setSellerId] = useState<string | null>(null);
+  setConfirmAlert?: (alert: ConfirmAlertProps | null) => void;
+}> = ({ setAlert, setConfirmAlert }) => {
+  const sellerId = useAppSelector(selectActiveRoleId);
+  const queryClient = useQueryClient();
+
   const [showAddForm, setShowAddForm] = useState(true); // Show form by default
   const [editingSlot, setEditingSlot] = useState<TestDriveSlot | null>(null);
   const [formData, setFormData] = useState({
@@ -57,108 +34,82 @@ export const TestDrivesPage: React.FC<{
     max_bookings: 1,
     is_active: true,
   });
+  const [addressValidation, setAddressValidation] = useState<{
+    isValidating: boolean;
+    isValid: boolean | null;
+    message: string;
+  }>({
+    isValidating: false,
+    isValid: null,
+    message: "",
+  });
 
-  // Fetch seller profile and slots
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!userId) return;
-      try {
-        setIsLoading(true);
-        // Get seller profile to get seller ID
-        const sellerResponse = await sellerService.getSellerProfile(userId);
-        // handleResult unwraps the response, so response is directly the seller object
-        const seller = sellerResponse?.seller || sellerResponse;
-        if (seller?._id) {
-          setSellerId(seller._id);
+  // Fetch test drive slots
+  const { data: slotsData, isLoading: isLoadingSlots } = useQuery({
+    queryKey: queryKeys.testDriveSlots(sellerId || ""),
+    queryFn: async () => {
+      if (!sellerId) return [];
+      const response = await sellerService.getTestDriveSlotsBySeller(sellerId);
+      const data = response?.slots || response;
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: !!sellerId,
+  });
+  console.log(slotsData);
+  // Fetch seller's listings to get models
+  const { data: modelsData, isLoading: isLoadingModels } = useQuery({
+    queryKey: queryKeys.sellerEvlist(sellerId || ""),
+    queryFn: async () => {
+      if (!sellerId) return [];
+      const response = await sellerService.getSellerEvList(sellerId);
+      const listingsData = response?.listings || response;
 
-          // Fetch slots for this seller
-          const slotsResponse = await sellerService.getTestDriveSlotsBySeller(
-            seller._id
-          );
-          // handleResult unwraps the response, so response is directly the slots array
-          const slotsData = slotsResponse?.slots || slotsResponse;
-          if (Array.isArray(slotsData)) {
-            setSlots(slotsData);
-          } else {
-            setSlots([]);
+      if (Array.isArray(listingsData)) {
+        const uniqueModels = new Map<string, EvModel>();
+        listingsData.forEach((listing: any) => {
+          if (listing.model_id && listing.model_id._id) {
+            const modelId = listing.model_id._id;
+            if (!uniqueModels.has(modelId)) {
+              uniqueModels.set(modelId, {
+                _id: listing.model_id._id,
+                model_name: listing.model_id.model_name,
+                brand_id: listing.model_id.brand_id
+                  ? {
+                      brand_name: listing.model_id.brand_id.brand_name,
+                    }
+                  : undefined,
+              });
+            }
           }
-
-          // Fetch seller's own listings to get their models
-          const listingsResponse = await sellerService.getSellerEvList(
-            seller._id
-          );
-          // handleResult unwraps the response
-          const listingsData = listingsResponse?.listings || listingsResponse;
-          if (Array.isArray(listingsData)) {
-            // Extract unique models from seller's listings
-            const uniqueModels = new Map<string, EvModel>();
-            listingsData.forEach((listing: any) => {
-              if (listing.model_id && listing.model_id._id) {
-                const modelId = listing.model_id._id;
-                if (!uniqueModels.has(modelId)) {
-                  uniqueModels.set(modelId, {
-                    _id: listing.model_id._id,
-                    model_name: listing.model_id.model_name,
-                    brand_id: listing.model_id.brand_id
-                      ? {
-                          brand_name: listing.model_id.brand_id.brand_name,
-                        }
-                      : undefined,
-                  });
-                }
-              }
-            });
-            setModels(Array.from(uniqueModels.values()));
-          } else {
-            setModels([]);
-          }
-        }
-      } catch (error: any) {
-        console.error("Failed to fetch data:", error);
-        setAlert?.({
-          id: Date.now(),
-          title: "Error",
-          message: "Failed to load test drive slots",
-          type: "error",
         });
-      } finally {
-        setIsLoading(false);
+        return Array.from(uniqueModels.values());
       }
-    };
+      return [];
+    },
+    enabled: !!sellerId,
+  });
 
-    fetchData();
-  }, [userId, setAlert]);
+  const slots = slotsData || [];
+  const models = modelsData || [];
+  const isLoading = isLoadingSlots || isLoadingModels;
 
-  const handleAddSlot = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!sellerId) return;
-
-    try {
-      const slotData = {
-        seller_id: sellerId,
-        model_id: formData.model_id,
-        location: formData.location,
-        available_date: new Date(formData.available_date).toISOString(),
-        max_bookings: formData.max_bookings,
-        is_active: formData.is_active,
-      };
-
-      const response = await sellerService.createTestDriveSlot(slotData);
-      // handleResult unwraps the response
-      const newSlot = response?.slot || response;
-
-      if (newSlot) {
-        setSlots([...slots, newSlot]);
-        setShowAddForm(false);
-        resetForm();
-        setAlert?.({
-          id: Date.now(),
-          title: "Success",
-          message: "Test drive slot created successfully!",
-          type: "success",
-        });
-      }
-    } catch (error: any) {
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: (slotData: any) => sellerService.createTestDriveSlot(slotData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.testDriveSlots(sellerId!),
+      });
+      setShowAddForm(false);
+      resetForm();
+      setAlert?.({
+        id: Date.now(),
+        title: "Success",
+        message: "Test drive slot created successfully!",
+        type: "success",
+      });
+    },
+    onError: (error: any) => {
       console.error("Failed to create slot:", error);
       const errorMessage =
         error?.response?.data?.message || "Failed to create test drive slot";
@@ -168,46 +119,27 @@ export const TestDrivesPage: React.FC<{
         message: errorMessage,
         type: "error",
       });
-    }
-  };
+    },
+  });
 
-  const handleUpdateSlot = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingSlot) return;
-
-    try {
-      const slotData = {
-        seller_id: sellerId,
-        model_id: formData.model_id,
-        location: formData.location,
-        available_date: new Date(formData.available_date).toISOString(),
-        max_bookings: formData.max_bookings,
-        is_active: formData.is_active,
-      };
-
-      const response = await sellerService.updateTestDriveSlot(
-        editingSlot._id,
-        slotData
-      );
-      // handleResult unwraps the response
-      const updatedSlot = response?.slot || response;
-
-      if (updatedSlot) {
-        setSlots(
-          slots.map((slot) =>
-            slot._id === editingSlot._id ? updatedSlot : slot
-          )
-        );
-        setEditingSlot(null);
-        resetForm();
-        setAlert?.({
-          id: Date.now(),
-          title: "Success",
-          message: "Test drive slot updated successfully!",
-          type: "success",
-        });
-      }
-    } catch (error: any) {
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      sellerService.updateTestDriveSlot(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.testDriveSlots(sellerId!),
+      });
+      setEditingSlot(null);
+      resetForm();
+      setAlert?.({
+        id: Date.now(),
+        title: "Success",
+        message: "Test drive slot updated successfully!",
+        type: "success",
+      });
+    },
+    onError: (error: any) => {
       console.error("Failed to update slot:", error);
       const errorMessage =
         error?.response?.data?.message || "Failed to update test drive slot";
@@ -217,26 +149,24 @@ export const TestDrivesPage: React.FC<{
         message: errorMessage,
         type: "error",
       });
-    }
-  };
+    },
+  });
 
-  const handleDeleteSlot = async (slotId: string) => {
-    if (
-      !window.confirm("Are you sure you want to delete this test drive slot?")
-    ) {
-      return;
-    }
-
-    try {
-      await sellerService.deleteTestDriveSlot(slotId);
-      setSlots(slots.filter((slot) => slot._id !== slotId));
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (slotId: string) => sellerService.deleteTestDriveSlot(slotId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.testDriveSlots(sellerId!),
+      });
       setAlert?.({
         id: Date.now(),
         title: "Success",
         message: "Test drive slot deleted successfully!",
         type: "success",
       });
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       console.error("Failed to delete slot:", error);
       const errorMessage =
         error?.response?.data?.message || "Failed to delete test drive slot";
@@ -246,7 +176,51 @@ export const TestDrivesPage: React.FC<{
         message: errorMessage,
         type: "error",
       });
-    }
+    },
+  });
+
+  const handleAddSlot = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sellerId) return;
+
+    const slotData = {
+      seller_id: sellerId,
+      model_id: formData.model_id,
+      location: formData.location,
+      available_date: new Date(formData.available_date).toISOString(),
+      max_bookings: formData.max_bookings,
+      is_active: formData.is_active,
+    };
+
+    createMutation.mutate(slotData);
+  };
+
+  const handleUpdateSlot = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSlot) return;
+
+    const slotData = {
+      seller_id: sellerId,
+      model_id: formData.model_id,
+      location: formData.location,
+      available_date: new Date(formData.available_date).toISOString(),
+      max_bookings: formData.max_bookings,
+      is_active: formData.is_active,
+    };
+
+    updateMutation.mutate({ id: editingSlot._id, data: slotData });
+  };
+
+  const handleDeleteSlot = (slotId: string) => {
+    setConfirmAlert?.({
+      title: "Confirm Delete",
+      message: "Are you sure you want to delete this test drive slot?",
+      cancelText: "Cancel",
+      confirmText: "Delete",
+      onConfirmAction() {
+        deleteMutation.mutate(slotId);
+      },
+    });
   };
 
   const handleEditSlot = (slot: TestDriveSlot) => {
@@ -270,6 +244,11 @@ export const TestDrivesPage: React.FC<{
       is_active: true,
     });
     setEditingSlot(null);
+    setAddressValidation({
+      isValidating: false,
+      isValid: null,
+      message: "",
+    });
   };
 
   const handleCancel = () => {
@@ -277,20 +256,78 @@ export const TestDrivesPage: React.FC<{
     resetForm();
   };
 
+  // Validate address using OpenStreetMap Nominatim API
+  async function validateAddress(address: string) {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+      address
+    )}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.length > 0) {
+      return {
+        valid: true,
+        lat: data[0].lat,
+        lon: data[0].lon,
+        display_name: data[0].display_name,
+      };
+    } else {
+      return { valid: false };
+    }
+  }
+
+  // Handle location input change with validation
+  const handleLocationChange = async (value: string) => {
+    setFormData({ ...formData, location: value });
+
+    if (!value.trim()) {
+      setAddressValidation({
+        isValidating: false,
+        isValid: null,
+        message: "",
+      });
+      return;
+    }
+
+    // Set validating state
+    setAddressValidation({
+      isValidating: true,
+      isValid: null,
+      message: "Validating address...",
+    });
+
+    // Debounce validation
+    const timeoutId = setTimeout(async () => {
+      try {
+        const result = await validateAddress(value);
+        if (result.valid) {
+          setAddressValidation({
+            isValidating: false,
+            isValid: true,
+            message: `✓ Valid address: ${result.display_name}`,
+          });
+        } else {
+          setAddressValidation({
+            isValidating: false,
+            isValid: false,
+            message: "✗ Address not found. Please enter a valid address.",
+          });
+        }
+      } catch (error) {
+        setAddressValidation({
+          isValidating: false,
+          isValid: false,
+          message: "✗ Failed to validate address. Please try again.",
+        });
+      }
+    }, 1000); // Wait 1 second after user stops typing
+
+    return () => clearTimeout(timeoutId);
+  };
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <Loader size={60} color="#4f46e5" />
-      </div>
-    );
-  }
-
-  if (!userId) {
-    return (
-      <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
-        <p className="text-gray-500 text-center py-10 dark:text-gray-400">
-          Please log in to manage test drive slots.
-        </p>
       </div>
     );
   }
@@ -371,13 +408,70 @@ export const TestDrivesPage: React.FC<{
               <input
                 type="text"
                 value={formData.location}
-                onChange={(e) =>
-                  setFormData({ ...formData, location: e.target.value })
-                }
+                onChange={(e) => handleLocationChange(e.target.value)}
                 required
                 placeholder="e.g., 123 Main Street, Colombo"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
+              {addressValidation.message && (
+                <div
+                  className={`mt-2 p-1 rounded-lg border ${
+                    addressValidation.isValidating
+                      ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800"
+                      : addressValidation.isValid
+                      ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+                      : "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    {addressValidation.isValidating ? (
+                      <div className="mt-0.5">
+                        <svg
+                          className="animate-spin h-2 w-2 text-blue-600 dark:text-blue-400"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                      </div>
+                    ) : addressValidation.isValid ? (
+                      <span className="text-green-600 dark:text-green-400 text-lg">✓</span>
+                    ) : (
+                      <span className="text-red-600 dark:text-red-400 text-lg">✗</span>
+                    )}
+                    <div className="flex-1">
+                      <p
+                        className={`text-sm font-medium ${
+                          addressValidation.isValidating
+                            ? "text-blue-800 dark:text-blue-200"
+                            : addressValidation.isValid
+                            ? "text-green-800 dark:text-green-200"
+                            : "text-red-800 dark:text-red-200"
+                        }`}
+                      >
+                        {addressValidation.isValidating
+                          ? "Checking address..."
+                          : addressValidation.isValid
+                          ? "Address verified successfully!"
+                          : "Address not found"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

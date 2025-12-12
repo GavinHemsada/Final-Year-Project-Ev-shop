@@ -31,7 +31,6 @@ import { testDriveRouter } from "./modules/testDrive/testDrive.router";
 import { cartRouter } from "./modules/cart/cart.router";
 import { financialRouter } from "./modules/financial/financial.router";
 import { sellerRouter } from "./modules/seller/seller.router";
-import { maintenanceRecordRouter } from "./modules/maintenance_record/maintenanceRecord.router";
 import { orderRouter } from "./modules/order/order.router";
 import { paymentRouter } from "./modules/payment/payment.router";
 import { container } from "./di/container";
@@ -193,7 +192,6 @@ apiV1Router.use("/test-drive", protectJWT, testDriveRouter());
 apiV1Router.use("/cart", protectJWT, cartRouter());
 apiV1Router.use("/financial", protectJWT, financialRouter());
 apiV1Router.use("/seller", protectJWT, sellerRouter());
-apiV1Router.use("/maintenance", protectJWT, maintenanceRecordRouter());
 apiV1Router.use("/order", protectJWT, orderRouter());
 // Payment webhook and return/cancel endpoints must be public (no JWT protection)
 // PayHere will call these endpoints directly
