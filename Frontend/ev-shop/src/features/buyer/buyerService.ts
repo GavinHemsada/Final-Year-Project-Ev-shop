@@ -239,6 +239,10 @@ export const buyerService = {
     const response = await axiosPrivate.get(`/post/replies/post/${post_id}`);
     return response.data;
   },
+  getPostRepliesByUser: async (user_id: string) => {
+    const response = await axiosPrivate.get(`/post/replies/user/${user_id}`);
+    return response.data;
+  },
   createPostReply: async (replyData: any) => {
     const response = await axiosPrivate.post(`/post/reply`, replyData);
     return response.data;

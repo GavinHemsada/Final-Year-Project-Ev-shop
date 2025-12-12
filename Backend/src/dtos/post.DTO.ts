@@ -75,3 +75,12 @@ export class PostReplyDTO {
   @IsNotEmpty()
   content!: string;
 }
+
+export class PostUpdateReplyDTO  {
+  /**
+   * The content of the reply. It must not be empty.
+   */
+  @IsString()
+  @IsNotEmpty()
+  content!: string;
+}

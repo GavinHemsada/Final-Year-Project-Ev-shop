@@ -828,10 +828,11 @@ export function postService(
       try {
         const existingReply = await postRepo.findReplyById(id);
         if (!existingReply) return { success: false, error: "Reply not found" };
-
-        const post = await postRepo.findPostById(
+        console.log("existingReply:", existingReply);
+        const post = await postRepo.findbyid(
           existingReply.post_id.toString()
         );
+        console.log("post:", post);
         if (!post) return { success: false, error: "Post not found" };
 
         const success = await postRepo.deleteReply(id);

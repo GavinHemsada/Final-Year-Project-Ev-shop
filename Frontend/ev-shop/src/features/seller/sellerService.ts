@@ -141,6 +141,10 @@ export const sellerService = {
     const response = await axiosPrivate.delete(`/post/reply/${id}`);
     return response.data;
   },
+  getPostRepliesBySeller: async (seller_id: string) => {
+    const response = await axiosPrivate.get(`/post/replies/seller/${seller_id}`);
+    return response.data;
+  },
 
   // test drive slot operations
   getTestDriveSlotsBySeller: async (sellerId: string) => {

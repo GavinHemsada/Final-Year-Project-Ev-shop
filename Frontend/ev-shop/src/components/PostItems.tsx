@@ -131,7 +131,9 @@ export const PostItem: React.FC<{
         </div>
 
         {/* Post Content */}
-        <h3 className="text-2xl font-bold mb-3 text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+        <h3 className="text-2xl font-bold mb-3 text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors hover:scale-99"
+        onClick={() => onView(post)}
+        >
           {post.title}
         </h3>
         <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed line-clamp-3">
@@ -173,15 +175,6 @@ export const PostItem: React.FC<{
               </span>
             )}
           </div>
-        </div>
-        {/* Post Actions */}
-        <div className="flex justify-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={() => onView(post)}
-            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-6 py-3 rounded-xl w-full justify-center transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg"
-          >
-            <ChatBubbleIcon className="h-5 w-5" /> View & Reply
-          </button>
         </div>
       </motion.div>
     );

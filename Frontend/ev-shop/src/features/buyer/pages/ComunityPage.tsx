@@ -48,15 +48,23 @@ export const CommunityPage: React.FC<{
   const [showReplies, setShowReplies] = useState(false);
   const [newReply, setNewReply] = useState("");
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [editingReply, setEditingReply] = useState<PostReply | null>(null);
+  const [editReplyContent, setEditReplyContent] = useState("");
+  const [replyMenuOpen, setReplyMenuOpen] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [formData, setFormData] = useState({
     title: "",
     content: "",
   });
 
   const queryClient = useQueryClient();
-
+  console.log(replies)
   // Fetch all community posts with search
-  const { data: postsData } = useQuery({
+  const { 
+    data: postsData, 
+    isLoading: isLoadingCommunity,
+    error: communityError 
+  } = useQuery({
     queryKey: queryKeys.communityPosts(searchQuery),
     queryFn: async () => {
       const params = searchQuery ? { search: searchQuery } : {};
@@ -64,11 +72,18 @@ export const CommunityPage: React.FC<{
       return response?.posts || response || [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: activeTab === "community", // Only fetch when this tab is active
+    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+    enabled: activeTab === "community",
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   // Fetch user's own posts
-  const { data: myPostsData } = useQuery({
+  const { 
+    data: myPostsData,
+    isLoading: isLoadingMyPosts,
+    error: myPostsError
+  } = useQuery({
     queryKey: queryKeys.myPosts(userId!),
     queryFn: async () => {
       if (!userId) return [];
@@ -76,15 +91,39 @@ export const CommunityPage: React.FC<{
       return response?.posts || response || [];
     },
     enabled: !!userId && activeTab === "myPosts",
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const allPosts: Post[] = useMemo(() => postsData || [], [postsData]);
   const myPosts: Post[] = useMemo(() => myPostsData || [], [myPostsData]);
 
-  // const isLoading =
-  //   activeTab === "community" ? isLoadingCommunity : isLoadingMyPosts;
-  const displayedPosts = activeTab === "community" ? allPosts : myPosts;
+  // Determine loading and error states based on active tab
+  const isLoading = 
+    activeTab === "community" ? isLoadingCommunity :
+    isLoadingMyPosts
+
+  const error = 
+    activeTab === "community" ? communityError :
+    myPostsError
+
+  const displayedPosts = 
+    activeTab === "community" ? allPosts : 
+    myPosts 
+
+  // Pagination logic
+  const POSTS_PER_PAGE = 5;
+  const totalPages = Math.ceil(displayedPosts.length / POSTS_PER_PAGE);
+  const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
+  const endIndex = startIndex + POSTS_PER_PAGE;
+  const paginatedPosts = displayedPosts.slice(startIndex, endIndex);
+
+  // Reset to page 1 when changing tabs or search
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchQuery]);
 
   // Mutations
   const createPostMutation = useMutation({
@@ -94,6 +133,7 @@ export const CommunityPage: React.FC<{
       content: string;
     }) => buyerService.createCommunityPost(postData),
     onSuccess: () => {
+      // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: queryKeys.communityPosts() });
       queryClient.invalidateQueries({ queryKey: queryKeys.myPosts(userId!) });
       setAlert?.({
@@ -106,6 +146,7 @@ export const CommunityPage: React.FC<{
       setShowPostForm(false);
     },
     onError: (error: any) => {
+      console.error("Create post error:", error);
       setAlert?.({
         id: Date.now(),
         title: "Error",
@@ -124,6 +165,7 @@ export const CommunityPage: React.FC<{
       postData: { user_id: string; title: string; content: string };
     }) => buyerService.updateCommunityPost(postId, postData),
     onSuccess: () => {
+      // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: queryKeys.communityPosts() });
       queryClient.invalidateQueries({ queryKey: queryKeys.myPosts(userId!) });
       setAlert?.({
@@ -137,6 +179,7 @@ export const CommunityPage: React.FC<{
       setShowPostForm(false);
     },
     onError: (error: any) => {
+      console.error("Update post error:", error);
       setAlert?.({
         id: Date.now(),
         title: "Error",
@@ -149,6 +192,7 @@ export const CommunityPage: React.FC<{
   const deletePostMutation = useMutation({
     mutationFn: (postId: string) => buyerService.deleteCommunityPost(postId),
     onSuccess: () => {
+      // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: queryKeys.communityPosts() });
       queryClient.invalidateQueries({ queryKey: queryKeys.myPosts(userId!) });
       setAlert?.({
@@ -158,11 +202,83 @@ export const CommunityPage: React.FC<{
         type: "success",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Delete post error:", error);
       setAlert?.({
         id: Date.now(),
         title: "Error",
         message: "Failed to delete post",
+        type: "error",
+      });
+    },
+  });
+
+  const updateReplyMutation = useMutation({
+    mutationFn: ({ replyId, content }: { replyId: string; content: string }) =>
+      buyerService.updatePostReply(replyId, { content }),
+    onSuccess: async () => {
+      // Refetch replies for the current post
+      if (selectedPost) {
+        try {
+          const response = await buyerService.getPostReplies(selectedPost._id);
+          setReplies(response?.replies || response || []);
+        } catch (error) {
+          console.error("Failed to refetch replies:", error);
+        }
+      }
+      // Invalidate all post queries to update reply counts
+      queryClient.invalidateQueries({ queryKey: queryKeys.communityPosts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myPosts(userId!) });
+      
+      setAlert?.({
+        id: Date.now(),
+        title: "Success",
+        message: "Reply updated successfully!",
+        type: "success",
+      });
+      setEditingReply(null);
+      setEditReplyContent("");
+    },
+    onError: (error: any) => {
+      console.error("Update reply error:", error);
+      setAlert?.({
+        id: Date.now(),
+        title: "Error",
+        message: error?.response?.data?.message || "Failed to update reply",
+        type: "error",
+      });
+    },
+  });
+
+  const deleteReplyMutation = useMutation({
+    mutationFn: (replyId: string) => buyerService.deletePostReply(replyId),
+    onSuccess: async () => {
+      // Refetch replies for the current post
+      if (selectedPost) {
+        try {
+          const response = await buyerService.getPostReplies(selectedPost._id);
+          setReplies(response?.replies || response || []);
+        } catch (error) {
+          console.error("Failed to refetch replies:", error);
+        }
+      }
+      // Invalidate all post queries to update reply counts
+      queryClient.invalidateQueries({ queryKey: queryKeys.communityPosts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myPosts(userId!) });
+      
+      setAlert?.({
+        id: Date.now(),
+        title: "Success",
+        message: "Reply deleted successfully!",
+        type: "success",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Delete reply error:", error);
+      setAlert?.({
+        id: Date.now(),
+        title: "Error",
+        message: "Failed to delete reply",
         type: "error",
       });
     },
@@ -300,6 +416,52 @@ export const CommunityPage: React.FC<{
     [userId, setAlert]
   );
 
+  const handleEditReply = useCallback((reply: PostReply) => {
+    setEditingReply(reply);
+    setEditReplyContent(reply.content);
+    setReplyMenuOpen(null);
+  }, []);
+
+  const handleUpdateReply = useCallback(
+    (replyId: string) => {
+      if (!editReplyContent.trim()) return;
+      updateReplyMutation.mutate({ replyId, content: editReplyContent });
+    },
+    [editReplyContent, updateReplyMutation]
+  );
+
+  const handleDeleteReply = useCallback(
+    (replyId: string) => {
+      setConfirmAlert?.({
+        title: "Delete Reply",
+        message: "Are you sure you want to delete this reply?",
+        confirmText: "Delete",
+        cancelText: "Cancel",
+        onConfirmAction: () => {
+          deleteReplyMutation.mutate(replyId);
+        },
+      });
+      setReplyMenuOpen(null);
+    },
+    [deleteReplyMutation, setConfirmAlert]
+  );
+
+  // Close reply menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (replyMenuOpen) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.reply-menu-container')) {
+          setReplyMenuOpen(null);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [replyMenuOpen]);
+
+
   return (
     <div className="space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen pb-8">
       {/* Tab Switcher */}
@@ -356,6 +518,7 @@ export const CommunityPage: React.FC<{
               />
             )}
           </button>
+
         </div>
       </motion.div>
 
@@ -524,9 +687,39 @@ export const CommunityPage: React.FC<{
         </motion.div>
       )}
 
-      {/* Posts Feed */}
+
+
+      {/* Posts and Replies Feed */}
       <div className="space-y-6">
-        {displayedPosts.length === 0 ? (
+        {/* Error State */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4"
+          >
+            <div className="flex items-center gap-3">
+              <svg className="h-5 w-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-red-800 dark:text-red-200 font-medium">
+                Failed to load posts. Please try again later.
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Loading State */}
+        {isLoading ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-12 text-center"
+          >
+            <Loader size={12} color="#3b82f6" />
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading posts...</p>
+          </motion.div>
+        ) : displayedPosts.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -541,14 +734,18 @@ export const CommunityPage: React.FC<{
                   ? searchQuery
                     ? "No posts found"
                     : "No posts yet"
-                  : "No posts yet"}
+                  : activeTab === "myPosts"
+                  ? "No posts yet"
+                  : "No replied posts yet"}
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
                 {activeTab === "community"
                   ? searchQuery
                     ? "Try adjusting your search terms or browse all posts."
                     : "Be the first to share something with the community!"
-                  : "Start sharing your thoughts with the community!"}
+                  : activeTab === "myPosts"
+                  ? "Start sharing your thoughts with the community!"
+                  : "Start engaging by replying to community posts!"}
               </p>
               {activeTab === "myPosts" && !showPostForm && (
                 <button
@@ -562,27 +759,77 @@ export const CommunityPage: React.FC<{
             </div>
           </motion.div>
         ) : (
-          <div className="space-y-6">
-            {displayedPosts.map((post, index) => (
+          <>
+            <div className="space-y-6">
+              {paginatedPosts.map((post, index) => (
+                <motion.div
+                  key={post._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                >
+                  <PostItem
+                    post={post}
+                    userId={userId}
+                    userRole={userRole}
+                    onEdit={handleEditClick}
+                    onDelete={handleDeletePost}
+                    onView={handleViewPost}
+                    showEditDelete={activeTab === "myPosts"}
+                    formatDate={formatDate}
+                  />
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
               <motion.div
-                key={post._id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="mt-8 flex items-center justify-center gap-2"
               >
-                <PostItem
-                  post={post}
-                  userId={userId}
-                  userRole={userRole}
-                  onEdit={handleEditClick}
-                  onDelete={handleDeletePost}
-                  onView={handleViewPost}
-                  showEditDelete={activeTab === "myPosts"}
-                  formatDate={formatDate}
-                />
+                {/* Previous Button */}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+
+                {/* Page Numbers */}
+                <div className="flex gap-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                        currentPage === page
+                          ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
+                          : "bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Next Button */}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
               </motion.div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 
@@ -691,22 +938,30 @@ export const CommunityPage: React.FC<{
                     let authorName = "";
                     let authorImage: string | undefined = undefined;
                     let authorInitial = "";
+                    let authorId = "";
 
                     if (isSeller && reply.seller_id) {
                       authorName = reply.seller_id.business_name || "Seller";
                       authorImage = reply.seller_id.shop_logo;
                       authorInitial = authorName.charAt(0).toUpperCase();
+                      authorId = reply.seller_id._id;
                     } else if (isFinancial && reply.financial_id) {
                       authorName = reply.financial_id.name;
                       authorInitial = authorName.charAt(0).toUpperCase();
+                      authorId = reply.financial_id._id;
                     } else if (reply.user_id) {
                       authorName = reply.user_id.name;
                       authorImage = reply.user_id.profile_image;
                       authorInitial = authorName.charAt(0).toUpperCase();
+                      authorId = reply.user_id._id;
                     } else {
                       authorName = "Unknown";
                       authorInitial = "?";
                     }
+
+                    const isEditing = editingReply?._id === reply._id;
+
+                    const isOwnReply = authorId === userId;
 
                     return (
                       <motion.div
@@ -716,30 +971,104 @@ export const CommunityPage: React.FC<{
                         transition={{ duration: 0.3, delay: index * 0.1 }}
                         className="bg-white dark:bg-gray-800 border-l-4 border-blue-500 pl-5 py-4 rounded-r-xl shadow-md"
                       >
-                        <div className="flex items-center gap-3 mb-3">
-                          {authorImage ? (
-                            <img
-                              src={`${apiURL}${authorImage}`}
-                              alt={authorName}
-                              className="h-10 w-10 rounded-full object-cover ring-2 ring-blue-100 dark:ring-blue-900"
-                            />
-                          ) : (
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-md">
-                              {authorInitial}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            {authorImage ? (
+                              <img
+                                src={`${apiURL}${authorImage}`}
+                                alt={authorName}
+                                className="h-10 w-10 rounded-full object-cover ring-2 ring-blue-100 dark:ring-blue-900"
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-md">
+                                {authorInitial}
+                              </div>
+                            )}
+                            <div>
+                              <span className="font-semibold text-gray-900 dark:text-white block">
+                                {authorName}
+                              </span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {formatDate(reply.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+                          {isOwnReply && (
+                            <div className="relative reply-menu-container">
+                              <button
+                                onClick={() => setReplyMenuOpen(replyMenuOpen === reply._id ? null : reply._id)}
+                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                              >
+                                <svg
+                                  className="h-5 w-5 text-gray-500 dark:text-gray-400"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                </svg>
+                              </button>
+                              {replyMenuOpen === reply._id && (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.95 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  exit={{ opacity: 0, scale: 0.95 }}
+                                  className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 z-10"
+                                >
+                                  <button
+                                    onClick={() => handleEditReply(reply)}
+                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2 rounded-t-lg"
+                                  >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteReply(reply._id)}
+                                    className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 rounded-b-lg"
+                                  >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    Delete
+                                  </button>
+                                </motion.div>
+                              )}
                             </div>
                           )}
-                          <div>
-                            <span className="font-semibold text-gray-900 dark:text-white block">
-                              {authorName}
-                            </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {formatDate(reply.createdAt)}
-                            </span>
-                          </div>
                         </div>
-                        <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                          {reply.content}
-                        </p>
+                        {isEditing ? (
+                          <div className="space-y-3">
+                            <textarea
+                              value={editReplyContent}
+                              onChange={(e) => setEditReplyContent(e.target.value)}
+                              rows={3}
+                              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none transition-all"
+                            />
+                            <div className="flex gap-3">
+                              <button
+                                onClick={() => handleUpdateReply(reply._id)}
+                                disabled={updateReplyMutation.isPending}
+                                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50"
+                              >
+                                {updateReplyMutation.isPending ? "Updating..." : "Update Reply"}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingReply(null);
+                                  setEditReplyContent("");
+                                }}
+                                className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-xl font-semibold hover:bg-gray-300 transition-colors dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                            {reply.content}
+                          </p>
+                        )}
                       </motion.div>
                     );
                   })

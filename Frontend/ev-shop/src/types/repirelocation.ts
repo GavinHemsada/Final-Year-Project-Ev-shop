@@ -1,6 +1,10 @@
 export interface RepairLocation {
   _id: string;
-  seller_id: string;
+  seller_id: {
+    _id: string;
+    business_name: string;
+    shop_logo?: string;
+  };
   name: string;
   address: string;
   latitude: number;

@@ -1,7 +1,7 @@
 import { validateDto } from "../../shared/middlewares/DtoValidator.middleware";
 import { Router } from "express";
 import { IPostController } from "./post.controller";
-import { PostDTO, PostReplyDTO } from "../../dtos/post.DTO";
+import { PostDTO, PostReplyDTO, PostUpdateReplyDTO } from "../../dtos/post.DTO";
 import { container } from "../../di/container";
 
 /**
@@ -622,7 +622,7 @@ export const postRouter = (): Router => {
    *       '500':
    *         description: Internal server error.
    */
-  router.put("/reply/:id", validateDto(PostReplyDTO), (req, res) =>
+  router.put("/reply/:id", validateDto(PostUpdateReplyDTO), (req, res) =>
     postController.updateReply(req, res)
   );
 
