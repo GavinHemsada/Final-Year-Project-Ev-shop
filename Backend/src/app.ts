@@ -170,7 +170,7 @@ app.use(
 // Payment-specific rate limiter for sensitive endpoints
 const paymentLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 10, // max 5 payment requests per minute
+  max: 5, // max 5 payment requests per minute
   message: "Too many payment requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,

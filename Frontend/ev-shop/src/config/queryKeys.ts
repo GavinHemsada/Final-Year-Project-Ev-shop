@@ -13,6 +13,7 @@ export const queryKeys = {
   communityPosts: (search?: string) => ["communityPosts", search || ""],
   communityPost: (id: string) => ["communityPost", id],
   myPosts: (userId: string) => ["myPosts", userId],
+  postReplies: (postId: string) => ["postReplies", postId],
 
   savedVehicles: (userId: string) => ["savedVehicles", userId],
   isVehicleSaved: (userId: string, listingId: string) => [
@@ -20,9 +21,8 @@ export const queryKeys = {
     userId,
     listingId,
   ],
-
   vehicleById: (id: string) => ["vehicle", id],
-  postReplies: (postId: string) => ["postReplies", postId],
+  
   // seller
   sellerProfile: (id: string) => ["sellerProfile", id],
   sellerOrders: (id: string) => ["sellerOrders", id],

@@ -6,8 +6,20 @@ import {
 import { ITestDriveRepository } from "./testDrive.repository";
 import { ISellerRepository } from "../seller/seller.repository";
 import { IEvRepository } from "../ev/ev.repository";
-import { TestDriveBookingStatus } from "../../shared/enum/enum";
+import {
+  TestDriveBookingStatus,
+  NotificationType,
+} from "../../shared/enum/enum";
 import CacheService from "../../shared/cache/CacheService";
+import { INotificationService } from "../notification/notification.service";
+
+/**
+ * Formats a date to YYYY-MM-DD format for comparison.
+ */
+const formatDateOnly = (date: Date | string): string => {
+  const d = new Date(date);
+  return d.toISOString().split("T")[0];
+};
 
 /**
  * Defines the interface for the test drive service, outlining the methods for managing test drive slots, bookings, and feedback.
@@ -129,7 +141,7 @@ export interface ITestDriveService {
   updateRating(
     id: string,
     data: Partial<FeedbackDTO>
-  ): Promise<{ success: boolean; bookingrate?: any; error?: string }>;  
+  ): Promise<{ success: boolean; bookingrate?: any; error?: string }>;
   /**
    * Deletes a feedback/rating by its unique ID.
    * @param id - The ID of the rating to delete.
@@ -151,8 +163,35 @@ export interface ITestDriveService {
 export function testDriveService(
   testDriveRepo: ITestDriveRepository,
   sellerRepo: ISellerRepository,
-  evmodelRepo: IEvRepository
+  evmodelRepo: IEvRepository,
+  notiRepo: INotificationService
 ): ITestDriveService {
+  function timeToMinutes(time: string) {
+    const [timePart, meridiem] = time.split(" "); // "10:30 AM" => ["10:30", "AM"]
+    let [hours, minutes] = timePart.split(":").map(Number);
+
+    if (meridiem === "PM" && hours !== 12) hours += 12;
+    if (meridiem === "AM" && hours === 12) hours = 0;
+
+    return hours * 60 + minutes;
+  }
+
+  function isTimeSlotAvailable(
+    bookingsOnSlot: { booking_time: string; duration_minutes: number }[],
+    newBooking: { booking_time: string; duration_minutes: number }
+  ) {
+    const newStart = timeToMinutes(newBooking.booking_time);
+    const newEnd = newStart + newBooking.duration_minutes;
+
+    return !bookingsOnSlot.some((b) => {
+      const existingStart = timeToMinutes(b.booking_time);
+      const existingEnd = existingStart + b.duration_minutes;
+
+      // Check if time durations overlap
+      return newStart < existingEnd && existingStart < newEnd;
+    });
+  }
+
   return {
     // Slot methods
     /**
@@ -380,24 +419,15 @@ export function testDriveService(
         if (bookingsOnSlot.length >= slot.max_bookings) {
           return { success: false, error: "Slot is fully booked" };
         }
-        // Check if the customer already has a booking for this slot on the same date.
-        const customer = await testDriveRepo.findBookingsByCustomerId(
-          data.customer_id
-        );
-        // This block has a potential logic issue where it returns inside a forEach.
-        if (!customer) return { success: false, error: "No bookings found" };
-        if (customer.length > 0) {
-          customer.forEach((element) => {
-            if (
-              data.slot_id == element.slot_id.toString() &&
-              data.booking_date == element.booking_date
-            ) {
-              return {
-                success: false,
-                error: "Customer already has a booking",
-              };
-            }
-          });
+        if (
+          !isTimeSlotAvailable(
+            bookingsOnSlot,
+             {
+            booking_time: data.booking_time,
+            duration_minutes: data.duration_minutes,
+          }
+        )) {
+          return { success: false, error: "Slot is reserved" };
         }
         // Prepare and create the new booking.
         const bookingData = {
@@ -413,13 +443,31 @@ export function testDriveService(
           CacheService.delete(`bookings_customer_${data.customer_id}`),
           CacheService.delete(`booking_${booking.id}`),
         ]);
-
+        const decreaseResult = await testDriveRepo.decreaseSlotCount(
+          data.slot_id
+        );
+        if (!decreaseResult) {
+          return { success: false, error: "Failed to update slot count" };
+        }
+        const notiSeller = await notiRepo.create({
+          seller_id: slot.seller_id._id.toString(),
+          title: "New Booking Received",
+          type: NotificationType.BOOKING_CONFIRMED,
+          message: `Customer booked a slot on ${formatDateOnly(
+            slot.available_date
+          )}.`,
+        });
+        if (!notiSeller) {
+          return { success: false, error: "Failed to create notification" };
+        }
+        console.log("Notification sent to seller for new booking.");
         return { success: true, booking };
       } catch (err) {
         console.log(err);
         return { success: false, error: "Failed to create booking" };
       }
     },
+
     /**
      * Updates an existing test drive booking.
      * It invalidates caches for the specific booking and the associated customer's booking list.

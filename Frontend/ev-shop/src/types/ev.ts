@@ -166,3 +166,32 @@ export interface EvModel {
     brand_name: string;
   };
 }
+
+export interface BuyerTestDriveSlot {
+  _id: string;
+
+  seller_id: {
+    _id: string;
+    business_name: string;
+  };
+
+  location: string;
+
+  model_id: {
+    _id: string;
+    model_name: string;
+    brand_id: {
+      _id: string;
+      brand_name: string;
+      brand_logo: string;
+    };
+  };
+
+  available_date: string;
+  max_bookings: number;
+  is_active: boolean;
+
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}

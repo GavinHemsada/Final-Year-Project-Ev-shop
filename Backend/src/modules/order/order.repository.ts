@@ -2,27 +2,32 @@ import Order, { IOrder } from "../../entities/Order";
 import { UpdateOrderDTO, CreateOrderDTO } from "../../dtos/order.DTO";
 import { Types } from "mongoose";
 import { withErrorHandling } from "../../shared/utils/CustomException";
+import path from "path";
 
 /**
  * Represents a populated Order document, where referenced ObjectIds
  * for `user_id` and `seller_id` have been replaced with actual document data.
  */
 interface IOderPopulate extends Omit<IOrder, "user_id" | "seller_id"> {
-  user_id: {
-    name: string;
-    email: string;
-    phone: string;
-    address: {
-      street: string;
-      city: string;
-      state: string;
-      zipCode: string;
-      country: string;
-    };
-  } |  Types.ObjectId;
-  seller_id: {
-    business_name: string;
-  } |  Types.ObjectId;
+  user_id:
+    | {
+        name: string;
+        email: string;
+        phone: string;
+        address: {
+          street: string;
+          city: string;
+          state: string;
+          zipCode: string;
+          country: string;
+        };
+      }
+    | Types.ObjectId;
+  seller_id:
+    | {
+        business_name: string;
+      }
+    | Types.ObjectId;
 }
 
 /**
@@ -46,13 +51,8 @@ export interface IOrderRepository {
    * @param userId - The ID of the user.
    * @returns A promise that resolves to an array of order documents or null.
    */
-  findByUserId(userId: string): Promise<IOrder[] | null>;
-  /**
-   * Finds all orders associated with a specific seller.
-   * @param sellerId - The ID of the seller.
-   * @returns A promise that resolves to an array of order documents or null.
-   */
-  findBySellerId(sellerId: string): Promise<IOrder[] | null>;
+  findByUserOrSellerId(Id: string): Promise<IOrder[] | null>;
+
   /**
    * Retrieves all orders from the database.
    * @returns A promise that resolves to an array of all order documents or null.
@@ -93,26 +93,34 @@ export const OrderRepository: IOrderRepository = {
   }),
 
   /** Finds all orders for a specific user, populating listing and seller details, sorted by most recent. */
-  findByUserId: withErrorHandling(async (userId) => {
-    const trimmedUserId = userId?.trim();
-    if (!trimmedUserId) {
-      throw new Error("User ID is required");
-    }
-    // Validate ObjectId format
-    if (!Types.ObjectId.isValid(trimmedUserId)) {
-      throw new Error(`Invalid user ID format: ${trimmedUserId}`);
-    }
-    return await Order.find({ user_id: new Types.ObjectId(trimmedUserId) })
-      .populate("listing_id")
-      .populate("seller_id", "business_name")
-      .sort({ order_date: -1 });
-  }),
+  findByUserOrSellerId: withErrorHandling(async (id: string) => {
+    const objectId = new Types.ObjectId(id);
 
-  /** Finds all orders for a specific seller, populating user and listing details, sorted by most recent. */
-  findBySellerId: withErrorHandling(async (sellerId) => {
-    return await Order.find({ seller_id: new Types.ObjectId(sellerId.trim())})
+    return await Order.find({
+      $or: [{ user_id: objectId }, { seller_id: objectId }],
+    })
       .populate("user_id", "name email")
-      .populate("listing_id")
+      .populate("seller_id", "business_name")
+      .populate({
+        path: "listing_id", 
+        select: "price color registration_year",
+        populate: {
+          path: "model_id",
+          select: "model_name",
+        }
+      })
+      .populate({
+        path:"booking_id",
+        select: "booking_date booking_time duration_minutes",
+        populate:{
+          path: "slot_id",
+          select: "location, model_id",
+          populate:{
+            path: "model_id",
+            select: "model_name"
+          }
+        }
+      })
       .sort({ order_date: -1 });
   }),
 

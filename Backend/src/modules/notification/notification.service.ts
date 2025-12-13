@@ -1,7 +1,8 @@
 import { INotificationRepository } from "./notification.repository";
 import { NotificationDTO } from "../../dtos/notification.DTO";
 import { IUserRepository } from "../user/user.repository";
-import CacheService from "../../shared/cache/CacheService";
+import { ISellerRepository } from "../seller/seller.repository";
+import { IFinancialRepository } from "../financial/financial.repository";
 
 /**
  * Defines the interface for the notification service, outlining methods for managing user notifications.
@@ -66,7 +67,6 @@ export interface INotificationService {
 /**
  * Factory function to create an instance of the notification service.
  * It encapsulates the business logic for managing notifications, including caching strategies
- * to improve performance.
  *
  * @param notificationRepo - The repository for notification data access.
  * @param userRepo - The repository for user data access.
@@ -74,24 +74,14 @@ export interface INotificationService {
  */
 export function notificationService(
   notificationRepo: INotificationRepository,
-  userRepo: IUserRepository
+  userRepo: IUserRepository,
+  sellerRepo: ISellerRepository,
+  financialRepo: IFinancialRepository
 ): INotificationService {
   return {
     findById: async (id) => {
       try {
-        /**
-         * Finds a single notification by its ID, using a cache-aside pattern.
-         * Caches the individual notification data for one hour.
-         */
-        const cacheKey = `notification_${id}`;
-        const notification = await CacheService.getOrSet(
-          cacheKey,
-          async () => {
-            const notificationData = await notificationRepo.findById(id);
-            return notificationData ?? null;
-          },
-          3600 // Cache for 1 hour
-        );
+        const notification = await notificationRepo.findById(id);
         if (!notification)
           return { success: false, error: "Notification not found" };
         return { success: true, notification };
@@ -101,25 +91,12 @@ export function notificationService(
     },
     findByUserId: async (user_id) => {
       try {
-        /**
-         * Finds all notifications for a specific user, using a cache-aside pattern.
-         * Caches the list of notifications for that user for one hour.
-         */
-        const cacheKey = `notifications_user_${user_id}`;
-        const notifications = await CacheService.getOrSet(
-          cacheKey,
-          async () => {
-            const notificationsData = await notificationRepo.findByUserId(
-              user_id
-            );
-            return notificationsData ?? [];
-          },
-          3600 // Cache for 1 hour
-        );
+        console.log(user_id);
+        const notifications = await notificationRepo.findByUserId(user_id);
         if (!notifications)
           return {
             success: false,
-            error: "No notifications found for this user",
+            error: "No notifications found for this user " + user_id,
           };
         return { success: true, notifications };
       } catch (err) {
@@ -128,19 +105,7 @@ export function notificationService(
     },
     findAll: async () => {
       try {
-        /**
-         * Retrieves all notifications, utilizing a cache-aside pattern.
-         * Caches the list of all notifications for one hour.
-         */
-        const cacheKey = "notifications";
-        const notifications = await CacheService.getOrSet(
-          cacheKey,
-          async () => {
-            const notificationsData = await notificationRepo.findAll();
-            return notificationsData ?? [];
-          },
-          3600 // Cache for 1 hour
-        );
+        const notifications = await notificationRepo.findAll();
         if (!notifications)
           return { success: false, error: "No notifications found" };
         return { success: true, notifications };
@@ -151,18 +116,26 @@ export function notificationService(
     create: async (data) => {
       /**
        * Creates a new notification after validating the user exists.
-       * It invalidates relevant notification caches to ensure data consistency.
        */
       try {
-        const user = await userRepo.findById(data.user_id);
-        if (!user) return { success: false, error: "User not found" };
-        const notification = await notificationRepo.create(data);
+        const checks = [
+          { id: data.user_id, repo: userRepo, error: "User not found" },
+          { id: data.seller_id, repo: sellerRepo, error: "Seller not found" },
+          {
+            id: data.financial_id,
+            repo: financialRepo,
+            error: "Financial user not found",
+          },
+        ];
 
-        // Invalidate relevant caches
-        await Promise.all([
-          CacheService.delete("notifications"),
-          CacheService.delete(`notifications_user_${data.user_id}`),
-        ]);
+        for (const item of checks) {
+          if (item.id) {
+            const exists = await item.repo.findById(item.id);
+            if (!exists) return { success: false, error: item.error };
+          }
+        }
+
+        const notification = await notificationRepo.create(data);
 
         return { success: true, notification };
       } catch (err) {
@@ -172,7 +145,6 @@ export function notificationService(
     markAsRead: async (id) => {
       /**
        * Marks a notification as read.
-       * It invalidates all caches related to this notification upon successful update.
        */
       try {
         const notification = await notificationRepo.findById(id);
@@ -182,13 +154,6 @@ export function notificationService(
         const success = await notificationRepo.notificationReaded(id);
         if (!success)
           return { success: false, error: "Notification not found" };
-
-        // Invalidate relevant caches
-        await Promise.all([
-          CacheService.delete(`notification_${id}`),
-          CacheService.delete("notifications"),
-          CacheService.delete(`notifications_user_${notification.user_id}`),
-        ]);
 
         return { success: true };
       } catch (err) {
@@ -201,7 +166,6 @@ export function notificationService(
     update: async (id, data) => {
       /**
        * Updates an existing notification's data.
-       * It invalidates all caches related to this notification upon successful update.
        */
       try {
         const existingNotification = await notificationRepo.findById(id);
@@ -216,14 +180,6 @@ export function notificationService(
         if (!notification)
           return { success: false, error: "Notification not found" };
 
-        // Invalidate relevant caches
-        await Promise.all([
-          CacheService.delete(`notification_${id}`),
-          CacheService.delete("notifications"),
-          CacheService.delete(
-            `notifications_user_${existingNotification.user_id}`
-          ),
-        ]);
         return { success: true, notification };
       } catch (err) {
         return { success: false, error: "Failed to update notification" };
@@ -232,7 +188,6 @@ export function notificationService(
     delete: async (id) => {
       /**
        * Deletes a notification from the system.
-       * It invalidates all caches related to this notification before deletion.
        */
       try {
         const notification = await notificationRepo.findById(id);
@@ -242,13 +197,6 @@ export function notificationService(
         const success = await notificationRepo.delete(id);
         if (!success)
           return { success: false, error: "Notification not found" };
-
-        // Invalidate relevant caches
-        await Promise.all([
-          CacheService.delete(`notification_${id}`),
-          CacheService.delete("notifications"),
-          CacheService.delete(`notifications_user_${notification.user_id}`),
-        ]);
 
         return { success: true };
       } catch (err) {

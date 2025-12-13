@@ -78,7 +78,7 @@ export function notificationController(
     getNotificationsByUserID: async (req, res) => {
       try {
         const result = await notificationService.findByUserId(
-          req.params.user_id
+          req.params.userId
         );
         return handleResult(res, result);
       } catch (err) {

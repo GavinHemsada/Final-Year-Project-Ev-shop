@@ -9,7 +9,11 @@ export interface INotification extends Document {
   /** The unique identifier for the notification document. */
   _id: Types.ObjectId;
   /** The ID of the `User` who will receive the notification. */
-  user_id: Types.ObjectId;
+  user_id?: Types.ObjectId;
+  /** The ID of the `Seller` associated with the notification, if applicable. */
+  seller_id?: Types.ObjectId;
+  /** The ID of the `Financial` entity associated with the notification, if applicable. */
+  financial_id?: Types.ObjectId;
   /** The type of the notification (e.g., 'NewOrder', 'PasswordReset'). */
   type: NotificationType;
   /** The title of the notification. */
@@ -26,7 +30,11 @@ export interface INotification extends Document {
 const NotificationSchema = new Schema<INotification>(
   {
     /** A reference to the `User` who owns this notification. */
-    user_id: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    user_id: { type: Schema.Types.ObjectId, ref: "User" },
+    /** A reference to the `Seller` associated with the notification, if applicable. */
+    seller_id: { type: Schema.Types.ObjectId, ref: "Seller" },
+    /** A reference to the `Financial` entity associated with the notification, if applicable. */
+    financial_id: { type: Schema.Types.ObjectId, ref: "FinancialInstitution" },
     /** The type of notification, controlled by the `NotificationType` enum. */
     type: {
       type: String,

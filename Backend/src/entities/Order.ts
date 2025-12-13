@@ -34,11 +34,11 @@ const OrderSchema = new Schema<IOrder>(
     /** A reference to the `User` who placed the order. */
     user_id: { type: Schema.Types.ObjectId, ref: "User", required: true },
     /** An optional reference to the `VehicleListing` being purchased. */
-    listing_id: { type: Schema.Types.ObjectId, ref: "Listing" },
+    listing_id: { type: Schema.Types.ObjectId, ref: "VehicleListing" },
     /** A reference to the `Seller` who will fulfill the order. */
     seller_id: { type: Schema.Types.ObjectId, ref: "Seller", required: true },
     /** An optional reference to a `TestDriveBooking` associated with the order. */
-    booking_id: { type: Schema.Types.ObjectId, ref: "Booking" },
+    booking_id: { type: Schema.Types.ObjectId, ref: "TestDriveBooking" },
     /** The current status of the order, controlled by the `OrderStatus` enum. */
     order_status: {
       type: String,

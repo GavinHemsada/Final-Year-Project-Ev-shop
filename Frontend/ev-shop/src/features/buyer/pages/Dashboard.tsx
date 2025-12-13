@@ -106,10 +106,11 @@ const App: React.FC = () => {
         queryKey: queryKeys.notifications(userID!),
         queryFn: () => buyerService.getUserNotifications(userID!),
         enabled: !!userID,
-        staleTime: 10 * 60 * 1000,
+        staleTime: 5000,
+        refetchInterval: 5000,
         refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: false,
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true,
       } satisfies UseQueryOptions<Notification[]>,
     ],
   }) as [
@@ -123,7 +124,7 @@ const App: React.FC = () => {
   const vehicles = evlistQuery.data || [];
   const user = userProfileQuery.data;
   const notifications = notificationQuery.data || [];
-
+  console.log(notifications);
   const isLoading =
     evlistQuery.isLoading ||
     userProfileQuery.isLoading ||

@@ -2,6 +2,8 @@ import { CreateOrderDTO, UpdateOrderDTO } from "../../dtos/order.DTO";
 import { OrderStatus, PaymentStatus } from "../../shared/enum/enum";
 import { IOrderRepository } from "./order.repository";
 import CacheService from "../../shared/cache/CacheService";
+import { IUserRepository } from "../user/user.repository";
+import { ISellerRepository } from "../seller/seller.repository";
 
 /**
  * Defines the interface for the order service, outlining the methods for managing orders.
@@ -34,17 +36,11 @@ export interface IOrderService {
    * @param userId - The ID of the user.
    * @returns A promise that resolves to an object containing an array of the user's orders or an error.
    */
-  getOrdersByUserId(
-    userId: string
+  getOrdersBySellerOrUserId(
+    id: string,
+    role: "user" | "seller"
   ): Promise<{ success: boolean; orders?: any[]; error?: string }>;
-  /**
-   * Retrieves all orders associated with a specific seller.
-   * @param sellerId - The ID of the seller.
-   * @returns A promise that resolves to an object containing an array of the seller's orders or an error.
-   */
-  getOrdersBySellerId(
-    sellerId: string
-  ): Promise<{ success: boolean; orders?: any[]; error?: string }>;
+
   /**
    * Updates an existing order.
    * @param id - The ID of the order to update.
@@ -71,7 +67,7 @@ export interface IOrderService {
  * @param repo - The repository for order data access.
  * @returns An implementation of the IOrderService interface.
  */
-export function orderService(repo: IOrderRepository): IOrderService {
+export function orderService(repo: IOrderRepository, userRepo: IUserRepository, sellerrepo: ISellerRepository): IOrderService {
   return {
     /**
      * Creates a new order with default statuses and invalidates the relevant user and seller order list caches.
@@ -142,59 +138,38 @@ export function orderService(repo: IOrderRepository): IOrderService {
       }
     },
 
-    /**
-     * Finds all orders for a specific user, using a cache-aside pattern.
-     * Caches the list of orders for that user for one hour.
-     */
-    getOrdersByUserId: async (userId) => {
+    getOrdersBySellerOrUserId: async (id: string, role: "user" | "seller") => {
       try {
-        if (!userId || !userId.trim()) {
-          return { success: false, error: "User ID is required" };
+        const trimmedId = id.trim();
+        const repos = role === "user" ? userRepo : sellerrepo;
+        const exists = await repos.findById(trimmedId);
+        if (!exists) {
+          return {
+            success: false,
+            error: `${role === "user" ? "User" : "Seller"} not found`,
+          };
         }
-        const trimmedUserId = userId.trim();
+        const cacheKey =
+          role === "user"
+            ? `orders_user_${trimmedId}`
+            : `orders_seller_${trimmedId}`;
 
-        const cacheKey = `orders_user_${trimmedUserId}`;
-        // Attempt to get from cache, otherwise fetch from repository and set cache.
         const orders = await CacheService.getOrSet(
           cacheKey,
-          async () => {
-            const ordersData = await repo.findByUserId(trimmedUserId);
-            return ordersData ?? [];
-          },
-          3600 // Cache for 1 hour
+          async () => await repo.findByUserOrSellerId(trimmedId),
+          3600 // 1 hour
         );
-        if (!orders) return { success: false, error: "No orders found" };
-        // Return success even if array is empty (user has no orders)
-        return { success: true, orders };
+
+        return {
+          success: true,
+          orders: orders ?? [],
+        };
       } catch (err: any) {
-        console.error("getOrdersByUserId error:", err);
+        console.error(`getOrdersByOwner (${role}) error:`, err);
         return {
           success: false,
           error: err?.message || "Failed to fetch orders",
         };
-      }
-    },
-
-    /**
-     * Finds all orders for a specific seller, using a cache-aside pattern.
-     * Caches the list of orders for that seller for one hour.
-     */
-    getOrdersBySellerId: async (sellerId) => {
-      try {
-        const cacheKey = `orders_seller_${sellerId}`;
-        // Attempt to get from cache, otherwise fetch from repository and set cache.
-        const orders = await CacheService.getOrSet(
-          cacheKey,
-          async () => {
-            const ordersData = await repo.findBySellerId(sellerId);
-            return ordersData ?? [];
-          },
-          3600 // Cache for 1 hour
-        );
-        if (!orders) return { success: false, error: "No orders found" };
-        return { success: true, orders };
-      } catch (err) {
-        return { success: false, error: "Failed to fetch orders" };
       }
     },
 
@@ -234,11 +209,11 @@ export function orderService(repo: IOrderRepository): IOrderService {
         if (!order) return { success: false, error: "Order not found" };
 
         // Reuse updateOrder logic to ensure consistent cache invalidation.
-        const result = await orderService(repo).updateOrder(id, {
+        const result = await repo.update(id, {
           order_status: OrderStatus.CANCELLED,
         });
-
-        return { success: result.success, error: result.error };
+        if (!result) return { success: false, error: "Failed to cancel order" };
+        return { success: true };
       } catch (err) {
         return { success: false, error: "Failed to cancel order" };
       }

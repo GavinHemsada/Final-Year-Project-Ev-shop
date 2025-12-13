@@ -1,6 +1,7 @@
 import { INotification, Notification } from "../../entities/Notification";
 import { NotificationDTO } from "../../dtos/notification.DTO";
 import { withErrorHandling } from "../../shared/utils/CustomException";
+import { Types } from "mongoose";
 
 /**
  * Defines the contract for the notification repository, specifying the methods for data access operations related to notifications.
@@ -65,9 +66,16 @@ export const NotificationRepository: INotificationRepository = {
   findById: withErrorHandling(async (id) => {
     return await Notification.findOne({ _id: id });
   }),
-  /** Finds all notifications for a specific user. */
+  /** Finds all notifications for a specific user (can be user, seller, or financial user). */
   findByUserId: withErrorHandling(async (user_id) => {
-    return await Notification.find({ user_id });
+    const objectId = new Types.ObjectId(user_id); // convert string to ObjectId
+    return await Notification.find({
+      $or: [
+        { user_id: objectId },
+        { seller_id: objectId },
+        { financial_id: objectId },
+      ],
+    }).sort({ createdAt: -1 });
   }),
   /** Retrieves all notifications. */
   findAll: withErrorHandling(async () => {
@@ -76,6 +84,7 @@ export const NotificationRepository: INotificationRepository = {
   /** Finds a notification by ID and sets its `is_read` status to true. */
   notificationReaded: withErrorHandling(async (id) => {
     const notification = await Notification.findById(id);
+    if (notification?.is_read) return true;
     notification!.is_read = true;
     await notification!.save();
     return true;

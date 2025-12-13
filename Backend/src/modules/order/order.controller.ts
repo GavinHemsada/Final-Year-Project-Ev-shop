@@ -29,13 +29,8 @@ export interface IOrderController {
    * @param req - The Express request object, containing the user ID in `req.params`.
    * @param res - The Express response object.
    */
-  getOrdersByUserId(req: Request, res: Response): Promise<Response>;
-  /**
-   * Handles the HTTP request to get all orders for a specific seller.
-   * @param req - The Express request object, containing the seller ID in `req.params`.
-   * @param res - The Express response object.
-   */
-  getOrdersBySellerId(req: Request, res: Response): Promise<Response>;
+  getOrdersByUserIdOrSellerId(req: Request, res: Response): Promise<Response>;
+  
   /**
    * Handles the HTTP request to update an existing order (e.g., change its status).
    * @param req - The Express request object, containing the order ID and update data.
@@ -94,36 +89,27 @@ export function orderController(service: IOrderService): IOrderController {
       }
     },
     /**
-     * Retrieves all orders placed by a specific user.
+     * Retrieves all orders placed by a specific user or seller.
      */
-    getOrdersByUserId: async (req, res) => {
+    getOrdersByUserIdOrSellerId: async (req, res) => {
       try {
         // Decode URL-encoded characters (like %0A for newline) and trim whitespace
-        const userId = decodeURIComponent(req.params.userId || "").trim();
-        if (!userId) {
+        const id = decodeURIComponent(req.params.userId || "").trim();
+        const role = req.params.role === "seller" ? "seller" : "user";
+        if (!id) {
           return handleError(
             res,
             new Error("User ID is required"),
-            "getOrdersByUserId"
+            "getOrdersByUserIdOrSellerId"
           );
         }
-        const result = await service.getOrdersByUserId(userId);
+        const result = await service.getOrdersBySellerOrUserId(id, role);
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "getOrdersByUserId");
       }
     },
-    /**
-     * Retrieves all orders associated with a specific seller.
-     */
-    getOrdersBySellerId: async (req, res) => {
-      try {
-        const result = await service.getOrdersBySellerId(req.params.sellerId);
-        return handleResult(res, result);
-      } catch (err) {
-        return handleError(res, err, "getOrdersBySellerId");
-      }
-    },
+   
     /**
      * Updates an existing order, typically to change its status (e.g., "shipped", "delivered").
      */

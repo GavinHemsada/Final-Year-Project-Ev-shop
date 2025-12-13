@@ -32,6 +32,8 @@ export enum NotificationType {
   SELLER_APPLICATION_APPROVED = "SELLER_APPLICATION_APPROVED",
   /** Notification for a rejected seller application. */
   SELLER_APPLICATION_REJECTED = "SELLER_APPLICATION_REJECTED",
+  /** Notification for a new reply to a user's post. */
+  POST_REPLY = "POST_REPLY",
 }
 
 /**

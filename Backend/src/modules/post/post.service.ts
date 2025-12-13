@@ -4,6 +4,8 @@ import { IUserRepository } from "../user/user.repository";
 import CacheService from "../../shared/cache/CacheService";
 import { ISellerRepository } from "../seller/seller.repository";
 import { IFinancialRepository } from "../financial/financial.repository";
+import { INotificationService } from "../notification/notification.service";
+import { NotificationType } from "../../shared/enum/enum";
 
 /**
  * Defines the interface for the post service, outlining methods for managing forum posts and replies.
@@ -224,7 +226,8 @@ export function postService(
   postRepo: IPostRepository,
   userRepo: IUserRepository,
   sellerRepo: ISellerRepository,
-  financialRepo: IFinancialRepository
+  financialRepo: IFinancialRepository,
+  notificationservice: INotificationService
 ): IPostService {
   return {
     // Posts
@@ -744,6 +747,20 @@ export function postService(
           financial_id: financial_id || null,
         });
 
+
+        // Send notification to the post owner (only one of these will be set)
+        const notificationResult = await notificationservice.create({
+          user_id: post.user_id? post.user_id.toString(): undefined,
+          seller_id: post.seller_id? post.seller_id.toString(): undefined,
+          financial_id: post.financial_id? post.financial_id.toString(): undefined,
+          type: NotificationType.POST_REPLY,
+          title: "New Reply to Your Post",
+          message: `Someone replied to your post: "${post.title}"`,
+        });
+        
+        if(!notificationResult.success){
+          console.error("Failed to create notification for post reply:", notificationResult.error);
+        }
         const currentReplyCount = post.reply_count || 0;
         await Promise.all([
           postRepo.updatePostReplyCount(

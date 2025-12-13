@@ -113,40 +113,8 @@ export const orderRouter = (): Router => {
    *       '500':
    *         description: Internal server error.
    */
-  router.get("/user/:userId", (req, res) =>
-    controller.getOrdersByUserId(req, res)
-  );
-
-  /**
-   * @swagger
-   * /order/seller/{sellerId}:
-   *   get:
-   *     summary: Get orders by seller ID
-   *     description: Retrieves all orders for a specific seller. Requires user to be the seller or an admin.
-   *     tags: [Orders]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: sellerId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the seller whose orders are to be retrieved.
-   *     responses:
-   *       '200':
-   *         description: A list of the seller's orders.
-   *       '401':
-   *         description: Unauthorized.
-   *       '403':
-   *         description: Forbidden (if user is not the seller or an admin).
-   *       '404':
-   *         description: Seller not found or no orders found.
-   *       '500':
-   *         description: Internal server error.
-   */
-  router.get("/seller/:sellerId", (req, res) =>
-    controller.getOrdersBySellerId(req, res)
+  router.get("/:role/:userId", (req, res) =>
+    controller.getOrdersByUserIdOrSellerId(req, res)
   );
 
   /**

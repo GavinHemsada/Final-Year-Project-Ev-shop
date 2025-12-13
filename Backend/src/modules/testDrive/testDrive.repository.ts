@@ -90,6 +90,12 @@ export interface ITestDriveRepository {
    */
   findBookingsBySlotId(slotId: string): Promise<ITestDriveBooking[] | null>;
   /**
+   * Decreases the available slot count for a specific test drive slot.
+   * @param slotId - The ID of the test drive slot.
+   * @returns A promise that resolves to true if the operation was successful, otherwise false.
+   */
+  decreaseSlotCount(slotId: string): Promise<boolean | null>;
+  /**
    * Updates an existing test drive booking.
    * @param id - The ID of the booking to update.
    * @param data - The partial DTO containing the fields to update.
@@ -146,43 +152,77 @@ export const TestDriveRepository: ITestDriveRepository = {
 
   /** Finds a single TestDriveSlot by its document ID. */
   findSlotById: withErrorHandling(async (id) => {
-    return await TestDriveSlot.findById(id).populate({
-      path: "model_id", select: "model_name model_logo"
-    }).populate({
-      path: "seller_id", select: "seller_name seller_logo"
-    })
+    return await TestDriveSlot.findById(id)
+      .populate({
+        path: "model_id",
+        select: "model_name",
+        populate: {
+          path: "brand_id",
+          select: "brand_logo brand_name",
+        },
+      })
+      .populate({
+        path: "seller_id",
+        select: "business_name rating",
+      });
   }),
 
   /** Finds all active TestDriveSlots, sorted by their available date. */
   findAllSlots: withErrorHandling(async () => {
-    return await TestDriveSlot.find({ is_active: true }).sort({
-      available_date: 1,
-    }).populate({
-      path: "model_id", select: "model_name model_logo"
-    }).populate({
-      path: "seller_id", select: "seller_name seller_logo"
-    })
+    return await TestDriveSlot.find({ is_active: true })
+      .sort({
+        available_date: 1,
+      })
+      .populate({
+        path: "model_id",
+        select: "model_name",
+        populate: {
+          path: "brand_id",
+          select: "brand_logo brand_name",
+        },
+      })
+      .populate({
+        path: "seller_id",
+        select: "business_name rating",
+      });
   }),
 
   /** Finds all TestDriveSlots for a given seller, sorted by most recent. */
   findSlotsBySeller: withErrorHandling(async (sellerId) => {
     return await TestDriveSlot.find({
       seller_id: new Types.ObjectId(sellerId),
-    }).populate({
-      path: "model_id", select: "model_name model_logo"
-    }).populate({
-      path: "seller_id", select: "seller_name seller_logo"
     })
+      .populate({
+        path: "model_id",
+        select: "model_name",
+        populate: {
+          path: "brand_id",
+          select: "brand_logo brand_name",
+        },
+      })
+      .populate({
+        path: "seller_id",
+        select: "business_name rating",
+      });
   }),
   /** Finds all active TestDriveSlots, sorted by their available date. */
   findActiveSlots: withErrorHandling(async () => {
-    return await TestDriveSlot.find({ is_active: true }).sort({
-      available_date: 1,
-    }).populate({
-      path: "model_id", select: "model_name model_logo"
-    }).populate({
-      path: "seller_id", select: "seller_name seller_logo"
-    })
+    return await TestDriveSlot.find({ is_active: true })
+      .sort({
+        available_date: 1,
+      })
+      .populate({
+        path: "model_id",
+        select: "model_name",
+        populate: {
+          path: "brand_id",
+          select: "brand_logo brand_name",
+        },
+      })
+      .populate({
+        path: "seller_id",
+        select: "business_name rating",
+      });
   }),
   /** Finds a TestDriveSlot by ID and updates it with new data. */
   updateSlot: withErrorHandling(async (id, data) => {
@@ -200,7 +240,7 @@ export const TestDriveRepository: ITestDriveRepository = {
   createBooking: withErrorHandling(async (data) => {
     const booking = new TestDriveBooking(data);
     return await booking.save();
-  }),
+  }), 
 
   /** Finds a single TestDriveBooking by ID and populates the related slot information. */
   findBookingById: withErrorHandling(async (id) => {
@@ -219,6 +259,16 @@ export const TestDriveRepository: ITestDriveRepository = {
   /** Finds all TestDriveBookings associated with a specific slot. */
   findBookingsBySlotId: withErrorHandling(async (slotId) => {
     return await TestDriveBooking.find({ slot_id: new Types.ObjectId(slotId) });
+  }),
+  /** Decreases the available slot count for a specific test drive slot. */
+  decreaseSlotCount: withErrorHandling(async (slotId) => {
+    const slot = await TestDriveSlot.findById(slotId);
+    if (!slot) {
+      throw new Error("Slot not found");
+    }
+    slot.max_bookings -= 1;
+    const result = await slot.save();
+    return result !== null;
   }),
 
   /** Finds a TestDriveBooking by ID and updates it with new data. */

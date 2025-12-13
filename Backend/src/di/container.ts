@@ -266,13 +266,19 @@ container.register<INotificationService>("NotificationService", {
   useFactory: (c) =>
     notificationService(
       c.resolve<INotificationRepository>("NotificationRepository"),
-      c.resolve<IUserRepository>("UserRepository")
+      c.resolve<IUserRepository>("UserRepository"),
+      c.resolve<ISellerRepository>("SellerRepository"),
+      c.resolve<IFinancialRepository>("FinancialRepository")
     ),
 });
 
 container.register<IOrderService>("OrderService", {
   useFactory: (c) =>
-    orderService(c.resolve<IOrderRepository>("OrderRepository")),
+    orderService(
+      c.resolve<IOrderRepository>("OrderRepository"),
+      c.resolve<IUserRepository>("UserRepository"),
+      c.resolve<ISellerRepository>("SellerRepository")
+    ),
 });
 
 container.register<IPaymentService>("PaymentService", {
@@ -289,7 +295,8 @@ container.register<IPostService>("PostService", {
       c.resolve<IPostRepository>("PostRepository"),
       c.resolve<IUserRepository>("UserRepository"),
       c.resolve<ISellerRepository>("SellerRepository"),
-      c.resolve<IFinancialRepository>("FinancialRepository")
+      c.resolve<IFinancialRepository>("FinancialRepository"),
+      c.resolve<INotificationService>("NotificationService")
     ),
 });
 
@@ -315,7 +322,8 @@ container.register<ITestDriveService>("TestDriveService", {
     testDriveService(
       c.resolve<ITestDriveRepository>("TestDriveRepository"),
       c.resolve<ISellerRepository>("SellerRepository"),
-      c.resolve<IEvRepository>("EvRepository")
+      c.resolve<IEvRepository>("EvRepository"),
+      c.resolve<INotificationService>("NotificationService")
     ),
 });
 
