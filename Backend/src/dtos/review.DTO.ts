@@ -37,7 +37,17 @@ export class ReviewDTO {
    * This can be used to verify that the reviewer has actually purchased the item or service.
    */
   @IsString()
-  order_id!: string;
+  @IsOptional()
+  order_id?: string;
+
+  
+  /**
+   * The MongoDB ObjectId of the test drive associated with the review.
+   * This can be used to verify that the reviewer has actually taken a test drive.
+   */
+  @IsString()
+  @IsOptional()
+  testDrive_id?: string;
 
   /**
    * The numerical rating given by the reviewer, on a scale of 1 to 5.

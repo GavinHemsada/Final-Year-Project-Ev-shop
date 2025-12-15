@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import "../style/buyer.css";
 import { useNavigate, useLocation } from "react-router-dom";
-import { CloseIcon, ChatBubbleIcon } from "@/assets/icons/icons";
+import { CloseIcon, ChatBubbleIcon, ChevronDownIcon } from "@/assets/icons/icons";
 import { Chatbot } from "../components/ChatBot";
 import { Sidebar } from "../components/SideBar";
 import { Header } from "../components/Header";
@@ -63,6 +63,14 @@ const App: React.FC = () => {
     null
   );
 
+  // Filters State
+  const [showFilters, setShowFilters] = useState(false);
+  const [priceMin, setPriceMin] = useState<number | "">("");
+  const [priceMax, setPriceMax] = useState<number | "">("");
+  const [selectedModel, setSelectedModel] = useState<string>("All");
+  const [sellerSearch, setSellerSearch] = useState<string>("");
+  const [sortBy, setSortBy] = useState<string>("default");
+
   const navigate = useNavigate();
   const location = useLocation();
   const userID = useAppSelector(selectUserId);
@@ -110,18 +118,25 @@ const App: React.FC = () => {
         refetchOnWindowFocus: true,
         refetchOnReconnect: true,
       } satisfies UseQueryOptions<Notification[]>,
+      {
+        queryKey: ["allReviews"],
+        queryFn: buyerService.getAllReviews,
+        staleTime: 1000 * 60 * 5,
+      } satisfies UseQueryOptions<any[]>,
     ],
   }) as [
     UseQueryResult<Vehicle[], Error>,
     UseQueryResult<User_Profile, Error>,
-    UseQueryResult<Notification[], Error>
+    UseQueryResult<Notification[], Error>,
+    UseQueryResult<any[], Error>
   ];
 
-  const [evlistQuery, userProfileQuery, notificationQuery] = result;
+  const [evlistQuery, userProfileQuery, notificationQuery, reviewsQuery] = result;
 
   const vehicles = evlistQuery.data || [];
   const user = userProfileQuery.data;
   const notifications = notificationQuery.data || [];
+  const allReviews = reviewsQuery.data || [];
   const isPasswordNull = user?.isPasswordNull;
 
   const isLoading =
@@ -129,14 +144,57 @@ const App: React.FC = () => {
     userProfileQuery.isLoading ||
     notificationQuery.isLoading;
 
+  // Extract unique models for dropdown
+  const availableModels = useMemo(() => {
+    const models = new Set(vehicles.map((v) => v.model_id?.model_name).filter(Boolean));
+    return ["All", ...Array.from(models)];
+  }, [vehicles]);
+
+  // Helper to get review count for sorting
+  const getReviewCount = useCallback((listingId: string) => {
+    if (!allReviews) return 0;
+    return allReviews.filter((r: any) => 
+      r.order_id?.listing_id?._id === listingId || 
+      r.order_id?.listing_id === listingId
+    ).length;
+  }, [allReviews]);
+
   const filteredVehicles = useMemo(
-    () =>
-      vehicles.filter((vehicle) =>
-        vehicle.model_id?.model_name
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())
-      ),  
-    [vehicles, searchTerm]
+    () => {
+      let filtered = vehicles.filter((vehicle) => {
+        // Search Term
+        if (searchTerm && !vehicle.model_id?.model_name.toLowerCase().includes(searchTerm.toLowerCase())) {
+          return false;
+        }
+        // Model Filter
+        if (selectedModel !== "All" && vehicle.model_id?.model_name !== selectedModel) {
+          return false;
+        }
+        // Price Filter
+        if (priceMin !== "" && vehicle.price < priceMin) return false;
+        if (priceMax !== "" && vehicle.price > priceMax) return false;
+        // Seller Filter
+        if (sellerSearch && !vehicle.seller_id?.business_name?.toLowerCase().includes(sellerSearch.toLowerCase())) {
+          return false;
+        }
+        return true;
+      });
+
+      // Sorting
+      return filtered.sort((a, b) => {
+        switch (sortBy) {
+          case "price_asc":
+            return (a.price || 0) - (b.price || 0);
+          case "price_desc":
+            return (b.price || 0) - (a.price || 0);
+          case "most_reviewed":
+            return getReviewCount(b._id) - getReviewCount(a._id);
+          default:
+            return 0;
+        }
+      });
+    },
+    [vehicles, searchTerm, selectedModel, priceMin, priceMax, sellerSearch, sortBy, getReviewCount]
   ); 
 
   const paginatedVehicles = useMemo(() => {
@@ -172,18 +230,139 @@ const App: React.FC = () => {
     setConfirmAlert(null);
   }, []);
 
-  // Tabs with memoized components
-  const tabs = useMemo(
-    () => ({
+  // Tabs components
+  const tabs = {
       dashboard: (
-        <VehicleList
-          vehicles={paginatedVehicles}
-          totalVehicles={filteredVehicles.length}
-          currentPage={currentPage}
-          itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
-          setAlert={handleSetAlert}
-        />
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          {/* Header Row: Title & Filter Button */}
+          <div className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between relative z-20">
+            <div>
+              <h1 className="text-3xl font-bold dark:text-white">
+                Explore Our Vehicles
+              </h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                 Showing {filteredVehicles.length} vehicles
+              </p>
+            </div>
+            
+            <button
+              type="button"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-all transform hover:scale-105 active:scale-95 text-sm font-semibold select-none"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="21" x2="4" y2="14"></line>
+                <line x1="4" y1="10" x2="4" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12" y2="3"></line>
+                <line x1="20" y1="21" x2="20" y2="16"></line>
+                <line x1="20" y1="12" x2="20" y2="3"></line>
+                <line x1="1" y1="14" x2="7" y2="14"></line>
+                <line x1="9" y1="8" x2="15" y2="8"></line>
+                <line x1="17" y1="16" x2="23" y2="16"></line>
+              </svg>
+              Filters & Sort
+              <ChevronDownIcon className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </button>
+            
+             {/* Filters Panel (Absolute Dropdown) */}
+            {showFilters && (
+              <div className="absolute top-12 right-0 w-full max-w-4xl bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 z-50">
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* Sort By */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                        Sort By
+                      </label>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm dark:text-white"
+                      >
+                        <option value="default">Default</option>
+                        <option value="most_reviewed">Most Reviewed</option>
+                        <option value="price_asc">Price: Low to High</option>
+                        <option value="price_desc">Price: High to Low</option>
+                      </select>
+                    </div>
+
+                    {/* Model Filter */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                        Model
+                      </label>
+                      <select
+                        value={selectedModel}
+                        onChange={(e) => setSelectedModel(e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm dark:text-white"
+                      >
+                        {availableModels.map((model) => (
+                          <option key={model} value={model}>
+                            {model}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Seller Filter */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                        Seller
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Shop name..."
+                        value={sellerSearch}
+                        onChange={(e) => setSellerSearch(e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm dark:text-white"
+                      />
+                    </div>
+
+                    {/* Price Range */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                        Price (LKR)
+                      </label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="number"
+                          placeholder="Min"
+                          value={priceMin}
+                          onChange={(e) => setPriceMin(e.target.value ? Number(e.target.value) : "")}
+                          className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm dark:text-white"
+                        />
+                        <span className="text-gray-400">-</span>
+                        <input
+                          type="number"
+                          placeholder="Max"
+                          value={priceMax}
+                          onChange={(e) => setPriceMax(e.target.value ? Number(e.target.value) : "")}
+                          className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm dark:text-white pb-2"
+                        />
+                      </div>
+                    </div>
+                 </div>
+                  <div className="mt-4 flex justify-end">
+                      <button 
+                        onClick={() => setShowFilters(false)}
+                        className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Close
+                      </button>
+                  </div>
+              </div>
+            )}
+          </div>
+
+          <VehicleList
+            vehicles={paginatedVehicles}
+            totalVehicles={filteredVehicles.length}
+            currentPage={currentPage}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            setAlert={handleSetAlert}
+          />
+        </div>
       ),
       profile: <UserProfile user={user!} setAlert={handleSetAlert} checkPassword={isPasswordNull!} />,
       orders: <OrderHistory setAlert={handleSetAlert} />,
@@ -198,24 +377,14 @@ const App: React.FC = () => {
       ),
       cart: <CartPage />,
       testDrives: <TestDrivesPage setAlert={handleSetAlert} />,
-      reviews: <MyReviewsPage setAlert={handleSetAlert} />,
+      reviews: <MyReviewsPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert}/>,
       community: (
         <CommunityPage
           setAlert={handleSetAlert}
           setConfirmAlert={handleSetConfirmAlert}
         />
       ),
-    }),
-    [
-      filteredVehicles,
-      user,
-      notifications,
-      paginatedVehicles,
-      currentPage,
-      itemsPerPage,
-      handleSetAlert,
-    ]
-  );
+    };
 
   // Callbacks
   const toggleChat = useCallback(() => setIsChatOpen((prev) => !prev), []);

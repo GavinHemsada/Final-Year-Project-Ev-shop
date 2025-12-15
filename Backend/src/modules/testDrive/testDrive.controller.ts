@@ -71,6 +71,30 @@ export interface ITestDriveController {
    */
   getBookingsByCustomer(req: Request, res: Response): Promise<Response>;
   /**
+   * Handles the HTTP request to get all bookings for a specific seller's slots.
+   * @param req - The Express request object, containing the seller ID in `req.params`.
+   * @param res - The Express response object.
+   */
+  getBookingsBySeller(req: Request, res: Response): Promise<Response>;
+  /**
+   * Handles the HTTP request to mark a booking as completed.
+   * @param req - The Express request object, containing the booking ID in `req.params`.
+   * @param res - The Express response object.
+   */
+  markBookingAsCompleted(req: Request, res: Response): Promise<Response>;
+  /**
+   * Handles the HTTP request to mark a booking as cancelled/rejected.
+   * @param req - The Express request object, containing the booking ID in `req.params`.
+   * @param res - The Express response object.
+   */
+  markBookingAsCancelled(req: Request, res: Response): Promise<Response>;
+  /**
+   * Handles the HTTP request to mark a booking as expired.
+   * @param req - The Express request object, containing the booking ID in `req.params`.
+   * @param res - The Express response object.
+   */
+  markBookingAsExpired(req: Request, res: Response): Promise<Response>;
+  /**
    * Handles the HTTP request to update an existing test drive booking.
    * @param req - The Express request object, containing the booking ID and update data.
    * @param res - The Express response object.
@@ -238,6 +262,56 @@ export function testDriveController(
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "fetching bookings by customer");
+      }
+    },
+
+    /**
+     * Retrieves all test drive bookings for a specific seller's slots.
+     */
+    getBookingsBySeller: async (req, res) => {
+      try {
+        const result = await service.findBookingsBySeller(
+          req.params.sellerId
+        );
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "fetching bookings by seller");
+      }
+    },
+
+    /**
+     * Marks a booking as completed.
+     */
+    markBookingAsCompleted: async (req, res) => {
+      try {
+        const result = await service.markBookingAsCompleted(req.params.id);
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "marking booking as completed");
+      }
+    },
+
+    /**
+     * Marks a booking as cancelled/rejected.
+     */
+    markBookingAsCancelled: async (req, res) => {
+      try {
+        const result = await service.markBookingAsCancelled(req.params.id);
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "marking booking as cancelled");
+      }
+    },
+
+    /**
+     * Marks a booking as expired.
+     */
+    markBookingAsExpired: async (req, res) => {
+      try {
+        const result = await service.markBookingAsExpired(req.params.id);
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "marking booking as expired");
       }
     },
 

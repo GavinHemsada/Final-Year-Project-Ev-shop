@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { BellIcon } from "@/assets/icons/icons";
 import type { SellerActiveTab, Notification } from "@/types";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { sellerService } from "../sellerService";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { selectSellerId } from "@/context/authSlice";
 
 /**
  * Props for the NotificationDropdown component.
@@ -25,6 +29,19 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   // Ref to the dropdown's root element, used to detect clicks outside of it.
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const sellerId = useAppSelector(selectSellerId);
+
+  const QueryClient = useQueryClient();
+
+  const notificationIsReadMutation = useMutation({
+    mutationFn: (notificationId: string) =>
+      sellerService.markNotificationAsRead(notificationId),
+    onSuccess: () => {
+      QueryClient.invalidateQueries({
+        queryKey: ["sellerNotifications", sellerId],
+      });
+    },
+  });
 
   // Effect hook to add and remove a mousedown event listener.
   // This is used to close the dropdown when a user clicks outside of it.
@@ -59,9 +76,11 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
    * Handles clicking on an individual notification.
    * It closes the dropdown and navigates to the 'notification' tab.
    */
-  const handleView = () => {
+  const handleView = (notification: Notification) => {
     setIsOpen(false);
     setActiveTab("notification");
+    notificationIsReadMutation.mutate(notification._id);
+    console.log(notification);
   };
 
   return (
@@ -74,10 +93,10 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
       >
         <BellIcon className="h-6 w-6" />
 
-        {/* Badge displaying the number of notifications. Only shown if there are notifications. */}
-        {notifications.length > 0 && (
+        {/* Badge displaying the number of unread notifications. Only shown if there are unread notifications. */}
+        {notifications.filter(n => !n.is_read).length > 0 && (
           <span className="absolute -top-0.5 right-0.5 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center border-2 border-white">
-            {notifications.length}
+            {notifications.filter(n => !n.is_read).length}
           </span>
         )}
       </button>
@@ -95,9 +114,13 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
             {/* Map over the notifications array to render each item. */}
             {notifications.map((notif) => (
               <div
-                key={notif.id}
-                className="p-4 border-b hover:bg-gray-50 cursor-pointer dark:border-gray-700 dark:hover:bg-gray-700"
-                onClick={handleView}
+                key={notif._id}
+                className={`p-4 border-b cursor-pointer dark:border-gray-700 ${
+                  !notif.is_read 
+                    ? 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30' 
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+                onClick={() => handleView(notif)}
               >
                 <p className="text-sm text-gray-700 dark:text-gray-300">
                   {notif.message}
@@ -109,7 +132,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                     {notif.time}
                   </p>
                   <a
-                    onClick={handleView}
+                    onClick={() => handleView(notif)}
                     className="text-sm font-semibold text-blue-600 hover:underline"
                   >
                     View details

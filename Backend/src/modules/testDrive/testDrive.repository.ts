@@ -10,6 +10,7 @@ import {
   FeedbackDTO,
 } from "../../dtos/testDrive.DTO";
 import { withErrorHandling } from "../../shared/utils/CustomException";
+import { TestDriveBookingStatus } from "../../shared/enum/enum";
 
 /**
  * Defines the contract for the test drive repository, specifying methods for data access operations
@@ -84,6 +85,14 @@ export interface ITestDriveRepository {
     customerId: string
   ): Promise<ITestDriveBooking[] | null>;
   /**
+   * Finds all test drive bookings for a specific seller's slots.
+   * @param sellerId - The ID of the seller.
+   * @returns A promise that resolves to an array of test drive booking documents or null.
+   */
+  findBookingsBySeller(
+    sellerId: string
+  ): Promise<ITestDriveBooking[] | null>;
+  /**
    * Finds all test drive bookings for a specific slot.
    * @param slotId - The ID of the test drive slot.
    * @returns A promise that resolves to an array of test drive booking documents or null.
@@ -92,6 +101,24 @@ export interface ITestDriveRepository {
     slotId: string,
     excludeBookingId?: string
   ): Promise<ITestDriveBooking[] | null>;
+  /**
+   * Marks a booking as completed.
+   * @param bookingId - The ID of the booking to mark as completed.
+   * @returns A promise that resolves to the updated booking or null.
+   */
+  markBookingAsCompleted(bookingId: string): Promise<ITestDriveBooking | null>;
+  /**
+   * Marks a booking as cancelled.
+   * @param bookingId - The ID of the booking to mark as cancelled.
+   * @returns A promise that resolves to the updated booking or null.
+   */
+  markBookingAsCancelled(bookingId: string): Promise<ITestDriveBooking | null>;
+  /**
+   * Marks a booking as expired.
+   * @param bookingId - The ID of the booking to mark as expired.
+   * @returns A promise that resolves to the updated booking or null.
+   */
+  markBookingAsExpired(bookingId: string): Promise<ITestDriveBooking | null>;
   /**
    * Decreases the available slot count for a specific test drive slot.
    * @param slotId - The ID of the test drive slot.
@@ -272,6 +299,38 @@ export const TestDriveRepository: ITestDriveRepository = {
       .sort({ booking_date: -1 });
   }),
 
+  /** Finds all TestDriveBookings for a given seller's slots, sorted by most recent. */
+  findBookingsBySeller: withErrorHandling(async (sellerId) => {
+    // First, find all slots for this seller
+    const slots = await TestDriveSlot.find({
+      seller_id: new Types.ObjectId(sellerId),
+    }).select("_id");
+
+    const slotIds = slots.map((slot) => slot._id);
+
+    // Then find all bookings for these slots
+    return await TestDriveBooking.find({
+      slot_id: { $in: slotIds },
+    })
+      .populate({
+        path: "customer_id",
+        select: "name email phone",
+      })
+      .populate({
+        path: "slot_id",
+        select: "location available_date",
+        populate: {
+          path: "model_id",
+          select: "model_name",
+          populate: {
+            path: "brand_id",
+            select: "brand_name",
+          },
+        },
+      })
+      .sort({ booking_date: -1 });
+  }),
+
   /** Finds all TestDriveBookings associated with a specific slot. */
   findBookingsBySlotId: withErrorHandling(
     async (slotId: string, excludeBookingId?: string) => {
@@ -286,6 +345,33 @@ export const TestDriveRepository: ITestDriveRepository = {
       return await TestDriveBooking.find(query);
     }
   ),
+
+  /** Marks a booking as completed. */
+  markBookingAsCompleted: withErrorHandling(async (bookingId: string) => {
+    return await TestDriveBooking.findByIdAndUpdate(
+      bookingId,
+      { status: TestDriveBookingStatus.COMPLETED },
+      { new: true }
+    );
+  }),
+
+  /** Marks a booking as cancelled. */
+  markBookingAsCancelled: withErrorHandling(async (bookingId: string) => {
+    return await TestDriveBooking.findByIdAndUpdate(
+      bookingId,
+      { status: TestDriveBookingStatus.CANCELLED },
+      { new: true }
+    );
+  }),
+
+  /** Marks a booking as expired. */
+  markBookingAsExpired: withErrorHandling(async (bookingId: string) => {
+    return await TestDriveBooking.findByIdAndUpdate(
+      bookingId,
+      { status: TestDriveBookingStatus.EXPIRED },
+      { new: true }
+    );
+  }),
 
   /** Decreases the available slot count for a specific test drive slot. */
   decreaseSlotCount: withErrorHandling(async (slotId) => {

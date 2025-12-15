@@ -260,9 +260,28 @@ export const TestDrivesPage: React.FC<{
     },
   });
 
+  // Fetch reviews to check status
+  const { data: userReviews } = useQuery({
+    queryKey: ["userReviews", userId],
+    queryFn: () => buyerService.getReviewsByReviewer(userId!),
+    enabled: !!userId,
+  });
+
+  // Helper to check if rated
+  const isRated = (bookingId: string) => {
+    return userReviews?.some((r: any) => 
+      r.target_type === 'service' && (
+        r.testDrive_id === bookingId || 
+        (typeof r.testDrive_id === 'object' && r.testDrive_id?._id === bookingId) ||
+        r.target_id === bookingId || 
+        (typeof r.target_id === 'object' && r.target_id?._id === bookingId)
+      )
+    );
+  };
+  console.log(isRated("67b6c0b3c4b3c4b3c4b3c4b3"));
   // Rating mutation
   const ratingMutation = useMutation({
-    mutationFn: buyerService.rateTestDrive,
+    mutationFn: buyerService.createReview,
     onSuccess: () => {
       if (setAlert) {
         setAlert({
@@ -468,16 +487,33 @@ export const TestDrivesPage: React.FC<{
     }
 
     const ratingData = {
-      booking_id: bookingToRate._id,
-      customer_id: userId,
-      slot_id: bookingToRate.slot_id._id,
-      model_id: bookingToRate.slot_id.model_id._id,
+      reviewer_id: userId,
+      target_id: bookingToRate.slot_id._id,
+      target_type: "service",
+      testDrive_id: bookingToRate._id, // Using booking ID as order reference
+      title: `Test Drive - ${bookingToRate.slot_id?.model_id?.model_name || "EV Model"}`,
       rating: ratingForm.rating,
       comment: ratingForm.comment,
     };
 
     ratingMutation.mutate(ratingData);
   };
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'available' | 'my-drives' | 'history'>('available');
+
+  // Filter bookings into active and history
+  const activeBookings = useMemo(() => {
+    return bookings.filter((b: any) => 
+      !['completed', 'cancelled', 'rejected'].includes(b.status?.toLowerCase())
+    );
+  }, [bookings]);
+
+  const historyBookings = useMemo(() => {
+    return bookings.filter((b: any) => 
+      ['completed', 'cancelled', 'rejected'].includes(b.status?.toLowerCase())
+    );
+  }, [bookings]);
 
   if (isSlotsLoading || (userId && isBookingsLoading)) {
     return (
@@ -488,113 +524,66 @@ export const TestDrivesPage: React.FC<{
   }
 
   if (isSlotsError || (userId && isBookingsError)) {
-     // Optional: Render an error state UI or just keep the alert logic if handled globally
-     // Since alerts are prop-based, we might want to ensure they are triggered or show inline error.
-     // For now, let's show a friendly message.
      return (
         <div className="text-center p-8 text-red-500">
            Error loading data. Please try refreshing the page.
         </div>
      );
   }
-  console.log(bookings);
+
   return (
-    <div className="space-y-12">
-      {/* Section for User's Existing Bookings */}
-      <div>
-        <h1 className="text-3xl font-bold mb-6 dark:text-white">
-          My Test Drives
-        </h1>
-        <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
-          {bookings.length > 0 ? (
-            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-              {bookings.map((booking: any) => (
-                <li
-                  key={booking._id}
-                  className="py-4 flex items-center justify-between"
-                >
-                  <div className="flex-1">
-                    <p className="font-semibold text-lg dark:text-white">
-                      {booking.slot_id?.model_id?.model_name || "EV Model"}
-                    </p>
-                    <p className="text-sm text-gray-600 flex items-center gap-2 mt-1 dark:text-gray-400">
-                      <CalendarIcon className="h-4 w-4" />
-                      {new Date(
-                        booking.booking_date || booking.scheduled_date
-                      ).toLocaleDateString()}
-                      <span className="text-gray-300 dark:text-gray-600">
-                        |
-                      </span>
-                      <ClockIcon className="h-4 w-4" />
-                      {booking.booking_time}
-                      <span className="text-gray-300 dark:text-gray-600">
-                        |
-                      </span>
-                      <span className="font-medium">Duration:</span>
-                      {booking.duration_minutes} min
-                    </p>
-                    <p className="text-sm text-gray-600 flex items-center gap-2 mt-1 dark:text-gray-400">
-                      <span className="h-4 w-4 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 border border-gray-400 rounded-full text-[10px]">
-                        L
-                      </span>
-                      <span className="font-medium">Location:</span>
-                      {booking.slot_id?.location || "N/A"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className={`flex items-center gap-2 ${booking.status === 'completed' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`}>
-                      <CheckIcon className="h-5 w-5" />
-                      <span className="font-semibold">{booking.status}</span>
-                    </div>
-                    {booking.status === 'completed' ? (
-                      <button
-                        onClick={() => handleRateBooking(booking)}
-                        disabled={ratingMutation.isPending}
-                        className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-yellow-600 dark:hover:bg-yellow-500 flex items-center gap-2"
-                        title="Rate this test drive"
-                      >
-                        <span>⭐</span>
-                        <span className="font-medium">Rate</span>
-                      </button>
-                    ) : (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEditBooking(booking)}
-                          disabled={updateMutation.isPending}
-                          className="p-2 text-blue-600 hover:text-blue-700 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed dark:text-blue-500 dark:hover:text-blue-400"
-                          title="Edit booking"
-                        >
-                          <EditIcon className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => handleCancelBooking(booking._id)}
-                          disabled={cancelMutation.isPending}
-                          className="p-2 text-red-600 hover:text-red-700 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed dark:text-red-500 dark:hover:text-red-400"
-                          title="Cancel booking"
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-500 text-center py-8 dark:text-gray-400">
-              You have no upcoming test drives.
-            </p>
-          )}
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+        <div>
+          <h1 className="text-3xl font-bold dark:text-white">Test Drives</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Manage your test drives and explore available slots.
+          </p>
+        </div>
+        
+        {/* Tabs */}
+        <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+          <button
+            onClick={() => setActiveTab('available')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'available'
+                ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            Available Slots
+          </button>
+          <button
+            onClick={() => setActiveTab('my-drives')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'my-drives'
+                ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            My Test Drives
+            {activeBookings.length > 0 && (
+              <span className="ml-2 bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300 px-2 py-0.5 rounded-full text-xs">
+                {activeBookings.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'history'
+                ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            History
+          </button>
         </div>
       </div>
 
-      {/* Section for Available Slots */}
-      <div>
-        <h1 className="text-3xl font-bold mb-6 dark:text-white">
-          Available Test Drive Slots
-        </h1>
-
-        {/* Search and Filter Controls */}
+      {/* Available Slots Tab */}
+      {activeTab === 'available' && (
+      <div className="animate-fadeIn">
         <div className="mb-6 flex flex-col sm:flex-row gap-4">
           {/* Search Bar */}
           <div className="flex-1">
@@ -604,7 +593,7 @@ export const TestDrivesPage: React.FC<{
                 placeholder="Search by model name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2.5 pl-10 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                className="w-full px-4 py-2.5 pl-10 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 transition-all"
               />
               <svg
                 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"
@@ -639,7 +628,7 @@ export const TestDrivesPage: React.FC<{
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:[color-scheme:dark]"
+                className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:[color-scheme:dark] transition-all"
               />
               {selectedDate && (
                 <button
@@ -663,11 +652,11 @@ export const TestDrivesPage: React.FC<{
               return (
                 <div
                   key={slot._id}
-                  className="bg-white p-6 rounded-xl shadow-md flex flex-col justify-between hover:shadow-lg transition-shadow dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700"
+                  className="bg-white p-6 rounded-xl shadow-md flex flex-col justify-between hover:shadow-lg transition-all dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700 group"
                 >
                   <div>
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 bg-blue-100 rounded-full dark:bg-blue-900/50">
+                      <div className="p-2 bg-blue-100 rounded-full dark:bg-blue-900/50 group-hover:bg-blue-200 dark:group-hover:bg-blue-800 transition-colors">
                         <CarIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                       </div>
                       <h3 className="text-xl font-bold dark:text-white">
@@ -728,7 +717,7 @@ export const TestDrivesPage: React.FC<{
                       )
                     }
                     disabled={isBooked || scheduleMutation.isPending || isNotAvailable}
-                    className="w-full mt-6 bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-600 dark:disabled:bg-gray-600"
+                    className="w-full mt-6 bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-600 dark:disabled:bg-gray-600 shadow-sm"
                   >
                     {isBooked ? "Booked" : "Book Now"}
                   </button>
@@ -736,10 +725,16 @@ export const TestDrivesPage: React.FC<{
               );
             })
           ) : (
-            <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
-              {slots.length === 0 
-                ? "No test drive slots available at the moment."
-                : "No slots match your search criteria. Try adjusting your filters."}
+            <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
+               <div className="mx-auto w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                  <CalendarIcon className="w-8 h-8 text-gray-400" />
+               </div>
+               <p className="text-lg font-medium">No slots found</p>
+               <p className="text-sm mt-1">
+                {slots.length === 0 
+                  ? "No test drive slots availble at the moment."
+                  : "Try adjusting your search or date filter."}
+               </p>
             </div>
           )}
         </div>
@@ -769,6 +764,154 @@ export const TestDrivesPage: React.FC<{
           </div>
         )}
       </div>
+      )}
+
+      {/* My Test Drives (Active) Tab */}
+      {activeTab === 'my-drives' && (
+      <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700 animate-fadeIn">
+        {activeBookings.length > 0 ? (
+          <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+            {activeBookings.map((booking: any) => (
+              <li
+                key={booking._id}
+                className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
+              >
+                <div className="flex-1">
+                  <p className="font-semibold text-lg dark:text-white">
+                    {booking.slot_id?.model_id?.model_name || "EV Model"}
+                  </p>
+                  <p className="text-sm text-gray-600 flex flex-wrap items-center gap-2 mt-1 dark:text-gray-400">
+                    <CalendarIcon className="h-4 w-4" />
+                    {new Date(
+                      booking.booking_date || booking.scheduled_date
+                    ).toLocaleDateString()}
+                    <span className="text-gray-300 dark:text-gray-600 hidden sm:inline">|</span>
+                    <ClockIcon className="h-4 w-4 ml-2 sm:ml-0" />
+                    {booking.booking_time}
+                    <span className="text-gray-300 dark:text-gray-600 hidden sm:inline">|</span>
+                    <span className="font-medium ml-2 sm:ml-0">Duration:</span>
+                    {booking.duration_minutes} min
+                  </p>
+                  <p className="text-sm text-gray-600 flex items-center gap-2 mt-1 dark:text-gray-400">
+                    <span className="h-4 w-4 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 border border-gray-400 rounded-full text-[10px]">
+                      L
+                    </span>
+                    <span className="font-medium">Location:</span>
+                    {booking.slot_id?.location || "N/A"}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto">
+                  <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
+                     booking.status === 'confirmed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                     booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                     'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                  }`}>
+                    <CheckIcon className="h-4 w-4" />
+                    <span className="capitalize">{booking.status || 'Scheduled'}</span>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEditBooking(booking)}
+                      disabled={updateMutation.isPending}
+                      className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors disabled:text-gray-400 disabled:cursor-not-allowed dark:text-blue-500 dark:hover:text-blue-400 dark:hover:bg-gray-700"
+                      title="Edit booking"
+                    >
+                      <EditIcon className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleCancelBooking(booking._id)}
+                      disabled={cancelMutation.isPending}
+                      className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:text-gray-400 disabled:cursor-not-allowed dark:text-red-500 dark:hover:text-red-400 dark:hover:bg-gray-700"
+                      title="Cancel booking"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="text-center py-12">
+             <div className="mx-auto w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                <CarIcon className="w-8 h-8 text-gray-400" />
+             </div>
+            <p className="text-gray-500 text-lg dark:text-gray-400">
+              You have no upcoming test drives.
+            </p>
+            <button 
+              onClick={() => setActiveTab('available')}
+              className="mt-4 text-blue-600 hover:underline dark:text-blue-400"
+            >
+              Browse available slots
+            </button>
+          </div>
+        )}
+      </div>
+      )}
+
+      {/* History Tab */}
+      {activeTab === 'history' && (
+      <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700 animate-fadeIn">
+        {historyBookings.length > 0 ? (
+          <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+            {historyBookings.map((booking: any) => (
+              <li
+                key={booking._id}
+                className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 opacity-75 hover:opacity-100 transition-opacity"
+              >
+                <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-lg dark:text-white">
+                        {booking.slot_id?.model_id?.model_name || "EV Model"}
+                      </p>
+                       <span className={`text-xs px-2 py-0.5 rounded-full capitalize border ${
+                         booking.status === 'completed' ? 'border-green-200 text-green-700 dark:text-green-400 dark:border-green-800' : 
+                         'border-red-200 text-red-700 dark:text-red-400 dark:border-red-800'
+                       }`}>
+                         {booking.status}
+                       </span>
+                    </div>
+                  <p className="text-sm text-gray-600 flex flex-wrap items-center gap-2 mt-1 dark:text-gray-400">
+                    <CalendarIcon className="h-4 w-4" />
+                    {new Date(
+                      booking.booking_date || booking.scheduled_date
+                    ).toLocaleDateString()}
+                    <span className="text-gray-300 dark:text-gray-600 hidden sm:inline">|</span>
+                    <ClockIcon className="h-4 w-4 ml-2 sm:ml-0" />
+                    {booking.booking_time}
+                  </p>
+                </div>
+                <div>
+                   {booking.status === 'completed' && !isRated(booking._id) && (
+                      <button
+                        onClick={() => handleRateBooking(booking)}
+                        disabled={ratingMutation.isPending}
+                        className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-yellow-600 dark:hover:bg-yellow-500 flex items-center gap-2 shadow-sm text-sm"
+                        title="Rate this test drive"
+                      >
+                        <span>⭐</span>
+                        <span className="font-medium">Rate Experience</span>
+                      </button>
+                   )}
+                   {booking.status === 'completed' && isRated(booking._id) && (
+                      <span className="flex items-center gap-1 text-sm text-gray-500 font-medium px-4 py-2 bg-gray-100 rounded-lg dark:text-gray-400 dark:bg-gray-700">
+                        <span>✓</span> Rated
+                      </span>
+                   )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+            <p>No past test drive history found.</p>
+          </div>
+        )}
+      </div>
+      )}
+
 
       {/* Booking Modal */}
       {showBookingModal && selectedSlot && (

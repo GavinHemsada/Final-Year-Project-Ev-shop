@@ -285,7 +285,10 @@ container.register<IPaymentService>("PaymentService", {
   useFactory: (c) =>
     paymentService(
       c.resolve<IPaymentRepository>("PaymentRepository"),
-      c.resolve<IOrderRepository>("OrderRepository")
+      c.resolve<IOrderRepository>("OrderRepository"),
+      c.resolve<IUserRepository>("UserRepository"),
+      c.resolve<IEvRepository>("EvRepository"),
+      c.resolve<INotificationService>("NotificationService"),
     ),
 });
 

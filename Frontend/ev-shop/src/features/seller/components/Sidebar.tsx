@@ -1,7 +1,6 @@
 import {
   CarIcon,
   ShoppingCartIcon,
-  HeartIcon,
   ReviewsIcon,
   CommunityIcon,
   KeyIcon,
@@ -92,13 +91,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon={<ShoppingCartIcon className="h-5 w-5" />}
           active={activeTab === "orders"}
           onClick={() => setActiveTab("orders")}
-          isExpanded={isExpanded}
-        />
-        <SidebarLink
-          text="Saved Vehicles"
-          icon={<HeartIcon className="h-5 w-5" />}
-          active={activeTab === "saved"}
-          onClick={() => setActiveTab("saved")}
           isExpanded={isExpanded}
         />
         <SidebarLink

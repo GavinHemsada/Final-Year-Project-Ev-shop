@@ -15,6 +15,8 @@ export interface IReview extends Document {
    * This is optional but helps verify that the reviewer made a purchase.
    */
   order_id?: Types.ObjectId;
+  /** The ID of the `TestDrive` associated with this review, if applicable. */
+  testDrive_id?: Types.ObjectId;
   /** The type of entity being reviewed (e.g., 'Product', 'Service'). */
   target_type: ReviewType;
   /** The ID of the specific entity being reviewed (e.g., a seller's ID or a product's ID). */
@@ -42,6 +44,8 @@ const ReviewSchema = new Schema<IReview>(
     },
     /** An optional reference to the `Order` to link the review to a specific transaction. */
     order_id: { type: Schema.Types.ObjectId, ref: "Order" },
+    /** An optional reference to the `TestDrive` to link the review to a specific test drive experience. */
+    testDrive_id: { type: Schema.Types.ObjectId, ref: "TestDriveBooking" },
     /** The ID of the reviewed entity. Note: This field does not have a `ref` because it can refer to different collections (e.g., 'Seller', 'VehicleListing') based on `target_type`. */
     target_id: { type: Schema.Types.ObjectId, required: true },
     /** The numerical rating, required to be between 1 and 5. */

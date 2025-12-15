@@ -62,23 +62,74 @@ export const ReviewRepository: IReviewRepository = {
   /** Retrieves all reviews, populating associated order and reviewer details. */
   getAllReviews: withErrorHandling(async () => {
     return await Review.find()
-      .populate("order_id")
-      .populate("reviewer_id", "name profile_image");
+      .populate("reviewer_id", "name profile_image")
+      .populate("target_id", "business_name shop_logo")
+      .populate({
+        path: "order_id",
+        select: "listing_id",
+        populate: {
+          path: "listing_id",
+          select: "_id model_id",
+          populate: {
+            path: "model_id",
+            select: "model_name",
+          },
+        },
+      });
   }),
   /** Retrieves all reviews for a specific target, populating reviewer details. */
   getReviewByTargetId: withErrorHandling(async (targetId) => {
-    return await Review.find({ target_id: targetId }).populate(
-      "reviewer_id",
-      "name profile_image"
-    );
+    return await Review.find({ target_id: targetId })
+      .populate("reviewer_id", "name profile_image")
+      .populate("target_id", "business_name shop_logo")
+      .populate({
+        path: "order_id",
+        select: "listing_id",
+        populate: {
+          path: "listing_id",
+          select: "_id model_id",
+          populate: {
+            path: "model_id",
+            select: "model_name",
+          },
+        },
+      });
   }),
   /** Retrieves all reviews written by a specific user. */
   getReviewsByReviewerId: withErrorHandling(async (reviewerId) => {
-    return await Review.find({ reviewer_id: reviewerId });
+    return await Review.find({ reviewer_id: reviewerId })
+      .populate("reviewer_id", "name profile_image")
+      .populate("target_id", "business_name shop_logo")
+      .populate({
+        path: "order_id",
+        select: "listing_id",
+        populate: {
+          path: "listing_id",
+          select: "_id model_id",
+          populate: {
+            path: "model_id",
+            select: "model_name",
+          },
+        },
+      });
   }),
   /** Finds a single review by its document ID. */
   getReviewById: withErrorHandling(async (id) => {
-    return await Review.findById(id);
+    return await Review.findById(id)
+      .populate("reviewer_id", "name profile_image")
+      .populate("target_id", "business_name shop_logo")
+      .populate({
+        path: "order_id",
+        select: "listing_id",
+        populate: {
+          path: "listing_id",
+          select: "_id model_id",
+          populate: {
+            path: "model_id",
+            select: "model_name",
+          },
+        },
+      });
   }),
   /** Creates a new Review document. */
   createReview: withErrorHandling(async (reviewData) => {

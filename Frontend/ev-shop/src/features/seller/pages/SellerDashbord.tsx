@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from "react";
 import type {
   SellerActiveTab,
   UserRole,
-  Notification,
   AlertProps,
   ConfirmAlertProps,
 } from "@/types";
@@ -16,7 +15,6 @@ import { NotificationPage } from "./NotificationPage";
 import { TestDrivesPage } from "./TestDrivePage";
 import { MyReviewsPage } from "./MyReviewsPage";
 import { CommunityPage } from "./ComunityPage";
-import { SavedVehicles } from "./SavedVehicalsPage";
 import { OrderHistory } from "./OrderHistoryPage";
 import SellerProfilePage from "./SellerProfilePage";
 import RepairLocationsPage from "./RepairLocationsPage";
@@ -36,11 +34,6 @@ import { sellerService } from "../sellerService";
 import type { Vehicle } from "@/types/ev";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
-
-const notifications: Notification[] = [
-  { id: 1, message: "Aura EV", time: "Sedan" },
-  { id: 2, message: "Pulse XR", time: "SUV" },
-];
 
 // --- Main Seller Dashboard Component ---
 const SellerDashboard: React.FC = () => {
@@ -85,11 +78,51 @@ const SellerDashboard: React.FC = () => {
   refetchOnReconnect: false,
 });
 
+  // Fetch seller notifications
+  const { data: notifications = [] } = useQuery({
+    queryKey: ["sellerNotifications", sellerId],
+    queryFn: () => sellerService.getSellerNotifications(sellerId!),
+    enabled: !!sellerId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+
+  // Fetch seller orders for stats
+  const { data: ordersData } = useQuery({
+    queryKey: ["sellerOrders", sellerId],
+    queryFn: () => sellerService.getSellerOrders(sellerId!),
+    enabled: !!sellerId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch test drive bookings for stats
+  const { data: bookingsData } = useQuery({
+    queryKey: ["testDriveBookings", sellerId],
+    queryFn: () => sellerService.getTestDriveBookings(sellerId!),
+    enabled: !!sellerId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   useEffect(() => {
     if (roles) setUserRole(roles);
   }, [roles]);
 
   const listings = sellerEvList.data || [];
+  const orders = ordersData?.orders || ordersData || [];
+  const bookings = bookingsData?.bookings || bookingsData || [];
+
+  // Calculate stats
+  const completedOrders = orders.filter(
+    (order: any) => order.order_status?.toLowerCase() === "completed"
+  );
+  const totalRevenue = completedOrders.reduce(
+    (sum: number, order: any) => sum + (order.total_amount || 0),
+    0
+  );
+  const vehiclesSold = completedOrders.length;
+  const activeListings = listings.length;
+  const confirmedBookings = bookings.filter(
+    (booking: any) => booking.status?.toLowerCase() === "confirmed"
+  ).length;
   console.log(listings);
   // Callback to handle alerts from child components
   const handleSetAlert = useCallback((alertData: AlertProps | null) => {
@@ -129,6 +162,12 @@ const SellerDashboard: React.FC = () => {
             setEditListingId={setEditListingId}
             setAlert={handleSetAlert}
             setConfirmAlert={handleSetConfirmAlert}
+            stats={{
+              totalRevenue,
+              vehiclesSold,
+              activeListings,
+              confirmedBookings,
+            }}
           />
         );
       case "orders":
@@ -137,8 +176,6 @@ const SellerDashboard: React.FC = () => {
         return <SellerProfilePage setAlert={handleSetAlert} />;
       case "evList":
         return <EvListingStepper setAlert={handleSetAlert} />;
-      case "saved":
-        return <SavedVehicles setAlert={handleSetAlert} />;
       case "notification":
         return (
           <NotificationPage
@@ -169,6 +206,12 @@ const SellerDashboard: React.FC = () => {
             setEditListingId={setEditListingId}
             setAlert={handleSetAlert}
             setConfirmAlert={handleSetConfirmAlert}
+            stats={{
+              totalRevenue,
+              vehiclesSold,
+              activeListings,
+              confirmedBookings,
+            }}
           />
         );
     }
@@ -276,30 +319,36 @@ const SellerDashboardPage: React.FC<{
     alert: ConfirmAlertProps | null,
     handler?: () => void
   ) => void;
-}> = ({ sellerid, setActiveTab, listing, setEditListingId, setAlert, setConfirmAlert }) => (
+  stats: {
+    totalRevenue: number;
+    vehiclesSold: number;
+    activeListings: number;
+    confirmedBookings: number;
+  };
+}> = ({ sellerid, setActiveTab, listing, setEditListingId, setAlert, setConfirmAlert, stats }) => (
   <>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <StatCard
         title="Total Revenue"
-        value="LKR 9,800,000"
+        value={`LKR ${stats.totalRevenue.toLocaleString()}`}
         icon={<DollarSignIcon className="h-6 w-6 text-green-600" />}
         bgColor="bg-green-100"
       />
       <StatCard
         title="Vehicles Sold"
-        value="1"
+        value={stats.vehiclesSold.toString()}
         icon={<ShoppingCartIcon className="h-6 w-6 text-blue-600" />}
         bgColor="bg-blue-100"
       />
       <StatCard
         title="Active Listings"
-        value="2"
+        value={stats.activeListings.toString()}
         icon={<CarIcon className="h-6 w-6 text-indigo-600" />}
         bgColor="bg-indigo-100"
       />
       <StatCard
-        title="Total Views"
-        value="4,050"
+        title="Confirmed Test Drives"
+        value={stats.confirmedBookings.toString()}
         icon={<UserIcon className="h-6 w-6 text-yellow-600" />}
         bgColor="bg-yellow-100"
       />

@@ -159,7 +159,7 @@ export function orderService(repo: IOrderRepository, userRepo: IUserRepository, 
           async () => await repo.findByUserOrSellerId(trimmedId),
           3600 // 1 hour
         );
-
+        console.log(orders);
         return {
           success: true,
           orders: orders ?? [],
@@ -189,10 +189,8 @@ export function orderService(repo: IOrderRepository, userRepo: IUserRepository, 
         // Invalidate all relevant caches
         await Promise.all([
           CacheService.delete(`order_${id}`),
-          CacheService.delete(`orders_user_${existingOrder.user_id}`),
-          CacheService.delete(`orders_seller_${existingOrder.seller_id}`),
+          CacheService.deletePattern(`orders_*`),
         ]);
-
         return { success: true, order };
       } catch (err) {
         return { success: false, error: "Failed to update order" };

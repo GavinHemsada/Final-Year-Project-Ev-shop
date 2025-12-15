@@ -299,6 +299,128 @@ export const testDriveRouter = (): Router => {
 
   /**
    * @swagger
+   * /test-drive/bookings/seller/{sellerId}:
+   *   get:
+   *     summary: Get bookings by seller ID
+   *     description: Retrieves all test drive bookings for a specific seller's slots. Requires seller or admin privileges.
+   *     tags: [Test Drive Bookings]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: sellerId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the seller.
+   *     responses:
+   *       '200':
+   *         description: A list of the seller's bookings.
+   *       '401':
+   *         description: Unauthorized.
+   *       '403':
+   *         description: Forbidden.
+   *       '404':
+   *         description: Seller not found.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.get("/bookings/seller/:sellerId", (req, res) =>
+    controller.getBookingsBySeller(req, res)
+  );
+
+  /**
+   * @swagger
+   * /test-drive/bookings/{id}/complete:
+   *   patch:
+   *     summary: Mark booking as completed
+   *     description: Marks a test drive booking as completed. Requires seller or admin privileges.
+   *     tags: [Test Drive Bookings]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the booking.
+   *     responses:
+   *       '200':
+   *         description: Booking marked as completed successfully.
+   *       '401':
+   *         description: Unauthorized.
+   *       '404':
+   *         description: Booking not found.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.patch("/bookings/:id/complete", (req, res) =>
+    controller.markBookingAsCompleted(req, res)
+  );
+
+  /**
+   * @swagger
+   * /test-drive/bookings/{id}/cancel:
+   *   patch:
+   *     summary: Mark booking as cancelled/rejected
+   *     description: Marks a test drive booking as cancelled. Requires seller or admin privileges.
+   *     tags: [Test Drive Bookings]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the booking.
+   *     responses:
+   *       '200':
+   *         description: Booking marked as cancelled successfully.
+   *       '401':
+   *         description: Unauthorized.
+   *       '404':
+   *         description: Booking not found.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.patch("/bookings/:id/cancel", (req, res) =>
+    controller.markBookingAsCancelled(req, res)
+  );
+
+  /**
+   * @swagger
+   * /test-drive/bookings/{id}/expire:
+   *   patch:
+   *     summary: Mark booking as expired
+   *     description: Marks a test drive booking as expired. For future use.
+   *     tags: [Test Drive Bookings]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the booking.
+   *     responses:
+   *       '200':
+   *         description: Booking marked as expired successfully.
+   *       '401':
+   *         description: Unauthorized.
+   *       '404':
+   *         description: Booking not found.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.patch("/bookings/:id/expire", (req, res) =>
+    controller.markBookingAsExpired(req, res)
+  );
+
+  /**
+   * @swagger
    * /test-drive/bookings/{id}:
    *   get:
    *     summary: Get booking by ID

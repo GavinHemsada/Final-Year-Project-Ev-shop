@@ -107,6 +107,38 @@ export interface ITestDriveService {
     customerId: string
   ): Promise<{ success: boolean; bookings?: any[]; error?: string }>;
   /**
+   * Finds all test drive bookings for a specific seller's slots.
+   * @param sellerId - The ID of the seller.
+   * @returns A promise that resolves to an object containing an array of the seller's bookings or an error.
+   */
+  findBookingsBySeller(
+    sellerId: string
+  ): Promise<{ success: boolean; bookings?: any[]; error?: string }>;
+  /**
+   * Marks a booking as completed.
+   * @param bookingId - The ID of the booking to mark as completed.
+   * @returns A promise that resolves to an object containing the updated booking or an error.
+   */
+  markBookingAsCompleted(
+    bookingId: string
+  ): Promise<{ success: boolean; booking?: any; error?: string }>;
+  /**
+   * Marks a booking as cancelled/rejected.
+   * @param bookingId - The ID of the booking to mark as cancelled.
+   * @returns A promise that resolves to an object containing the updated booking or an error.
+   */
+  markBookingAsCancelled(
+    bookingId: string
+  ): Promise<{ success: boolean; booking?: any; error?: string }>;
+  /**
+   * Marks a booking as expired.
+   * @param bookingId - The ID of the booking to mark as expired.
+   * @returns A promise that resolves to an object containing the updated booking or an error.
+   */
+  markBookingAsExpired(
+    bookingId: string
+  ): Promise<{ success: boolean; booking?: any; error?: string }>;
+  /**
    * Updates an existing test drive booking.
    * @param id - The ID of the booking to update.
    * @param data - The partial data to update the booking with.
@@ -396,6 +428,91 @@ export function testDriveService(
         return { success: true, bookings: cachedBookings };
       } catch (err) {
         return { success: false, error: "Failed to fetch bookings" };
+      }
+    },
+    /**
+     * Finds all bookings for a specific seller's slots, using a cache-aside pattern.
+     * Caches the list of bookings for that seller for one hour.
+     */
+    findBookingsBySeller: async (sellerId) => {
+      try {
+        const cachekey = `bookings_seller_${sellerId}`;
+        const cachedBookings = await CacheService.getOrSet<any[] | null>(
+          cachekey,
+          async () => {
+            const bookings = await testDriveRepo.findBookingsBySeller(
+              sellerId
+            );
+            return bookings ?? null;
+          },
+          3600 // Cache for 1 hour
+        );
+        if (!cachedBookings) {
+          return { success: false, error: "No bookings found" };
+        }
+        return { success: true, bookings: cachedBookings };
+      } catch (err) {
+        return { success: false, error: "Failed to fetch bookings" };
+      }
+    },
+    /**
+     * Marks a booking as completed and invalidates relevant caches.
+     */
+    markBookingAsCompleted: async (bookingId) => {
+      try {
+        const booking = await testDriveRepo.markBookingAsCompleted(bookingId);
+        if (!booking) {
+          return { success: false, error: "Booking not found" };
+        }
+        // Invalidate caches
+        await Promise.all([
+          CacheService.delete(`booking_${bookingId}`),
+          CacheService.deletePattern("bookings_seller_*"),
+          CacheService.deletePattern("bookings_customer_*"),
+        ]);
+        return { success: true, booking };
+      } catch (err) {
+        return { success: false, error: "Failed to mark booking as completed" };
+      }
+    },
+    /**
+     * Marks a booking as cancelled and invalidates relevant caches.
+     */
+    markBookingAsCancelled: async (bookingId) => {
+      try {
+        const booking = await testDriveRepo.markBookingAsCancelled(bookingId);
+        if (!booking) {
+          return { success: false, error: "Booking not found" };
+        }
+        // Invalidate caches
+        await Promise.all([
+          CacheService.delete(`booking_${bookingId}`),
+          CacheService.deletePattern("bookings_seller_*"),
+          CacheService.deletePattern("bookings_customer_*"),
+        ]);
+        return { success: true, booking };
+      } catch (err) {
+        return { success: false, error: "Failed to mark booking as cancelled" };
+      }
+    },
+    /**
+     * Marks a booking as expired and invalidates relevant caches.
+     */
+    markBookingAsExpired: async (bookingId) => {
+      try {
+        const booking = await testDriveRepo.markBookingAsExpired(bookingId);
+        if (!booking) {
+          return { success: false, error: "Booking not found" };
+        }
+        // Invalidate caches
+        await Promise.all([
+          CacheService.delete(`booking_${bookingId}`),
+          CacheService.deletePattern("bookings_seller_*"),
+          CacheService.deletePattern("bookings_customer_*"),
+        ]);
+        return { success: true, booking };
+      } catch (err) {
+        return { success: false, error: "Failed to mark booking as expired" };
       }
     },
     /**

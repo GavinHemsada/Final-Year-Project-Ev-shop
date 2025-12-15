@@ -50,10 +50,6 @@ const TestDriveBookingSchema = new Schema<ITestDriveBooking>(
       enum: Object.values(TestDriveBookingStatus),
       required: true,
     },
-    /** An optional rating for the test drive experience, between 1 and 5. */
-    feedback_rating: { type: Number, min: 1, max: 5 },
-    /** An optional text comment for feedback. */
-    feedback_comment: { type: String },
     /** The duration of the test drive in minutes, which is required. */
     duration_minutes: { type: Number, required: true },
     /** A flag indicating if a reminder has been sent to the customer. */

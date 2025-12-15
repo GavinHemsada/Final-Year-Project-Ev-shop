@@ -8,6 +8,7 @@ const PaymentSuccessPage: React.FC = () => {
   const { showToast } = useToast();
 
   const orderId = searchParams.get("order_id");
+  const paymentId = searchParams.get("payment_id");
 
   useEffect(() => {
     if (orderId) {

@@ -15,6 +15,10 @@ export type Order = {
     street_address?: string;
     business_name?: string;
   };
+  user_id?: {
+    name?: string;
+    email?: string;
+  };
   items?: Array<{
     listing_id: {
       listing_title: string;

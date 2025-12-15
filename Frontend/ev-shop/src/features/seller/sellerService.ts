@@ -168,6 +168,23 @@ export const sellerService = {
     const response = await axiosPrivate.delete(`/test-drive/slots/${slotId}`);
     return response.data;
   },
+  // Test Drive Booking operations
+  getTestDriveBookings: async (sellerId: string) => {
+    const response = await axiosPrivate.get(`/test-drive/bookings/seller/${sellerId}`);
+    return response.data;
+  },
+  markBookingAsCompleted: async (bookingId: string) => {
+    const response = await axiosPrivate.patch(`/test-drive/bookings/${bookingId}/complete`);
+    return response.data;
+  },
+  markBookingAsCancelled: async (bookingId: string) => {
+    const response = await axiosPrivate.patch(`/test-drive/bookings/${bookingId}/cancel`);
+    return response.data;
+  },
+  markBookingAsExpired: async (bookingId: string) => {
+    const response = await axiosPrivate.patch(`/test-drive/bookings/${bookingId}/expire`);
+    return response.data;
+  },
   getAllEvModels: async () => {
     const response = await axiosPrivate.get("/ev/models");
     return response.data;
@@ -223,6 +240,19 @@ export const sellerService = {
   // Order operations
   getSellerOrders: async (sellerId: string) => {
     const response = await axiosPrivate.get(`/order/seller/${sellerId}`);
+    return response.data;
+  },
+  updateOrderStatus: async (orderId: string, status: string) => {
+    const response = await axiosPrivate.patch(`/order/${orderId}`, { order_status: status });
+    return response.data;
+  },
+  // Notification operations
+  getSellerNotifications: async (sellerId: string) => {
+    const response = await axiosPrivate.get(`/notification/seller/${sellerId}`);
+    return response.data;
+  },
+  markNotificationAsRead: async (notificationId: string) => {
+    const response = await axiosPrivate.patch(`/notification/${notificationId}/read`);
     return response.data;
   },
 };

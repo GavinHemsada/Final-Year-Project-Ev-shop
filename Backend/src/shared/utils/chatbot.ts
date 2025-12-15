@@ -132,20 +132,47 @@ async function handleEvQuestion(
         };
       });
 
-    // Sort and filter based on question type
+    // Filter EVs based on keywords in the question (Brand, Category, Model)
     const question = userQuestion.toLowerCase();
-    let relevantEvs = [...evData];
+    const uniqueBrands = Array.from(new Set(evData.map((e) => e.brand.toLowerCase())));
+    const uniqueCategories = Array.from(new Set(evData.map((e) => e.category.toLowerCase())));
+    
+    let filteredEvs = evData.filter((ev) => {
+      // Check for Brand match
+      const brandInQuestion = uniqueBrands.find((b) => question.includes(b));
+      if (brandInQuestion && ev.brand.toLowerCase() !== brandInQuestion) {
+        return false;
+      }
+      
+      // Check for Category match (e.g., "suv", "sedan")
+      const categoryInQuestion = uniqueCategories.find((c) => question.includes(c));
+      if (categoryInQuestion && ev.category.toLowerCase() !== categoryInQuestion) {
+        return false;
+      }
+
+      // Check for specific model name match if not covered by brand
+      // Simple check: if a model name word is in question
+      // This might be too aggressive, skipping for now to rely on Brand/Category primarily.
+      
+      return true;
+    });
+
+    // If no specific filters matched (or filtering resulted in 0, though unlikely if keywords found), 
+    // fall back to all data if the filter was too strict? 
+    // No, if user asks for "Toyota" and we have none, we should show none.
+    
+    // Sort and filter based on question type
+    let relevantEvs = [...filteredEvs];
     let sortCriteria = "";
 
-    if (question.includes("best selling") || question.includes("popular")) {
-      // For best selling, we can sort by price (assuming lower price = more popular)
-      // or by number of listings for the same model
+    if (question.includes("best selling") || question.includes("popular") || question.includes("most selling")) {
+      // For best selling, we can sort by popularity (listing count as proxy)
       const modelCounts: { [key: string]: number } = {};
       evData.forEach((ev) => {
         const key = `${ev.brand} ${ev.model_name}`;
         modelCounts[key] = (modelCounts[key] || 0) + 1;
       });
-      relevantEvs = evData
+      relevantEvs = filteredEvs
         .map((ev) => ({
           ...ev,
           popularity: modelCounts[`${ev.brand} ${ev.model_name}`] || 0,
@@ -154,8 +181,8 @@ async function handleEvQuestion(
         .slice(0, 10);
       sortCriteria = "popularity (number of listings)";
     } else if (question.includes("fastest") || question.includes("fast")) {
-      // Sort by range (higher range often correlates with performance)
-      relevantEvs = evData
+      // Sort by range
+      relevantEvs = filteredEvs
         .filter((ev) => ev.range_km !== null)
         .sort((a, b) => (b.range_km || 0) - (a.range_km || 0))
         .slice(0, 10);
@@ -164,17 +191,18 @@ async function handleEvQuestion(
       question.includes("budget") ||
       question.includes("cheap") ||
       question.includes("affordable") ||
-      question.includes("lowest price")
+      question.includes("lowest price") ||
+      question.includes("low price")
     ) {
       // Sort by price (lowest first)
-      relevantEvs = evData.sort((a, b) => a.price - b.price).slice(0, 10);
+      relevantEvs = filteredEvs.sort((a, b) => a.price - b.price).slice(0, 10);
       sortCriteria = "price (lowest to highest)";
     } else if (
       question.includes("best model") ||
       question.includes("best ev")
     ) {
-      // Sort by a combination of factors (range, price, battery)
-      relevantEvs = evData
+      // Sort by score
+      relevantEvs = filteredEvs
         .map((ev) => ({
           ...ev,
           score:
@@ -187,8 +215,7 @@ async function handleEvQuestion(
       sortCriteria = "overall value (range, price, battery)";
     } else {
       // Default: show top 10 by range
-      relevantEvs = evData
-        .filter((ev) => ev.range_km !== null)
+      relevantEvs = filteredEvs
         .sort((a, b) => (b.range_km || 0) - (a.range_km || 0))
         .slice(0, 10);
     }
@@ -208,6 +235,7 @@ ${index + 1}. ${ev.brand} ${ev.model_name} (${ev.year})
    }
    - Category: ${ev.category}
    - Condition: ${ev.condition}
+   - Color: ${ev.color}
    - Seller: ${ev.seller}`
       )
       .join("\n");
@@ -216,12 +244,12 @@ ${index + 1}. ${ev.brand} ${ev.model_name} (${ev.year})
 
 USER QUESTION: ${userQuestion}
 
-AVAILABLE EV DATA (${relevantEvs.length} vehicles, sorted by ${
+AVAILABLE EV DATA (${relevantEvs.length} vehicles matching criteria, sorted by ${
       sortCriteria || "relevance"
     }):
 ${evListText}
 
-STATISTICS:
+STATISTICS (Overall Store):
 - Total Active Listings: ${evData.length}
 - Price Range: LKR ${Math.min(...evData.map((e) => e.price))} - LKR ${Math.max(
       ...evData.map((e) => e.price)
@@ -229,21 +257,23 @@ STATISTICS:
 - Average Price: LKR ${Math.round(
       evData.reduce((sum, e) => sum + e.price, 0) / evData.length
     )}
-- Brands Available: ${new Set(evData.map((e) => e.brand)).size}
+- Brands Available: ${Array.from(new Set(evData.map((e) => e.brand))).join(", ")}
 - Categories: ${Array.from(new Set(evData.map((e) => e.category))).join(", ")}
+- Colors Available: ${Array.from(new Set(evData.map((e) => e.color))).join(", ")}
 
 INSTRUCTIONS:
 - Provide a comprehensive and helpful answer
-- List the top recommended EVs with their key features
+- List the top recommended EVs with their key features from the provided lists
 - Include prices in LKR (Sri Lankan Rupees)
 - Mention range, battery capacity, and charging time when available
+- If the user asks about colors/brands, use the Statistics section
 - Be friendly and informative
 - Format the response with clear sections and bullet points
-- If specific data is missing, mention it but still provide available information
+- If NO EVs match the specific criteria (empty list), suggest checking back later or viewing broadly available models from the statistics.
 - Make the response engaging and easy to read`;
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-1.5-flash",
     });
 
     const result = await model.generateContent(prompt);

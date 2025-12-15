@@ -82,6 +82,8 @@ export enum OrderStatus {
   PENDING = "pending",
   /** The order has been confirmed by the seller. */
   CONFIRMED = "confirmed",
+  /** The order has been completed and delivered. */
+  COMPLETED = "completed",
   /** The order has been cancelled. */
   CANCELLED = "cancelled",
 }

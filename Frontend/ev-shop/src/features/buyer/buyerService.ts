@@ -294,6 +294,14 @@ export const buyerService = {
   },
 
   // reviews operations
+  getAllReviews: async () => {
+    const response = await axiosPrivate.get(`/review/reviews`);
+    return response.data;
+  },
+  getReviewsByReviewer: async (reviewerId: string) => {
+    const response = await axiosPrivate.get(`/review/reviews/reviewer/${reviewerId}`);
+    return response.data;
+  },
   getUserReviews: async (reviewerId: string) => {
     const response = await axiosPrivate.get(
       `/review/reviews/reviewer/${reviewerId}`

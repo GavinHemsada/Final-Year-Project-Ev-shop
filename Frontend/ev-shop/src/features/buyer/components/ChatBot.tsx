@@ -13,6 +13,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose }) => {
   // State to manage the input field's value
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isThinking, setIsThinking] = useState(false);
   // Ref to automatically scroll to the latest message
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -23,18 +24,19 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose }) => {
   };
 
   // Effect hook to scroll to the bottom whenever the messages array updates
-  useEffect(scrollToBottom, [messages]);
+  useEffect(scrollToBottom, [messages, isThinking]);
 
-  const handleSendMessage = (text: string) => {
-    
+  const handleSendMessage = async (text: string) => {
     const newUserMessage: ChatMessage = {
       id: Date.now(),
       text,
       sender: "user",
     };
     setMessages((prev) => [...prev, newUserMessage]);
+    setInputValue("");
+    setIsThinking(true);
 
-    setTimeout(async() => {
+    try {
       const respons = await buyerService.sendMessageToChatbot(text);
       console.log(respons);
       const botResponse: ChatMessage = {
@@ -43,7 +45,17 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose }) => {
         sender: "bot",
       };
       setMessages((prev) => [...prev, botResponse]);
-    }, 1500);
+    } catch (error) {
+      console.error("Chatbot Error:", error);
+      const errorResponse: ChatMessage = {
+        id: Date.now() + 1,
+        text: "I'm having trouble connecting right now. Please try again.",
+        sender: "bot",
+      };
+      setMessages((prev) => [...prev, errorResponse]);
+    } finally {
+      setIsThinking(false);
+    }
   };
 
   // Handler for form submission (sending a message)
@@ -52,7 +64,6 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose }) => {
     // Check if the input value is not empty after trimming whitespace
     if (inputValue.trim()) {
       handleSendMessage(inputValue.trim()); // Call the onSendMessage prop with the trimmed input
-      setInputValue(""); // Clear the input field after sending
     }
   };
 
@@ -100,6 +111,17 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose }) => {
               </div>
             </div>
           ))}
+          {/* Thinking indicator */}
+          {isThinking && (
+             <div className="flex items-end gap-2 justify-start">
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0 animate-bounce">
+                  E
+                </div>
+                <div className="bg-gray-200 text-gray-800 rounded-2xl rounded-bl-none p-3 animate-pulse dark:bg-gray-700 dark:text-gray-200">
+                  <p className="text-sm">Thinking...</p>
+                </div>
+             </div>
+          )}
           {/* Empty div used as a reference point for scrolling to the bottom */}
           <div ref={messagesEndRef} />
         </div>

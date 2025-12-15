@@ -225,6 +225,31 @@ export const VehicleCard: React.FC<{
 
   const isSaving = toggleSaveMutation.isPending;
 
+  // Fetch all reviews to calculate listing rating
+  const { data: allReviews } = useQuery({
+    queryKey: ["allReviews"],
+    queryFn: buyerService.getAllReviews,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const { listingRating, listingReviewCount } = useMemo(() => {
+    if (!allReviews || !Array.isArray(allReviews)) return { listingRating: 0, listingReviewCount: 0 };
+    
+    // Filter reviews for this specific listing
+    const listingReviews = allReviews.filter((review: any) => 
+        review.order_id?.listing_id?._id === vehicle._id || 
+        review.order_id?.listing_id === vehicle._id
+    );
+
+    if (listingReviews.length === 0) return { listingRating: 0, listingReviewCount: 0 };
+
+    const total = listingReviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0);
+    return {
+        listingRating: total / listingReviews.length,
+        listingReviewCount: listingReviews.length
+    };
+  }, [allReviews, vehicle._id]);
+
   // Memoize image URLs to prevent recreation
   const imageUrls = useMemo(
     () => images?.map((img) => `${apiURL}${img}`) || [],
@@ -246,7 +271,7 @@ export const VehicleCard: React.FC<{
 
   // Get seller shop name
   const sellerShopName = seller_id?.business_name || "Seller";
-  const sellerRating = seller_id?.rating || 0;
+  // const sellerRating = seller_id?.rating || 0; // Removed unused variable
 
   // Star Rating Component
   const StarRating = ({ rating }: { rating: number }) => {
@@ -409,10 +434,14 @@ export const VehicleCard: React.FC<{
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
                 {sellerShopName}
               </p>
+              {/* Available EV Count */}
+              <span className="text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded">
+                {vehicle.number_of_ev} available
+              </span>
               <div className="flex items-center gap-1 text-xs">
-                <StarRating rating={sellerRating} />
+                <StarRating rating={listingRating} />
                 <span className="text-gray-600 dark:text-gray-400 ml-0.5">
-                  ({sellerRating.toFixed(1)})
+                  ({listingReviewCount})
                 </span>
               </div>
             </div>

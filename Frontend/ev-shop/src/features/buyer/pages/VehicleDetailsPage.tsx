@@ -536,9 +536,13 @@ const VehicleDetailsPage: React.FC = () => {
                   >
                     {addToCartMutation.isPending ? "Adding..." : "Add to Cart"}
                   </button>
-                  <button className="w-full bg-white border-2 border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-lg hover:bg-gray-50 transition-all duration-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
-                    Book Test Drive
+                  <button
+                    disabled
+                    className="w-full bg-white border-2 border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Apply for Lease
                   </button>
+
                 </div>
 
                 {!userId && (

@@ -163,7 +163,7 @@ export function reviewService(
      */
     getReviewById: async (id: string) => {
       try {
-        const cacheKey = `review_${id}`;
+        const cacheKey = `reviews_${id}`;
         // Attempt to get from cache, otherwise fetch from repository and set cache.
         const review = await CacheService.getOrSet(
           cacheKey,
@@ -217,10 +217,11 @@ export function reviewService(
 
         // Invalidate all caches this review might be a part of.
         await Promise.all([
-          CacheService.delete(`review_${id}`),
+          CacheService.delete(`reviews_${id}`),
           CacheService.delete("reviews"),
           CacheService.delete(`reviews_target_${existingReview.target_id}`),
           CacheService.delete(`reviews_reviewer_${existingReview.reviewer_id}`),
+          CacheService.deletePattern(`reviews_*`),
         ]);
 
         return { success: true, review };
@@ -244,10 +245,11 @@ export function reviewService(
 
         // Invalidate all caches this review might be a part of.
         await Promise.all([
-          CacheService.delete(`review_${id}`),
+          CacheService.delete(`reviews_${id}`),
           CacheService.delete("reviews"),
           CacheService.delete(`reviews_target_${existingReview.target_id}`),
           CacheService.delete(`reviews_reviewer_${existingReview.reviewer_id}`),
+          CacheService.deletePattern(`reviews_*`),
         ]);
 
         return { success: true };

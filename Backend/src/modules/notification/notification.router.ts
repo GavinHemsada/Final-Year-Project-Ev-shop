@@ -114,6 +114,9 @@ export const notificationRouter = (): Router => {
     notificationController.getNotificationsByUserID(req, res)
   );
 
+  router.get("/seller/:userId", (req, res) =>
+    notificationController.getNotificationsByUserID(req, res)
+  );
   /**
    * @swagger
    * /notification/{id}:
