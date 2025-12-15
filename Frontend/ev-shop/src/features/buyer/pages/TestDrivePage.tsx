@@ -4,10 +4,12 @@ import {
   CheckIcon,
   CalendarIcon,
   ClockIcon,
+  EditIcon,
+  TrashIcon,
 } from "@/assets/icons/icons";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { selectUserId } from "@/context/authSlice";
-import type { AlertProps, BuyerTestDriveSlot } from "@/types";
+import type { AlertProps, BuyerTestDriveSlot, BuyerBookingData } from "@/types";
 import { buyerService } from "../buyerService";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
@@ -42,6 +44,27 @@ export const TestDrivesPage: React.FC<{
     duration_minutes: 30,
   });
 
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [editForm, setEditForm] = useState({
+    booking_date: "",
+    booking_time: "",
+    duration_minutes: 30,
+  });
+
+  // Cancel confirmation state
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<string | null>(null);
+
+  // Rating modal state
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [bookingToRate, setBookingToRate] = useState<any>(null);
+  const [ratingForm, setRatingForm] = useState({
+    rating: 0,
+    comment: "",
+  });
+
   // Fetch available slots
   const {
     data: slotsData,
@@ -57,7 +80,7 @@ export const TestDrivesPage: React.FC<{
     data: bookingsData,
     isLoading: isBookingsLoading,
     isError: isBookingsError,
-  } = useQuery<BuyerTestDriveSlot[]>({
+  } = useQuery<BuyerBookingData[]>({
     queryKey: queryKeys.customerTestDrives(userId || ""),
     queryFn: () => buyerService.getTestDriveByCustomer(userId!),
     enabled: !!userId,
@@ -117,28 +140,35 @@ export const TestDrivesPage: React.FC<{
   const scheduleMutation = useMutation({
     mutationFn: buyerService.scheduleTestDrive,
     onSuccess: (data) => {
-      if (data.success) {
-        if (setAlert) {
-          setAlert({
-            id: Date.now(),
-            title: "Test drive scheduled successfully",
-            type: "success",
-            message: "Test drive scheduled successfully!",
-          });
-        }
-        // Invalidate queries to refresh data
-        queryClient.invalidateQueries({ queryKey: queryKeys.activeTestDriveSlots });
-        if (userId) {
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.customerTestDrives(userId),
-          });
-        }
-      } else {
-        throw new Error(data.message || "Failed to book slot");
+      console.log("Booking response:", data);
+      console.log("Response type:", typeof data);
+      console.log("Response keys:", data ? Object.keys(data) : "null");
+      
+      // If we got here, the API call was successful
+      // Show success message regardless of the response structure
+      if (setAlert) {
+        setAlert({
+          id: Date.now(),
+          title: "Test drive scheduled successfully",
+          type: "success",
+          message: "Test drive scheduled successfully!",
+        });
       }
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.activeTestDriveSlots });
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.customerTestDrives(userId),
+        });
+      }
+      
+      // Close modal after successful booking
+      setShowBookingModal(false);
     },
     onError: (error: any) => {
       console.error("Error booking slot:", error);
+      console.error("Error response:", error.response);
       if (setAlert) {
         setAlert({
           id: Date.now(),
@@ -146,7 +176,123 @@ export const TestDrivesPage: React.FC<{
           type: "error",
           message:
             error.response?.data?.message ||
+            error.message ||
             "Failed to book test drive. Please try again.",
+        });
+      }
+    },
+  });
+
+  // Cancel mutation
+  const cancelMutation = useMutation({
+    mutationFn: buyerService.cancelTestDrive,
+    onSuccess: () => {
+      if (setAlert) {
+        setAlert({
+          id: Date.now(),
+          title: "Booking cancelled",
+          type: "success",
+          message: "Your test drive booking has been cancelled successfully.",
+        });
+      }
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.activeTestDriveSlots });
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.customerTestDrives(userId),
+        });
+      }
+      setShowCancelDialog(false);
+      setBookingToCancel(null);
+    },
+    onError: (error: any) => {
+      console.error("Error cancelling booking:", error);
+      if (setAlert) {
+        setAlert({
+          id: Date.now(),
+          title: "Error cancelling booking",
+          type: "error",
+          message:
+            error.response?.data?.message ||
+            error.message ||
+            "Failed to cancel booking. Please try again.",
+        });
+      }
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      buyerService.updateTestDrive(id, data),
+    onSuccess: () => {
+      if (setAlert) {
+        setAlert({
+          id: Date.now(),
+          title: "Booking updated",
+          type: "success",
+          message: "Your test drive booking has been updated successfully.",
+        });
+      }
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.activeTestDriveSlots });
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.customerTestDrives(userId),
+        });
+      }
+      setShowEditModal(false);
+      setSelectedBooking(null);
+    },
+    onError: (error: any) => {
+      console.error("Error updating booking:", error);
+      if (setAlert) {
+        setAlert({
+          id: Date.now(),
+          title: "Error updating booking",
+          type: "error",
+          message:
+            error.response?.data?.message ||
+            error.message ||
+            "Failed to update booking. Please try again.",
+        });
+      }
+    },
+  });
+
+  // Rating mutation
+  const ratingMutation = useMutation({
+    mutationFn: buyerService.rateTestDrive,
+    onSuccess: () => {
+      if (setAlert) {
+        setAlert({
+          id: Date.now(),
+          title: "Rating submitted",
+          type: "success",
+          message: "Thank you for rating your test drive experience!",
+        });
+      }
+      // Invalidate queries to refresh data
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.customerTestDrives(userId),
+        });
+      }
+      setShowRatingModal(false);
+      setBookingToRate(null);
+      setRatingForm({ rating: 0, comment: "" });
+    },
+    onError: (error: any) => {
+      console.error("Error submitting rating:", error);
+      if (setAlert) {
+        setAlert({
+          id: Date.now(),
+          title: "Error submitting rating",
+          type: "error",
+          message:
+            error.response?.data?.message ||
+            error.message ||
+            "Failed to submit rating. Please try again.",
         });
       }
     },
@@ -204,7 +350,6 @@ export const TestDrivesPage: React.FC<{
     };
 
     scheduleMutation.mutate(bookingData);
-    setShowBookingModal(false);
   };
 
   const handleTimeChange = (time: string) => {
@@ -230,6 +375,110 @@ export const TestDrivesPage: React.FC<{
     setBookingForm({ ...bookingForm, booking_time: time });
   };
 
+  const handleEditTimeChange = (time: string) => {
+    // Validate time is between 08:30 and 15:30
+    if (time) {
+      const [hours, minutes] = time.split(':').map(Number);
+      const timeInMinutes = hours * 60 + minutes;
+      const minTime = 8 * 60 + 30;
+      const maxTime = 15 * 60 + 30;
+
+      if (timeInMinutes < minTime || timeInMinutes > maxTime) {
+        if (setAlert) {
+          setAlert({
+            id: Date.now(),
+            title: "Invalid Time",
+            type: "error",
+            message: "Please select a time between 8:30 AM and 3:30 PM.",
+          });
+        }
+        return;
+      }
+    }
+    setEditForm({ ...editForm, booking_time: time });
+  };
+
+  const handleEditBooking = (booking: any) => {
+    setSelectedBooking(booking);
+    // Pre-fill the edit form with existing booking data
+    const bookingDate = new Date(booking.booking_date || booking.scheduled_date).toISOString().slice(0, 10);
+    setEditForm({
+      booking_date: bookingDate,
+      booking_time: booking.booking_time || booking.time_slot || "",
+      duration_minutes: booking.duration_minutes || 30,
+    });
+    setShowEditModal(true);
+  };
+
+  const handleCancelBooking = (bookingId: string) => {
+    setBookingToCancel(bookingId);
+    setShowCancelDialog(true);
+  };
+
+  const confirmCancelBooking = () => {
+    if (bookingToCancel) {
+      cancelMutation.mutate(bookingToCancel);
+    }
+  };
+
+  const handleSubmitEdit = () => {
+    if (!selectedBooking) return;
+
+    // Validate form
+    if (!editForm.booking_date || !editForm.booking_time) {
+      if (setAlert) {
+        setAlert({
+          id: Date.now(),
+          title: "Validation Error",
+          type: "error",
+          message: "Please fill in all required fields.",
+        });
+      }
+      return;
+    }
+
+    const updateData = {
+      booking_time: editForm.booking_time,
+      duration_minutes: editForm.duration_minutes,
+    };
+
+    updateMutation.mutate({ id: selectedBooking._id, data: updateData });
+  };
+
+  const handleRateBooking = (booking: any) => {
+    setBookingToRate(booking);
+    setRatingForm({ rating: 0, comment: "" });
+    setShowRatingModal(true);
+  };
+
+  const handleSubmitRating = () => {
+    if (!bookingToRate || !userId) return;
+
+    // Validate rating
+    if (ratingForm.rating === 0) {
+      if (setAlert) {
+        setAlert({
+          id: Date.now(),
+          title: "Validation Error",
+          type: "error",
+          message: "Please select a rating.",
+        });
+      }
+      return;
+    }
+
+    const ratingData = {
+      booking_id: bookingToRate._id,
+      customer_id: userId,
+      slot_id: bookingToRate.slot_id._id,
+      model_id: bookingToRate.slot_id.model_id._id,
+      rating: ratingForm.rating,
+      comment: ratingForm.comment,
+    };
+
+    ratingMutation.mutate(ratingData);
+  };
+
   if (isSlotsLoading || (userId && isBookingsLoading)) {
     return (
       <div className="text-center p-8 dark:text-gray-300">
@@ -248,7 +497,7 @@ export const TestDrivesPage: React.FC<{
         </div>
      );
   }
-
+  console.log(bookings);
   return (
     <div className="space-y-12">
       {/* Section for User's Existing Bookings */}
@@ -264,11 +513,9 @@ export const TestDrivesPage: React.FC<{
                   key={booking._id}
                   className="py-4 flex items-center justify-between"
                 >
-                  <div>
+                  <div className="flex-1">
                     <p className="font-semibold text-lg dark:text-white">
-                      {booking.model_name ||
-                        booking.model_id?.name ||
-                        "EV Model"}
+                      {booking.slot_id?.model_id?.model_name || "EV Model"}
                     </p>
                     <p className="text-sm text-gray-600 flex items-center gap-2 mt-1 dark:text-gray-400">
                       <CalendarIcon className="h-4 w-4" />
@@ -279,12 +526,56 @@ export const TestDrivesPage: React.FC<{
                         |
                       </span>
                       <ClockIcon className="h-4 w-4" />
-                      {booking.booking_time || booking.time_slot}
+                      {booking.booking_time}
+                      <span className="text-gray-300 dark:text-gray-600">
+                        |
+                      </span>
+                      <span className="font-medium">Duration:</span>
+                      {booking.duration_minutes} min
+                    </p>
+                    <p className="text-sm text-gray-600 flex items-center gap-2 mt-1 dark:text-gray-400">
+                      <span className="h-4 w-4 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 border border-gray-400 rounded-full text-[10px]">
+                        L
+                      </span>
+                      <span className="font-medium">Location:</span>
+                      {booking.slot_id?.location || "N/A"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                    <CheckIcon className="h-5 w-5" />
-                    <span className="font-semibold">{booking.status}</span>
+                  <div className="flex items-center gap-3">
+                    <div className={`flex items-center gap-2 ${booking.status === 'completed' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`}>
+                      <CheckIcon className="h-5 w-5" />
+                      <span className="font-semibold">{booking.status}</span>
+                    </div>
+                    {booking.status === 'completed' ? (
+                      <button
+                        onClick={() => handleRateBooking(booking)}
+                        disabled={ratingMutation.isPending}
+                        className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-yellow-600 dark:hover:bg-yellow-500 flex items-center gap-2"
+                        title="Rate this test drive"
+                      >
+                        <span>⭐</span>
+                        <span className="font-medium">Rate</span>
+                      </button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditBooking(booking)}
+                          disabled={updateMutation.isPending}
+                          className="p-2 text-blue-600 hover:text-blue-700 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed dark:text-blue-500 dark:hover:text-blue-400"
+                          title="Edit booking"
+                        >
+                          <EditIcon className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleCancelBooking(booking._id)}
+                          disabled={cancelMutation.isPending}
+                          className="p-2 text-red-600 hover:text-red-700 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed dark:text-red-500 dark:hover:text-red-400"
+                          title="Cancel booking"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </li>
               ))}
@@ -368,6 +659,7 @@ export const TestDrivesPage: React.FC<{
           {paginatedSlots.length > 0 ? (
             paginatedSlots.map((slot: any) => {
               const isBooked = bookedSlotIds.has(slot._id);
+              const isNotAvailable = slot.max_bookings === 0;
               return (
                 <div
                   key={slot._id}
@@ -435,7 +727,7 @@ export const TestDrivesPage: React.FC<{
                         slot.available_date
                       )
                     }
-                    disabled={isBooked || scheduleMutation.isPending}
+                    disabled={isBooked || scheduleMutation.isPending || isNotAvailable}
                     className="w-full mt-6 bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-600 dark:disabled:bg-gray-600"
                   >
                     {isBooked ? "Booked" : "Book Now"}
@@ -546,6 +838,7 @@ export const TestDrivesPage: React.FC<{
                   value={bookingForm.duration_minutes}
                   onChange={(e) => setBookingForm({ ...bookingForm, duration_minutes: parseInt(e.target.value) || 30 })}
                   min="15"
+                  max="60"
                   step="15"
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
@@ -565,6 +858,226 @@ export const TestDrivesPage: React.FC<{
                 className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-600"
               >
                 {scheduleMutation.isPending ? "Booking..." : "Confirm Booking"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && selectedBooking && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold dark:text-white">
+                Edit Test Drive
+              </h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Model: <span className="font-semibold text-gray-900 dark:text-white">
+                  {selectedBooking.model_name || selectedBooking.model_id?.name || "EV Model"}
+                </span>
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Booking Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Booking Date
+                </label>
+                <input
+                  type="date"
+                  value={editForm.booking_date}
+                  readOnly
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100 dark:bg-gray-600 dark:border-gray-600 dark:text-white dark:[color-scheme:dark] cursor-not-allowed opacity-75"
+                />
+              </div>
+
+              {/* Booking Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Booking Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="time"
+                  value={editForm.booking_time}
+                  onChange={(e) => handleEditTimeChange(e.target.value)}
+                  min="08:30"
+                  max="15:30"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:[color-scheme:dark]"
+                  required
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Available time: 8:30 AM - 3:30 PM
+                </p>
+              </div>
+
+              {/* Duration */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  value={editForm.duration_minutes}
+                  onChange={(e) => setEditForm({ ...editForm, duration_minutes: parseInt(e.target.value) || 30 })}
+                  min="15"
+                  max="60"
+                  step="15"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitEdit}
+                disabled={updateMutation.isPending}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-600"
+              >
+                {updateMutation.isPending ? "Updating..." : "Update Booking"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Dialog */}
+      {showCancelDialog && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Cancel Booking
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                Are you sure you want to cancel this test drive booking? This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowCancelDialog(false);
+                  setBookingToCancel(null);
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Keep Booking
+              </button>
+              <button
+                onClick={confirmCancelBooking}
+                disabled={cancelMutation.isPending}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-red-700 dark:hover:bg-red-600"
+              >
+                {cancelMutation.isPending ? "Cancelling..." : "Yes, Cancel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rating Modal */}
+      {showRatingModal && bookingToRate && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold dark:text-white">
+                Rate Your Test Drive
+              </h2>
+              <button
+                onClick={() => setShowRatingModal(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Model: <span className="font-semibold text-gray-900 dark:text-white">
+                  {bookingToRate.slot_id?.model_id?.model_name || "EV Model"}
+                </span>
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              {/* Star Rating */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Your Rating <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2 justify-center">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRatingForm({ ...ratingForm, rating: star })}
+                      className="text-4xl transition-all hover:scale-110 focus:outline-none"
+                    >
+                      <span className={star <= ratingForm.rating ? "text-yellow-400" : "text-gray-300 dark:text-gray-600"}>
+                        ⭐
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-center mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  {ratingForm.rating === 0 && "Click to rate"}
+                  {ratingForm.rating === 1 && "Poor"}
+                  {ratingForm.rating === 2 && "Fair"}
+                  {ratingForm.rating === 3 && "Good"}
+                  {ratingForm.rating === 4 && "Very Good"}
+                  {ratingForm.rating === 5 && "Excellent"}
+                </p>
+              </div>
+
+              {/* Comment */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Your Comments (Optional)
+                </label>
+                <textarea
+                  value={ratingForm.comment}
+                  onChange={(e) => setRatingForm({ ...ratingForm, comment: e.target.value })}
+                  rows={4}
+                  placeholder="Share your experience with this test drive..."
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowRatingModal(false)}
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitRating}
+                disabled={ratingMutation.isPending}
+                className="flex-1 px-4 py-2.5 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-yellow-600 dark:hover:bg-yellow-500"
+              >
+                {ratingMutation.isPending ? "Submitting..." : "Submit Rating"}
               </button>
             </div>
           </div>

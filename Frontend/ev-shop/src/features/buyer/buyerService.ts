@@ -10,14 +10,6 @@ export const buyerService = {
     const response = await axiosPrivate.get(`/user/${id}`);
     return response.data;
   },
-  checkPasswordNull: async (email: string) => {
-    // Trim and encode email to handle special characters and whitespace
-    const cleanEmail = email.trim();
-    const response = await axiosPrivate.get(
-      `/user/check-password-null/${encodeURIComponent(cleanEmail)}`
-    );
-    return response.data;
-  },
 
   // cart operations
   addToCart: async (

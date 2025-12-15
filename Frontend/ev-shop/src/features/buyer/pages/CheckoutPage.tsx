@@ -4,8 +4,9 @@ import { useAppSelector } from "@/hooks/useAppSelector";
 import { selectUserId } from "@/context/authSlice";
 import { useCart } from "@/hooks/useCart";
 import { buyerService } from "../buyerService";
-import { Loader } from "@/components/Loader";
+import { PageLoader, Loader } from "@/components/Loader";
 import { useToast } from "@/context/ToastContext";
+import { ArrowLeftIcon } from "@/assets/icons/icons";
 import type { Vehicle } from "@/types";
 
 const apiURL = import.meta.env.VITE_API_URL;
@@ -75,7 +76,7 @@ const CheckoutPage: React.FC = () => {
         user_id: userId,
         listing_id: vehicle._id,
         seller_id: vehicle.seller_id._id,
-        total_amount: totalPrice,
+        total_amount: 50000,
       };
 
       const order = await buyerService.placeOrder(orderData);
@@ -85,13 +86,12 @@ const CheckoutPage: React.FC = () => {
       }
 
       // Create payment session
-      const frontendUrl = window.location.origin;
       const paymentData = {
         order_id: order._id,
         payment_type: "purchase", // EV_PURCHASE
-        amount: totalPrice,
-        returnUrl: `${frontendUrl}/user/payment/return`,
-        cancelUrl: `${frontendUrl}/user/payment/cancel`,
+        amount: 50000,
+        returnUrl: `${apiURL}api/v1/payment/payment-return`,
+        cancelUrl: `${apiURL}api/v1/payment/payment-cancel`,
       };
 
       const paymentResponse = await buyerService.createPayment(paymentData);
@@ -146,8 +146,8 @@ const CheckoutPage: React.FC = () => {
 
   if (cartLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <Loader size={60} color="#4f46e5" />
+      <div className="min-h-screen flex items-center justify-center">
+        <PageLoader/>
       </div>
     );
   }
@@ -159,6 +159,15 @@ const CheckoutPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-4xl mx-auto px-4">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate("/user/dashboard", { state: { activeTab: "cart" } })}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors mb-6"
+        >
+          <ArrowLeftIcon className="h-5 w-5" />
+          <span>Back to Cart</span>
+        </button>
+
         <h1 className="text-3xl font-bold mb-8 dark:text-white">Checkout</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -237,7 +246,23 @@ const CheckoutPage: React.FC = () => {
                 )}
               </button>
 
-              <p className="text-xs text-gray-500 mt-4 text-center dark:text-gray-400">
+              {/* Advance Payment Notice */}
+              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-xs text-blue-800 dark:text-blue-200">
+                  <strong>Important:</strong> To secure the vehicle, you must make an advance payment
+                  of <strong>LKR 50,000</strong>. After this payment, you
+                  must complete the full payment and collect the vehicle
+                  within <strong>14 days</strong>. Failure to do so will
+                  result in the cancellation of the advance payment.
+                  <br /><br />
+                  <span className="text-red-600 dark:text-red-400 font-semibold">
+                    ⚠️ Important: The LKR 50,000 advance payment is non-refundable 
+                    and will be deducted from the total vehicle cost.
+                  </span>
+                </p>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-2 text-center dark:text-gray-400">
                 You will be redirected to PayHere to complete your payment
               </p>
             </div>

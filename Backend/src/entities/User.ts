@@ -122,6 +122,7 @@ const UserSchema = new Schema<IUser>(
      * is not included in API responses.
      */
     toJSON: {
+      virtuals: true,
       transform(_doc, ret: any) {
         delete ret.password;
         delete ret.salt;
@@ -135,6 +136,7 @@ const UserSchema = new Schema<IUser>(
      * This mirrors the `toJSON` transform for consistency.
      */
     toObject: {
+      virtuals: true,
       transform(_doc, ret: any) {
         delete ret.password;
         delete ret.salt;
@@ -165,6 +167,12 @@ UserSchema.methods.comparePassword = function (raw: string) {
   return bcrypt.compare(raw, this.password);
 };
 
+/** A virtual property `isPasswordNull` to check if the user's password is null.
+ * This is useful for determining if the user signed up via OAuth and has no password set.
+ */
+UserSchema.virtual("isPasswordNull").get(function (this: IUser) {
+  return this.password == null;
+});
 /**
  * Creates indexes on key fields to optimize common query performance.
  * - `role` and `last_login`: For querying users by role, sorted by last login.

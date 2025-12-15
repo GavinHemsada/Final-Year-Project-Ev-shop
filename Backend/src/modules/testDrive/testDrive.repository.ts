@@ -88,13 +88,22 @@ export interface ITestDriveRepository {
    * @param slotId - The ID of the test drive slot.
    * @returns A promise that resolves to an array of test drive booking documents or null.
    */
-  findBookingsBySlotId(slotId: string): Promise<ITestDriveBooking[] | null>;
+  findBookingsBySlotId(
+    slotId: string,
+    excludeBookingId?: string
+  ): Promise<ITestDriveBooking[] | null>;
   /**
    * Decreases the available slot count for a specific test drive slot.
    * @param slotId - The ID of the test drive slot.
    * @returns A promise that resolves to true if the operation was successful, otherwise false.
    */
   decreaseSlotCount(slotId: string): Promise<boolean | null>;
+  /**
+   * Increases the available slot count for a specific test drive slot.
+   * @param slotId - The ID of the test drive slot.
+   * @returns A promise that resolves to true if the operation was successful, otherwise false.
+   */
+  invokeSlotIncrease(slotId: string): Promise<boolean | null>;
   /**
    * Updates an existing test drive booking.
    * @param id - The ID of the booking to update.
@@ -240,7 +249,7 @@ export const TestDriveRepository: ITestDriveRepository = {
   createBooking: withErrorHandling(async (data) => {
     const booking = new TestDriveBooking(data);
     return await booking.save();
-  }), 
+  }),
 
   /** Finds a single TestDriveBooking by ID and populates the related slot information. */
   findBookingById: withErrorHandling(async (id) => {
@@ -252,14 +261,32 @@ export const TestDriveRepository: ITestDriveRepository = {
     return await TestDriveBooking.find({
       customer_id: new Types.ObjectId(customerId),
     })
-      .populate("slot_id")
+      .populate({
+        path: "slot_id",
+        select: "location",
+        populate: {
+          path: "model_id",
+          select: "model_name",
+        },
+      })
       .sort({ booking_date: -1 });
   }),
 
   /** Finds all TestDriveBookings associated with a specific slot. */
-  findBookingsBySlotId: withErrorHandling(async (slotId) => {
-    return await TestDriveBooking.find({ slot_id: new Types.ObjectId(slotId) });
-  }),
+  findBookingsBySlotId: withErrorHandling(
+    async (slotId: string, excludeBookingId?: string) => {
+      const query: any = {
+        slot_id: new Types.ObjectId(slotId),
+      };
+
+      if (excludeBookingId) {
+        query._id = { $ne: new Types.ObjectId(excludeBookingId) };
+      }
+
+      return await TestDriveBooking.find(query);
+    }
+  ),
+
   /** Decreases the available slot count for a specific test drive slot. */
   decreaseSlotCount: withErrorHandling(async (slotId) => {
     const slot = await TestDriveSlot.findById(slotId);
@@ -270,7 +297,15 @@ export const TestDriveRepository: ITestDriveRepository = {
     const result = await slot.save();
     return result !== null;
   }),
-
+  invokeSlotIncrease: withErrorHandling(async (slotId) => {
+    const slot = await TestDriveSlot.findById(slotId);
+    if (!slot) {
+      throw new Error("Slot not found");
+    }
+    slot.max_bookings += 1;
+    const result = await slot.save();
+    return result !== null;
+  }),
   /** Finds a TestDriveBooking by ID and updates it with new data. */
   updateBooking: withErrorHandling(async (id, data) => {
     return await TestDriveBooking.findByIdAndUpdate(id, data, { new: true });

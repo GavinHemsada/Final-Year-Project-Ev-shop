@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { selectUserId, setActiveRole, addNewRole } from "@/context/authSlice";
 import { CloseIcon } from "@/assets/icons/icons";
@@ -29,7 +29,21 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState("");
+  const [shouldNavigate, setShouldNavigate] = useState(false);
   const navigate = useNavigate();
+
+  // Navigate to seller dashboard after Redux state updates
+  useEffect(() => {
+    if (shouldNavigate && successMessage) {
+      const timer = setTimeout(async () => {
+        // Set active role to seller before navigating
+        await dispatch(setActiveRole("seller"));
+        navigate("/seller/dashboard");
+        setShouldNavigate(false); // Reset the flag
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldNavigate, successMessage, navigate, dispatch]);
   /**
    * Handles changes for all form inputs.
    */
@@ -116,9 +130,8 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
         type: "success",
       });
       dispatch(addNewRole("seller"));
-      dispatch(setActiveRole("seller"));
       setSuccessMessage("Application submitted successfully!");
-      navigate("/seller/dashboard");
+      setShouldNavigate(true); // Trigger navigation via useEffect
       // Clear the form on success
       setFormData({
         business_name: "",
@@ -132,10 +145,11 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
         website: "",
       });
     } catch (err: any) {
+      console.log(err.response.data.message);
       setAlert?.({
         id: Date.now(),
         title: "Fail Registration",
-        message: "An unexpected error occurred. Please try again.",
+        message: err?.response.data.message || "An unexpected error occurred. Please try again.",
         type: "error",
       });
     } finally {

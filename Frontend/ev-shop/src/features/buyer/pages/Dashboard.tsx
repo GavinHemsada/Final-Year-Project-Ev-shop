@@ -42,7 +42,6 @@ import { PageLoader } from "@/components/Loader";
 import { buyerService } from "../buyerService";
 import {
   useQueries,
-  useQuery,
   type UseQueryOptions,
   type UseQueryResult,
 } from "@tanstack/react-query";
@@ -68,10 +67,9 @@ const App: React.FC = () => {
   const location = useLocation();
   const userID = useAppSelector(selectUserId);
   const roles = useAppSelector(selectRoles);
-  console.log(userID);
   const userRole = useMemo(() => roles || [], [roles]);
   const itemsPerPage = 9;
-
+  console.log(userID);
   const dispatch = useAppDispatch();
   // Page load state
   useEffect(() => {
@@ -98,7 +96,7 @@ const App: React.FC = () => {
         queryFn: () => buyerService.getUserProfile(userID!),
         enabled: !!userID,
         staleTime: 10 * 60 * 1000,
-        refetchOnMount: false,
+        refetchOnMount: true,
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
       } satisfies UseQueryOptions<User_Profile>,
@@ -106,9 +104,9 @@ const App: React.FC = () => {
         queryKey: queryKeys.notifications(userID!),
         queryFn: () => buyerService.getUserNotifications(userID!),
         enabled: !!userID,
-        staleTime: 5000,
-        refetchInterval: 5000,
-        refetchOnMount: false,
+        staleTime: 10000,
+        refetchInterval: 10000,
+        refetchOnMount: true,
         refetchOnWindowFocus: true,
         refetchOnReconnect: true,
       } satisfies UseQueryOptions<Notification[]>,
@@ -124,7 +122,8 @@ const App: React.FC = () => {
   const vehicles = evlistQuery.data || [];
   const user = userProfileQuery.data;
   const notifications = notificationQuery.data || [];
-  console.log(notifications);
+  const isPasswordNull = user?.isPasswordNull;
+
   const isLoading =
     evlistQuery.isLoading ||
     userProfileQuery.isLoading ||
@@ -136,20 +135,9 @@ const App: React.FC = () => {
         vehicle.model_id?.model_name
           .toLowerCase()
           .includes(searchTerm.toLowerCase())
-      ),
+      ),  
     [vehicles, searchTerm]
   ); 
-
-  const checkpassword = useQuery({
-    queryKey: queryKeys.checkPassword(user?.email!),
-    queryFn: () => buyerService.checkPasswordNull(user!.email!),
-    enabled: !!user?.email,
-    staleTime: 10 * 60 * 1000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-  const isPasswordNull = checkpassword.data;
 
   const paginatedVehicles = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -197,7 +185,7 @@ const App: React.FC = () => {
           setAlert={handleSetAlert}
         />
       ),
-      profile: <UserProfile user={user!} setAlert={handleSetAlert} checkPassword={isPasswordNull} />,
+      profile: <UserProfile user={user!} setAlert={handleSetAlert} checkPassword={isPasswordNull!} />,
       orders: <OrderHistory setAlert={handleSetAlert} />,
       services: <Services setAlert={handleSetAlert} />,
       financing: <FinancingPage setAlert={handleSetAlert} />,
@@ -291,7 +279,7 @@ const App: React.FC = () => {
             userRole={userRole}
             user={user}
             notifications={notifications}
-            checkPassword={isPasswordNull}
+            checkPassword={isPasswordNull!}
             onLogout={handleLogout}
             setActiveTab={handleSetActiveTab}
             onBecomeSellerClick={setSellermodeOpen}

@@ -419,14 +419,21 @@ export function testDriveService(
         if (bookingsOnSlot.length >= slot.max_bookings) {
           return { success: false, error: "Slot is fully booked" };
         }
+        // Check if the customer already has a booking for the same slot.
+        
+        const existingBooking = bookingsOnSlot.find(
+          (b) => b.customer_id.toString() === data.customer_id
+        );
+        if(existingBooking){
+          return { success: false, error: "Customer already has a booking" };
+        }
+        // Check for time slot availability to avoid overlapping bookings.
         if (
-          !isTimeSlotAvailable(
-            bookingsOnSlot,
-             {
+          !isTimeSlotAvailable(bookingsOnSlot, {
             booking_time: data.booking_time,
             duration_minutes: data.duration_minutes,
-          }
-        )) {
+          })
+        ) {
           return { success: false, error: "Slot is reserved" };
         }
         // Prepare and create the new booking.
@@ -442,6 +449,8 @@ export function testDriveService(
         await Promise.all([
           CacheService.delete(`bookings_customer_${data.customer_id}`),
           CacheService.delete(`booking_${booking.id}`),
+          CacheService.delete("slots_active"),
+          CacheService.deletePattern("slots_*"),
         ]);
         const decreaseResult = await testDriveRepo.decreaseSlotCount(
           data.slot_id
@@ -460,7 +469,6 @@ export function testDriveService(
         if (!notiSeller) {
           return { success: false, error: "Failed to create notification" };
         }
-        console.log("Notification sent to seller for new booking.");
         return { success: true, booking };
       } catch (err) {
         console.log(err);
@@ -480,8 +488,29 @@ export function testDriveService(
           return { success: false, error: "Booking not found" };
         }
 
-        const slot = await testDriveRepo.findSlotById(data.slot_id!);
-        if (!slot) return { success: false, error: "Slot not found" };
+        const isTimeChanged =
+          (data.booking_time &&
+            data.booking_time !== existingBooking.booking_time) ||
+          (data.duration_minutes &&
+            data.duration_minutes !== existingBooking.duration_minutes);
+
+        if (isTimeChanged) {
+          // Get all bookings on the same slot EXCEPT this booking
+          const bookingsOnSlot = await testDriveRepo.findBookingsBySlotId(
+            existingBooking.slot_id._id.toString(),
+            id
+          );
+
+          if (
+            !isTimeSlotAvailable(bookingsOnSlot!, {
+              booking_time: data.booking_time ?? existingBooking.booking_time,
+              duration_minutes:
+                data.duration_minutes ?? existingBooking.duration_minutes,
+            })
+          ) {
+            return { success: false, error: "Slot is reserved" };
+          }
+        }
         const { customer_id, ...filterData } = data;
         const booking = await testDriveRepo.updateBooking(id, filterData);
         if (!booking) return { success: false, error: "Booking not found" };
@@ -508,8 +537,14 @@ export function testDriveService(
           // Invalidate caches before deleting to prevent serving stale data.
           await CacheService.delete(`booking_${id}`);
           await CacheService.delete(`bookings_customer_${booking.customer_id}`);
+          await CacheService.delete("slots_active");
+          await CacheService.deletePattern("slots_*");
         }
         const success = await testDriveRepo.deleteBooking(id);
+        const slotIncreaseResult = await testDriveRepo.invokeSlotIncrease(id);
+        if (!slotIncreaseResult) {
+          return { success: false, error: "Failed to update slot count" };
+        }
         if (!success) return { success: false, error: "Booking not found" };
         return { success: true };
       } catch (err) {

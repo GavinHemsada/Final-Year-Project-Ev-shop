@@ -20,7 +20,6 @@ export const ProfileDropdown: React.FC<{
   ({ user, onLogout, setActiveTab, checkPassword }) => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-    console.log(checkPassword);
     // Close dropdown when clicking outside
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {

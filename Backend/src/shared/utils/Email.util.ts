@@ -17,7 +17,7 @@ const pass = process.env.EMAIL_PASS;
  * @returns A promise that resolves with the `info` object from nodemailer upon success,
  *          or `undefined` if an error occurs.
  */
-export const sendOtpEmail = async (
+export const sendEmail = async (
   to: string,
   subject: string,
   text: string,

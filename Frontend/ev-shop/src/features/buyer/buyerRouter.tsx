@@ -14,8 +14,9 @@ const BuyerRouter = () => {
       <Route path="vehicle/:id" element={<VehicleDetailsPage />} />
       <Route path="checkout" element={<CheckoutPage />} />
       <Route path="payment/return" element={<PaymentSuccessPage />} />
+      <Route path="payment/pending" element={<PaymentSuccessPage />} />
       <Route path="payment/failed" element={<PaymentFailedPage />} />
-      <Route path="payment/cancelled" element={<PaymentCancelledPage />} />
+      <Route path="payment/cancel" element={<PaymentCancelledPage />} />
       <Route path="payment/error" element={<PaymentErrorPage />} />
     </Routes>
   );

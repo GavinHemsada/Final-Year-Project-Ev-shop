@@ -163,9 +163,14 @@ export function sellerService(
     createSeller: async (data) => {
       try {
         // Ensure a user doesn't already have a seller profile.
+        console.log("data.user_id", data);
         const existingSeller = await repo.findByUserId(data.user_id);
         if (existingSeller) {
           return { success: false, error: "User already has a seller profile" };
+        }
+        const sellers = await repo.findAll();
+        if (sellers && sellers.length > 0 && sellers.some(s => s.business_name === data.business_name)) {
+          return { success: false, error: "name already exists" };
         }
         const seller = await repo.create(data);
         const user = await userRepo.findById(data.user_id);

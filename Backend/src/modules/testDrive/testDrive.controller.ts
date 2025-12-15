@@ -208,6 +208,7 @@ export function testDriveController(
     createBooking: async (req, res) => {
       try {
         const result = await service.createBooking(req.body);
+        console.log("Booking created:", result);
         return handleResult(res, result, 201);
       } catch (err) {
         return handleError(res, err, "creating booking");

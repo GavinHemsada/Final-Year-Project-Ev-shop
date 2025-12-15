@@ -6,7 +6,7 @@ import {
   OTPverifyDTO,
   ResetPasswordDTO,
 } from "./auth.dto";
-import { sendOtpEmail } from "../../shared/utils/Email.util";
+import { sendEmail } from "../../shared/utils/Email.util";
 import crypto from "crypto";
 
 /**
@@ -193,11 +193,208 @@ export function authService(authRepo: IAuthRepository): IAuthService {
         };
         await user.save();
 
-        const subject = "Your OTP Code";
-        const text = `Your OTP code is ${otp}. It is valid for 10 minutes.`;
-        const html = `<p>Your OTP code is <b>${otp}</b>. It is valid for 10 minutes.</p>`;
+        const subject = "🔐 Your OTP Code - EV Shop";
+        const text = `Your OTP code is ${otp}. It is valid for ${OTP_EXPIRES_MIN} minutes. Please do not share this code with anyone.`;
+        const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body {
+              margin: 0;
+              padding: 0;
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              background-color: #f4f7fa;
+            }
+            .email-container {
+              max-width: 600px;
+              margin: 20px auto;
+              background-color: #ffffff;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              padding: 40px 20px;
+              text-align: center;
+              color: white;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 28px;
+              font-weight: 700;
+            }
+            .header p {
+              margin: 10px 0 0 0;
+              font-size: 16px;
+              opacity: 0.95;
+            }
+            .content {
+              padding: 40px 30px;
+            }
+            .greeting {
+              font-size: 18px;
+              color: #333;
+              margin-bottom: 20px;
+            }
+            .message {
+              font-size: 16px;
+              color: #555;
+              line-height: 1.6;
+              margin-bottom: 30px;
+            }
+            .otp-container {
+              background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+              border-radius: 12px;
+              padding: 30px;
+              text-align: center;
+              margin: 30px 0;
+              border: 2px dashed #667eea;
+            }
+            .otp-label {
+              font-size: 14px;
+              color: #666;
+              margin-bottom: 10px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              font-weight: 600;
+            }
+            .otp-code {
+              font-size: 48px;
+              font-weight: 700;
+              color: #667eea;
+              letter-spacing: 8px;
+              margin: 15px 0;
+              font-family: 'Courier New', monospace;
+              text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .otp-validity {
+              font-size: 14px;
+              color: #666;
+              margin-top: 10px;
+            }
+            .timer-icon {
+              display: inline-block;
+              font-size: 18px;
+              margin-right: 5px;
+            }
+            .security-notice {
+              background-color: #fff3cd;
+              border-left: 4px solid #ffc107;
+              padding: 15px 20px;
+              margin: 25px 0;
+              border-radius: 6px;
+            }
+            .security-notice p {
+              margin: 0;
+              color: #856404;
+              font-size: 14px;
+            }
+            .security-tips {
+              background-color: #f8f9fa;
+              border-radius: 8px;
+              padding: 20px;
+              margin: 25px 0;
+            }
+            .security-tips h3 {
+              margin: 0 0 15px 0;
+              font-size: 16px;
+              color: #333;
+            }
+            .security-tips ul {
+              margin: 0;
+              padding-left: 20px;
+            }
+            .security-tips li {
+              color: #555;
+              font-size: 14px;
+              margin: 8px 0;
+              line-height: 1.5;
+            }
+            .footer {
+              background-color: #f8f9fa;
+              padding: 25px 30px;
+              text-align: center;
+              color: #6c757d;
+              font-size: 14px;
+              border-top: 1px solid #e9ecef;
+            }
+            .footer p {
+              margin: 5px 0;
+            }
+            .footer strong {
+              color: #495057;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="email-container">
+            <!-- Header -->
+            <div class="header">
+              <h1>🔐 Verification Code</h1>
+              <p>Secure your account with this one-time password</p>
+            </div>
 
-        const mailResponse = await sendOtpEmail(email, subject, text, html);
+            <!-- Content -->
+            <div class="content">
+              <div class="greeting">
+                Hello,
+              </div>
+
+              <div class="message">
+                You've requested to reset your password for your <strong>EV Shop</strong> account. 
+                Please use the verification code below to proceed with resetting your password.
+              </div>
+
+              <!-- OTP Display -->
+              <div class="otp-container">
+                <div class="otp-label">Your Verification Code</div>
+                <div class="otp-code">${otp}</div>
+                <div class="otp-validity">
+                  <span class="timer-icon">⏱️</span>
+                  This code will expire in <strong>${OTP_EXPIRES_MIN} minutes</strong>
+                </div>
+              </div>
+
+              <!-- Security Warning -->
+              <div class="security-notice">
+                <p><strong>⚠️ Security Alert:</strong> Never share this code with anyone. EV Shop staff will never ask for your verification code.</p>
+              </div>
+
+              <!-- Security Tips -->
+              <div class="security-tips">
+                <h3>🛡️ Security Tips</h3>
+                <ul>
+                  <li>This code is valid for only ${OTP_EXPIRES_MIN} minutes</li>
+                  <li>You have ${MAX_OTP_ATTEMPTS} attempts to enter the correct code</li>
+                  <li>If you didn't request this code, please ignore this email</li>
+                  <li>Make sure you're on the official EV Shop website</li>
+                </ul>
+              </div>
+
+              <div class="message">
+                If you didn't request a password reset, please ignore this email or contact our support team 
+                if you have concerns about your account security.
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+              <p><strong>EV Shop</strong></p>
+              <p>Your trusted partner for electric vehicles</p>
+              <p style="margin-top: 15px; font-size: 12px;">
+                This is an automated security email. Please do not reply to this message.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+        const mailResponse = await sendEmail(email, subject, text, html);
         if (!mailResponse) {
           return { success: false, error: "Failed to send OTP email" };
         }

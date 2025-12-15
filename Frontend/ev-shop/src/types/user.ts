@@ -30,4 +30,5 @@ export type User_Profile = {
   /** * The user's physical address, represented as a nested object.
    */
   address: Address;
+  isPasswordNull: boolean;
 };

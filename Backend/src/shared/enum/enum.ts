@@ -142,6 +142,8 @@ export enum TestDriveBookingStatus {
   CANCELLED = "cancelled",
   /** The test drive has been completed. */
   COMPLETED = "completed",
+  /** The test drive has expired. */
+  EXPIRED = "expired",
 }
 
 /**

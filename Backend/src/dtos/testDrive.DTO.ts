@@ -96,6 +96,19 @@ export class TestDriveBookingDTO {
   duration_minutes!: number;
 }
 
+export class UpdateTestDriveBookingDTO {
+  /**
+   * The specific time of the booking (e.g., "14:00").
+   */
+  @IsString()
+  booking_time!: string;
+
+  /**
+   * The expected duration of the test drive in minutes.
+   */
+  @IsNumber()
+  duration_minutes!: number;
+}
 /**
  * Data Transfer Object (DTO) for submitting feedback or a rating after a test drive.
  * Defines the validation rules for the feedback payload.

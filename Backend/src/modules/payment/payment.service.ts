@@ -122,6 +122,10 @@ export function paymentService(
         const firstName = nameParts[0] || "User";
         const lastName = nameParts.slice(1).join(" ") || "Name";
         
+        // Append order_id to return and cancel URLs
+        const returnUrlWithOrderId = `${data.returnUrl}?order_id=${paymentData.order_id}`;
+        const cancelUrlWithOrderId = `${data.cancelUrl}?order_id=${paymentData.order_id}`;
+        
         const requestObject = createPaymentRequest({
           orderId: paymentData.order_id,
           amount: paymentData.amount,
@@ -136,8 +140,8 @@ export function paymentService(
             city: user.address?.city || "Colombo",
             country: user.address?.country || "Sri Lanka",
           },
-          returnUrl: data.returnUrl,
-          cancelUrl: data.cancelUrl,
+          returnUrl: returnUrlWithOrderId,
+          cancelUrl: cancelUrlWithOrderId,
           notifyUrl: notifyurl,
         });
         
@@ -182,19 +186,23 @@ export function paymentService(
           method,
         });
 
-        // Verify the integrity of the notification hash.
-        const valid = verifyNotificationHash({
-          merchantId: merchant_id,
-          orderId: order_id,
-          payhereAmount: payhere_amount,
-          payhereCurrency: payhere_currency,
-          statusCode: status_code,
-          md5sig: md5sig,
-        });
+        // Verify the integrity of the notification hash (skip for manual cancellations)
+        if (md5sig) {
+          const valid = verifyNotificationHash({
+            merchantId: merchant_id,
+            orderId: order_id,
+            payhereAmount: payhere_amount,
+            payhereCurrency: payhere_currency,
+            statusCode: status_code,
+            md5sig: md5sig,
+          });
 
-        if (!valid) {
-          console.error("Invalid payment hash verification");
-          return { success: false, error: "Invalid payment hash" };
+          if (!valid) {
+            console.error("Invalid payment hash verification");
+            return { success: false, error: "Invalid payment hash" };
+          }
+        } else {
+          console.log("Skipping hash verification for manual cancellation");
         }
 
         // Find the corresponding payment record by order_id
@@ -258,7 +266,10 @@ export function paymentService(
         } else if (status_code === "-1") {
           // Payment cancelled
           payment.status = PaymentStatus.CANCELLED;
-          payment.payment_method = method?.toLowerCase();
+          // Only set payment_method if it's a valid payment method (not manual_cancel)
+          if (method && method !== "manual_cancel") {
+            payment.payment_method = method.toLowerCase();
+          }
           payment.payment_id = payment_id;
           await payment.save();
           console.log(`Payment ${payment._id} updated to CANCELLED`);

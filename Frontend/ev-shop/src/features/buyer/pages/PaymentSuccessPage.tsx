@@ -1,15 +1,13 @@
 import React, { useEffect } from "react";
-import { useSearchParams, useNavigate, Link } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { CheckCircleIcon } from "@/assets/icons/icons";
 import { useToast } from "@/context/ToastContext";
 
 const PaymentSuccessPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { showToast } = useToast();
 
   const orderId = searchParams.get("order_id");
-  const paymentId = searchParams.get("payment_id");
 
   useEffect(() => {
     if (orderId) {
@@ -38,13 +36,6 @@ const PaymentSuccessPage: React.FC = () => {
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
             <p className="text-sm text-gray-600 dark:text-gray-400">Order ID</p>
             <p className="font-semibold dark:text-white">{orderId}</p>
-          </div>
-        )}
-
-        {paymentId && (
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Payment ID</p>
-            <p className="font-semibold dark:text-white">{paymentId}</p>
           </div>
         )}
 

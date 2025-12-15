@@ -203,6 +203,10 @@ export function financialService(
         );
         if (existingInstitution)
           return { success: false, error: "User already has an institution" };
+        const sellers = await repo.findAllInstitutions();
+        if (sellers && sellers.length > 0 && sellers.some(s => s.name === data.name)) {
+          return { success: false, error: "Institution name already exists" };
+        }
         // Assign role and save user.
         user.role.push(UserRole.FINANCE);
         const updatedUser = await user.save();

@@ -12,12 +12,6 @@ export interface IUserRepository {
    */
   findByEmail(email: string): Promise<IUser | null>;
   /**
-   *
-   * @param email
-   *
-   */
-  checkPasswordNull(email: string): Promise<boolean | null>;
-  /**
    * Finds a user by their unique ID.
    * @param id - The ID of the user to find.
    * @returns A promise that resolves to the user object (without password) or null if not found.
@@ -52,18 +46,9 @@ export const UserRepository: IUserRepository = {
   findByEmail: withErrorHandling(async (email) => {
     return await User.findOne({ email }).select("-password");
   }),
-  /** Checks if the user's password is null by email. */
-  checkPasswordNull: withErrorHandling(async (email) => {
-    // Trim email to remove any whitespace/newlines
-    const cleanEmail = email.trim();
-    const user = await User.findOne({ email: cleanEmail });
-    console.log("check user", user);
-    if (!user) return null; // user not found
-    return user.password === null || user.password === undefined; // true if password is null/undefined, false otherwise
-  }),
   /** Finds a user by their document ID, excluding the password field. */
   findById: withErrorHandling(async (_id) => {
-    return await User.findOne({ _id }).select("-password");
+    return await User.findById(_id);
   }),
   /** Retrieves all user documents, excluding the password field from each. */
   findAll: withErrorHandling(async () => {

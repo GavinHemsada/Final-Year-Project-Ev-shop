@@ -123,7 +123,7 @@ export const Header = React.memo(
           {switchUserFinancer && (
             <RoleButton
               onClick={() =>
-                switchRoleAndNavigate("finance", "/finance/dashboard")
+                switchRoleAndNavigate("finance", "/financial/dashboard")
               }
               title="Switch to Financial Contributor"
               icon={<SwitchIcon className="h-4 w-4 flex-shrink-0" />}

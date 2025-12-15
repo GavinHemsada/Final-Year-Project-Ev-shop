@@ -23,6 +23,8 @@ export interface ITestDriveBooking extends Document {
   feedback_comment?: string;
   /** The expected duration of the test drive in minutes. */
   duration_minutes: number;
+  /** Indicates whether a reminder has been sent to the customer. */
+  reminder_sent: boolean;
 }
 
 /**
@@ -54,6 +56,8 @@ const TestDriveBookingSchema = new Schema<ITestDriveBooking>(
     feedback_comment: { type: String },
     /** The duration of the test drive in minutes, which is required. */
     duration_minutes: { type: Number, required: true },
+    /** A flag indicating if a reminder has been sent to the customer. */
+    reminder_sent: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

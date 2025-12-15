@@ -100,7 +100,7 @@ export const OrderRepository: IOrderRepository = {
       $or: [{ user_id: objectId }, { seller_id: objectId }],
     })
       .populate("user_id", "name email")
-      .populate("seller_id", "business_name")
+      .populate("seller_id", "business_name street_address")
       .populate({
         path: "listing_id", 
         select: "price color registration_year",

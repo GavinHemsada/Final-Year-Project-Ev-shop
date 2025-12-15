@@ -42,6 +42,7 @@ export type Vehicle = {
     };
     shop_logo?: string;
     street_address?: string;
+    rating?: number;
   };
 
   model_id: {
@@ -194,4 +195,25 @@ export interface BuyerTestDriveSlot {
   createdAt: string;
   updatedAt: string;
   __v: number;
+}
+
+export interface BuyerBookingData {
+  _id: string;
+  booking_date: string;        
+  booking_time: string;        
+  duration_minutes: number;
+  status: string;
+  customer_id: string;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+
+  slot_id: {
+    _id: string;
+    location: string;
+    model_id: {
+      _id: string;
+      model_name: string;
+    };
+  };
 }

@@ -53,6 +53,12 @@ import { swaggerSpec } from "./config/swagger.config";
 import swaggerUi from "swagger-ui-express";
 import { refreshRedis } from "./config/redis";
 
+// Import the cron job starter
+import { startCronJobs } from "./shared/utils/ReminderEmailSender";
+ 
+// Start the cron jobs
+startCronJobs();
+
 // Initialize the Express application
 const app: Express = express();
 
@@ -148,7 +154,7 @@ app.use(passport.session());
 // This protects your API endpoints from brute-force attacks and abuse.
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
+  max: 200, // Limit each IP to 200 requests per window
   standardHeaders: true,
   legacyHeaders: false,
   message: {

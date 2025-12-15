@@ -78,6 +78,7 @@ export interface IPaymentController {
 export function paymentController(
   service: IPaymentService
 ): IPaymentController {
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
   return {
     /**
      * Creates a new payment session.
@@ -181,9 +182,12 @@ export function paymentController(
     handlePaymentReturn: async (req, res) => {
       try {
         const { order_id, payment_id, status_code } = req.query;
-        
+        console.log("=== PAYMENT RETURN HANDLER ===");
+        console.log("Query params:", { order_id, payment_id, status_code });
+
         // If we have status_code from PayHere, process it as a webhook would
         if (status_code && order_id) {
+          console.log("Processing payment notification...");
           // Process the payment notification similar to webhook
           const webhookData = {
             merchant_id: req.query.merchant_id as string,
@@ -195,63 +199,107 @@ export function paymentController(
             md5sig: req.query.md5sig as string,
             method: req.query.method as string,
           };
-          
+
           // Try to validate and update payment/order status
           await service.validatePayment(webhookData);
         }
-        
+
         // Get the payment to check its status
-        const paymentResult = await service.getPaymentByOrderId(order_id as string);
-        
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-        
+        const paymentResult = await service.getPaymentByOrderId(
+          order_id as string
+        );
+
         if (!paymentResult.success || !paymentResult.payment) {
+          console.log("Payment not found, redirecting to failed page");
           // Redirect to failure page if payment not found
-          res.redirect(`${frontendUrl}/user/payment/failed?order_id=${order_id}`);
+          res.redirect(
+            `${frontendUrl}/user/payment/failed?order_id=${order_id}`
+          );
           return res;
         }
 
         const payment = paymentResult.payment;
+        console.log("Payment status:", payment.status);
 
         // Redirect based on payment status
         if (payment.status === "completed" || status_code === "2") {
-          res.redirect(`${frontendUrl}/user/payment/return?order_id=${order_id}&payment_id=${payment_id}`);
+          console.log("Redirecting to success page");
+          res.redirect(
+            `${frontendUrl}/user/payment/return?order_id=${order_id}&payment_id=${payment_id || ""}`
+          );
         } else if (payment.status === "failed" || status_code === "-2") {
-          res.redirect(`${frontendUrl}/user/payment/failed?order_id=${order_id}`);
+          console.log("Redirecting to failed page");
+          res.redirect(
+            `${frontendUrl}/user/payment/failed?order_id=${order_id}`
+          );
+        } else if (payment.status === "cancelled" || status_code === "-1") {
+          console.log("Redirecting to cancel page");
+          res.redirect(
+            `${frontendUrl}/user/payment/cancel?order_id=${order_id}`
+          );
         } else {
-          res.redirect(`${frontendUrl}/user/payment/pending?order_id=${order_id}`);
+          console.log("Payment status unclear, redirecting to pending page");
+          res.redirect(
+            `${frontendUrl}/user/payment/pending?order_id=${order_id}`
+          );
         }
         return res;
       } catch (err) {
         console.error("Error in handlePaymentReturn:", err);
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
         res.redirect(`${frontendUrl}/user/payment/error`);
         return res;
       }
     },
     /**
      * Handles the redirect from PayHere when payment is cancelled.
-     * Redirects user to cancellation page.
+     * Updates payment and order status to cancelled, then redirects user to cancellation page.
      */
     handlePaymentCancel: async (req, res) => {
       try {
         const { order_id } = req.query;
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-        
-        // Optionally update payment status to cancelled
+        console.log("=== PAYMENT CANCEL HANDLER ===");
+        console.log("Order ID:", order_id);
+
+        // Update payment and order status to cancelled
         if (order_id) {
-          const paymentResult = await service.getPaymentByOrderId(order_id as string);
-          if (paymentResult.success && paymentResult.payment) {
-            // Payment cancellation will be handled by the webhook if user cancels during payment
-            // This is just for the redirect
+          try {
+            console.log("Attempting to update payment/order status to CANCELLED...");
+            
+            // Simulate webhook cancellation by calling validatePayment with status_code -1
+            const result = await service.validatePayment({
+              merchant_id: process.env.PAYHERE_MERCHANT_ID || "",
+              order_id: order_id as string,
+              payment_id: "",
+              payhere_amount: "0",
+              payhere_currency: "LKR",
+              status_code: "-1", // -1 indicates cancelled
+              md5sig: "", // Not validating hash for manual cancellation
+              method: "manual_cancel",
+            });
+            
+            console.log("Validation result:", result);
+            
+            if (result.success) {
+              console.log(`✓ Payment and Order for order_id ${order_id} updated to CANCELLED`);
+            } else {
+              console.error(`✗ Failed to update status: ${result.error}`);
+            }
+          } catch (error) {
+            console.error("Error updating payment/order status:", error);
+            // Continue to redirect even if update fails
           }
+        } else {
+          console.log("No order_id provided in query");
         }
-        
-        res.redirect(`${frontendUrl}/payment/cancelled?order_id=${order_id || ""}`);
+
+        console.log("Redirecting to cancel page...");
+        res.redirect(
+          `${frontendUrl}/user/payment/cancel?order_id=${order_id || ""}`
+        );
         return res;
       } catch (err) {
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-        res.redirect(`${frontendUrl}/payment/error`);
+        console.error("Error in handlePaymentCancel:", err);
+        res.redirect(`${frontendUrl}/user/payment/error`);
         return res;
       }
     },

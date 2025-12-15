@@ -169,13 +169,12 @@ const VehicleDetailsPage: React.FC = () => {
       }
 
       // Create payment session
-      const frontendUrl = window.location.origin;
       const paymentData = {
         order_id: order._id,
         payment_type: "purchase",
         amount: 50000, // Charge only the advance payment
-        returnUrl: `${frontendUrl}/user/payment/return`,
-        cancelUrl: `${frontendUrl}/user/payment/cancel`,
+        returnUrl: `${apiURL}api/v1/payment/payment-return`,
+        cancelUrl: `${apiURL}api/v1/payment/payment-cancel`,
       };
 
       const paymentResponse = await buyerService.createPayment(paymentData);
@@ -510,8 +509,13 @@ const VehicleDetailsPage: React.FC = () => {
                         To secure the vehicle, you must make an advance payment
                         of <strong>LKR 50,000</strong>. After this payment, you
                         must complete the full payment and collect the vehicle
-                        within <strong>7 days</strong>. Failure to do so will
+                        within <strong>14 days</strong>. Failure to do so will
                         result in the cancellation of the advance payment.
+                        <br /><br />
+                        <span className="text-red-600 dark:text-red-400 font-semibold">
+                          ⚠️ Important: The LKR 50,000 advance payment is non-refundable 
+                          and will be deducted from the total vehicle cost.
+                        </span>
                       </p>
                     </div>
                   </div>

@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { itemVariants, cardHover } from "./animations/variants"; // Adjust path as needed
-import { HeartIcon } from "@/assets/icons/icons";
+import { HeartIcon, StarIcon } from "@/assets/icons/icons";
 import type { Vehicle } from "@/types";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay, Pagination } from "swiper/modules";
@@ -246,6 +246,64 @@ export const VehicleCard: React.FC<{
 
   // Get seller shop name
   const sellerShopName = seller_id?.business_name || "Seller";
+  const sellerRating = seller_id?.rating || 0;
+
+  // Star Rating Component
+  const StarRating = ({ rating }: { rating: number }) => {
+    const stars = [];
+    
+    // If rating is 0, show 5 empty stars
+    if (rating === 0) {
+      for (let i = 0; i < 5; i++) {
+        stars.push(
+          <span key={`empty-${i}`} className="text-gray-300 dark:text-gray-600">
+            <StarIcon />
+          </span>
+        );
+      }
+      return <div className="flex items-center gap-0.5">{stars}</div>;
+    }
+    
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    
+    // Full stars - gold color
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(
+        <span key={`full-${i}`} className="text-yellow-400">
+          <StarIcon />
+        </span>
+      );
+    }
+    
+    // Half star - gradient gold/gray
+    if (hasHalfStar && fullStars < 5) {
+      stars.push(
+        <span key="half" className="relative inline-block w-4 h-4">
+          <span className="absolute inset-0 text-gray-300 dark:text-gray-600">
+            <StarIcon />
+          </span>
+          <span className="absolute inset-0 overflow-hidden" style={{ width: '50%' }}>
+            <span className="text-yellow-400">
+              <StarIcon />
+            </span>
+          </span>
+        </span>
+      );
+    }
+    
+    // Empty stars
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(
+        <span key={`empty-${i}`} className="text-gray-300 dark:text-gray-600">
+          <StarIcon />
+        </span>
+      );
+    }
+    
+    return <div className="flex items-center gap-0.5">{stars}</div>;
+  };
 
   // Get seller logo (prefer shop_logo, fallback to user profile_image)
   const sellerLogo = `${apiURL}${seller_id.shop_logo}`;
@@ -347,9 +405,17 @@ export const VehicleCard: React.FC<{
             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
               Sold by
             </p>
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
-              {sellerShopName}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
+                {sellerShopName}
+              </p>
+              <div className="flex items-center gap-1 text-xs">
+                <StarRating rating={sellerRating} />
+                <span className="text-gray-600 dark:text-gray-400 ml-0.5">
+                  ({sellerRating.toFixed(1)})
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

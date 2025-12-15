@@ -4,6 +4,7 @@ import {
   TestDriveBookingDTO,
   TestDriveSlotDTO,
   FeedbackDTO,
+  UpdateTestDriveBookingDTO
 } from "../../dtos/testDrive.DTO";
 import { container } from "../../di/container";
 import { ITestDriveController } from "./testDrive.controller";
@@ -364,7 +365,7 @@ export const testDriveRouter = (): Router => {
    *       '500':
    *         description: Internal server error.
    */
-  router.put("/bookings/:id", validateDto(TestDriveBookingDTO), (req, res) =>
+  router.put("/bookings/:id", validateDto(UpdateTestDriveBookingDTO), (req, res) =>
     controller.updateBooking(req, res)
   );
 

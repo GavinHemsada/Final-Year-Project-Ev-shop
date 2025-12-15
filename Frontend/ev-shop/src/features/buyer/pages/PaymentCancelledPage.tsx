@@ -1,20 +1,61 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { XCircleIcon } from "@/assets/icons/icons";
 import { useToast } from "@/context/ToastContext";
+import { buyerService } from "../buyerService";
+import { Loader } from "@/components/Loader";
+
+interface PaymentInfo {
+  _id: string;
+  order_id: {
+    _id: string;
+    total_amount: number;
+  };
+  payment_status: string;
+  amount: number;
+}
 
 const PaymentCancelledPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { showToast } = useToast();
+  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const orderId = searchParams.get("order_id");
 
   useEffect(() => {
+    const fetchPaymentStatus = async () => {
+      if (!orderId) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Fetch payment information from the database
+        const payment = await buyerService.getPaymentByOrderId(orderId);
+        setPaymentInfo(payment);
+      } catch (error) {
+        console.error("Failed to fetch payment status:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPaymentStatus();
+    
     showToast({
       text: "Payment was cancelled.",
       type: "warning",
     });
-  }, [showToast]);
+  }, [orderId, showToast]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <Loader size={60} color="#4f46e5" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4">
@@ -31,9 +72,27 @@ const PaymentCancelledPage: React.FC = () => {
         </p>
 
         {orderId && (
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Order ID</p>
-            <p className="font-semibold dark:text-white">{orderId}</p>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6 space-y-2">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Order ID</p>
+              <p className="font-semibold dark:text-white">{orderId}</p>
+            </div>
+            {paymentInfo && (
+              <>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Payment Status</p>
+                  <p className="font-semibold text-yellow-600 dark:text-yellow-400 capitalize">
+                    {paymentInfo.payment_status}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Amount</p>
+                  <p className="font-semibold dark:text-white">
+                    LKR {paymentInfo.amount.toLocaleString("en-US")}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         )}
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { selectUserId, setActiveRole, addNewRole } from "@/context/authSlice";
 import { CloseIcon } from "@/assets/icons/icons";
@@ -29,7 +29,21 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState("");
+  const [shouldNavigate, setShouldNavigate] = useState(false);
   const navigate = useNavigate();
+
+  // Navigate to financial dashboard after Redux state updates
+  useEffect(() => {
+    if (shouldNavigate && successMessage) {
+      const timer = setTimeout(async () => {
+        // Set active role to finance before navigating
+        await dispatch(setActiveRole("finance"));
+        navigate("/financial/dashboard");
+        setShouldNavigate(false); // Reset the flag
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldNavigate, successMessage, navigate, dispatch]);
   /**
    * Handles changes for all form inputs.
    */
@@ -112,6 +126,9 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
         message: "Successfully register for new Financial Institution",
         type: "success",
       });
+      dispatch(addNewRole("finance"));
+      setSuccessMessage("Application submitted successfully!");
+      setShouldNavigate(true); // Trigger navigation via useEffect
       setFormData({
         name: "",
         type: "",
@@ -124,7 +141,7 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
       setAlert?.({
         id: Date.now(),
         title: "Fail Registration",
-        message: "An unexpected error occurred. Please try again.",
+        message: err?.response.data.message ,
         type: "error",
       });
     } finally {
