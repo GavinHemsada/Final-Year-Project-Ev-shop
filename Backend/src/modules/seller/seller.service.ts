@@ -184,6 +184,7 @@ export function sellerService(
 
         // Invalidate the cache for the list of all sellers.
         await CacheService.delete("sellers");
+        await CacheService.deletePattern(`seller_*`);
 
         return { success: true, seller };
       } catch (err) {
@@ -233,6 +234,7 @@ export function sellerService(
           CacheService.delete("sellers"),
           CacheService.delete(`seller_${id}`),
           CacheService.delete(`seller_user_${existingSeller.user_id}`),
+          CacheService.deletePattern(`seller_*`),
         ]);
 
         return { success: true, seller };
@@ -271,6 +273,7 @@ export function sellerService(
           CacheService.delete("sellers"),
           CacheService.delete(`seller_${id}`),
           CacheService.delete(`seller_user_${existingSeller.user_id}`),
+          CacheService.deletePattern(`seller_*`),
         ]);
 
         return { success: true, seller };
@@ -292,6 +295,7 @@ export function sellerService(
             CacheService.delete("sellers"),
             CacheService.delete(`seller_${id}`),
             CacheService.delete(`seller_user_${existingSeller.user_id}`),
+            CacheService.deletePattern(`seller_*`),
           ]);
         }
         const success = await repo.delete(id);

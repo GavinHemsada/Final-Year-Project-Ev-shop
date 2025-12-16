@@ -1,4 +1,4 @@
-import ort from "onnxruntime-node";
+const ort = require("onnxruntime-node");
 import path from "path";
 
 export type InputType = {

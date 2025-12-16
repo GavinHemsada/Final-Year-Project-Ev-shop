@@ -63,7 +63,7 @@ export const ReviewRepository: IReviewRepository = {
   getAllReviews: withErrorHandling(async () => {
     return await Review.find()
       .populate("reviewer_id", "name profile_image")
-      .populate("target_id", "business_name shop_logo")
+      .populate("target_id", "_id business_name shop_logo")
       .populate({
         path: "order_id",
         select: "listing_id",

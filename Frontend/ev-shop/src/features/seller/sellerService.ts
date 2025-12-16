@@ -255,4 +255,9 @@ export const sellerService = {
     const response = await axiosPrivate.patch(`/notification/${notificationId}/read`);
     return response.data;
   },
+  // Reviews operations
+  getAllReviews: async () => {
+    const response = await axiosPrivate.get(`/review/reviews`);
+    return response.data;
+  },
 };

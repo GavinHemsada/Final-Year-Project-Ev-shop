@@ -40,6 +40,7 @@ import { evRouter } from "./modules/ev/ev.router";
 import { savedVehicleRouter } from "./modules/savedVehicle/savedVehicle.router";
 import { repairLocationRouter } from "./modules/repairLocation/repairLocation.router";
 import { IRepairLocationController } from "./modules/repairLocation/repairLocation.controller";
+import { mlRouter } from "./modules/ml/ml.router";
 
 // Logging utilities
 import morgan from "morgan";
@@ -154,7 +155,7 @@ app.use(passport.session());
 // This protects your API endpoints from brute-force attacks and abuse.
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Limit each IP to 200 requests per window
+  max: 1000, // Limit each IP to 1000 requests per window
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -237,6 +238,9 @@ apiV1Router.get("/repair-location/active", (req, res) => repairLocationControlle
 apiV1Router.use("/ev", protectJWT, evRouter());
 apiV1Router.use("/saved-vehicle", protectJWT, savedVehicleRouter());
 apiV1Router.use("/repair-location", protectJWT, repairLocationRouter());
+
+// ML Test Router
+apiV1Router.use("/ml-test", protectJWT, mlRouter());
 
 // ============================================
 // MONITORING & HEALTH CHECK ENDPOINTS
