@@ -108,10 +108,15 @@ const LoginPage = () => {
       dispatch(setUserData({userid: respons.userid, roles: roleList, ids: {userid: respons.userid} } ));
       dispatch(setActiveRole(roleList[0])); 
       showMessage("Login Successful", respons.message, "success");
+      console.log(roleList[0]);
       // Redirect to the user dashboard after a short delay.
       setTimeout(() => {
-        nav("/user/dashboard", { replace: true });
-      }, 2000); // Wait 2 seconds before navigating
+        if(roleList[0] === 'admin'){
+          nav("/admin/dashboard", { replace: true });
+        }else if(roleList[0] === 'user'){
+          nav("/user/dashboard", { replace: true });
+        }
+      }, 2000); 
     } catch (err: any) {
       // Handle different types of errors (response error vs. network error).
       if (err.response) {

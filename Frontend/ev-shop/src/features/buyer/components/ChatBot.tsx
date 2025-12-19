@@ -69,7 +69,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose }) => {
 
   return (
     // Main container for the chatbot, positioned fixed at the bottom right
-    <div className="fixed bottom-24 right-6 w-80 h-[28rem] bg-white rounded-xl shadow-2xl flex flex-col z-40 animate-slideInUp dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
+    <div className="fixed bottom-24 right-6 w-110 h-[33rem] bg-white rounded-xl shadow-2xl flex flex-col z-40 animate-slideInUp dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
       {/* Chatbot header */}
       <header className="bg-blue-600 text-white p-4 flex justify-between items-center rounded-t-xl dark:bg-blue-700">
         <h3 className="font-bold text-lg">EV-Shop Assistant</h3>

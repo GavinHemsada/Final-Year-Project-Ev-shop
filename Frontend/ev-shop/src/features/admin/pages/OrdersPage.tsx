@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "../adminService";
 import { Loader } from "@/components/Loader";
 import type { AlertProps } from "@/types";
+import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 
 export const OrdersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void }> = ({
   setAlert,
@@ -39,6 +40,14 @@ export const OrdersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void
         order.order_status?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
+  
+  const reportData = filteredOrders.map(order => ({
+    id: order._id,
+    date: order.order_date ? new Date(order.order_date).toLocaleDateString() : "N/A",
+    status: order.order_status || "pending",
+    amount: `LKR ${order.total_amount?.toLocaleString("en-US") || "0"}`,
+    customer: order.user_id?.name || "N/A"
+  }));
 
   if (isLoading) {
     return (
@@ -50,15 +59,29 @@ export const OrdersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center sm:flex-row flex-col gap-4">
         <h2 className="text-2xl font-bold dark:text-white">Orders Management</h2>
-        <input
-          type="text"
-          placeholder="Search orders..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-        />
+        <div className="flex gap-3 w-full sm:w-auto">
+          <ReportGeneratorButton
+            data={reportData}
+            columns={[
+              { header: "Order ID", dataKey: "id" },
+              { header: "Customer", dataKey: "customer" },
+              { header: "Date", dataKey: "date" },
+              { header: "Status", dataKey: "status" },
+              { header: "Amount", dataKey: "amount" },
+            ]}
+            title="Orders Management Report"
+            filename="orders_report"
+          />
+          <input
+            type="text"
+            placeholder="Search orders..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white flex-1 sm:flex-none"
+          />
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:border dark:border-gray-700 overflow-hidden">
@@ -143,4 +166,3 @@ export const OrdersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void
     </div>
   );
 };
-

@@ -4,6 +4,7 @@ import { adminService } from "../adminService";
 import { Loader } from "@/components/Loader";
 import { TrashIcon } from "@/assets/icons/icons";
 import type { AlertProps } from "@/types";
+import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 
 export const FinancialPage: React.FC<{ setAlert: (alert: AlertProps | null) => void }> = ({
   setAlert,
@@ -39,6 +40,12 @@ export const FinancialPage: React.FC<{ setAlert: (alert: AlertProps | null) => v
         financial.email?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
+  
+  const reportData = filteredFinancials.map(financial => ({
+    name: financial.name || "N/A",
+    email: financial.email || "N/A",
+    phone: financial.phone || "N/A"
+  }));
 
   if (isLoading) {
     return (
@@ -50,15 +57,27 @@ export const FinancialPage: React.FC<{ setAlert: (alert: AlertProps | null) => v
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center sm:flex-row flex-col gap-4">
         <h2 className="text-2xl font-bold dark:text-white">Financial Institutions Management</h2>
-        <input
-          type="text"
-          placeholder="Search financial institutions..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-        />
+        <div className="flex gap-3 w-full sm:w-auto">
+          <ReportGeneratorButton
+            data={reportData}
+            columns={[
+              { header: "Name", dataKey: "name" },
+              { header: "Email", dataKey: "email" },
+              { header: "Phone", dataKey: "phone" },
+            ]}
+            title="Financial Institutions Report"
+            filename="financial_institutions_report"
+          />
+          <input
+            type="text"
+            placeholder="Search financial institutions..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white flex-1 sm:flex-none"
+          />
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:border dark:border-gray-700 overflow-hidden">
@@ -122,4 +141,3 @@ export const FinancialPage: React.FC<{ setAlert: (alert: AlertProps | null) => v
     </div>
   );
 };
-

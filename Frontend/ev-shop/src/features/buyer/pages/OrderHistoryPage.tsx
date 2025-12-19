@@ -11,6 +11,7 @@ const getStatusChip = (status: Order["order_status"]): string => {
   switch (status?.toLowerCase()) {
     case "delivered":
     case "confirmed":
+      return "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300";
     case "completed":
       return "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300";
     case "processing":
@@ -172,7 +173,7 @@ const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> 
                   Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
-                  Vehicle
+                  Vehicle Model
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
                   Location

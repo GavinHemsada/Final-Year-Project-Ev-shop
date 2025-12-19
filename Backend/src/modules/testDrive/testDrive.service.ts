@@ -99,6 +99,11 @@ export interface ITestDriveService {
     id: string
   ): Promise<{ success: boolean; booking?: any; error?: string }>;
   /**
+   * Finds all test drive bookings.
+   * @returns A promise that resolves to an object containing an array of all bookings or an error.
+   */
+  findAllBookings(): Promise<{ success: boolean; bookings?: any[]; error?: string }>;
+  /**
    * Finds all test drive bookings made by a specific customer.
    * @param customerId - The ID of the customer.
    * @returns A promise that resolves to an object containing an array of the customer's bookings or an error.
@@ -403,6 +408,28 @@ export function testDriveService(
         return { success: true, booking: cachedBooking };
       } catch (err) {
         return { success: false, error: "Failed to fetch booking" };
+      }
+    },
+    /**
+     * Finds all bookings, utilizing a cache-aside pattern.
+     */
+    findAllBookings: async () => {
+      try {
+        const cachekey = "bookings_all";
+        const cachedBookings = await CacheService.getOrSet<any[] | null>(
+          cachekey,
+          async () => {
+            const bookings = await testDriveRepo.findAllBookings();
+            return bookings ?? null;
+          },
+          3600 // Cache for 1 hour
+        );
+        if (!cachedBookings) {
+          return { success: false, error: "No bookings found" };
+        }
+        return { success: true, bookings: cachedBookings };
+      } catch (err) {
+        return { success: false, error: "Failed to fetch all bookings" };
       }
     },
     /**

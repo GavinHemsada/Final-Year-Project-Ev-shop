@@ -59,6 +59,12 @@ export interface ITestDriveController {
    */
   createBooking(req: Request, res: Response): Promise<Response>;
   /**
+    * Handles the HTTP request to get all test drive bookings.
+    * @param req - The Express request object.
+    * @param res - The Express response object.
+    */
+  getAllBookings(req: Request, res: Response): Promise<Response>;
+  /**
    * Handles the HTTP request to get a booking by its unique ID.
    * @param req - The Express request object, containing the booking ID in `req.params`.
    * @param res - The Express response object.
@@ -236,6 +242,18 @@ export function testDriveController(
         return handleResult(res, result, 201);
       } catch (err) {
         return handleError(res, err, "creating booking");
+      }
+    },
+
+    /**
+     * Retrieves all test drive bookings.
+     */
+    getAllBookings: async (_req, res) => {
+      try {
+        const result = await service.findAllBookings();
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "fetching all bookings");
       }
     },
 

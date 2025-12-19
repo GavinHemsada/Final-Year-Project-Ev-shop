@@ -81,6 +81,7 @@ export interface ITestDriveRepository {
    * @param customerId - The ID of the customer.
    * @returns A promise that resolves to an array of test drive booking documents or null.
    */
+  findAllBookings(): Promise<ITestDriveBooking[] | null>;
   findBookingsByCustomerId(
     customerId: string
   ): Promise<ITestDriveBooking[] | null>;
@@ -281,6 +282,31 @@ export const TestDriveRepository: ITestDriveRepository = {
   /** Finds a single TestDriveBooking by ID and populates the related slot information. */
   findBookingById: withErrorHandling(async (id) => {
     return await TestDriveBooking.findById(id).populate("slot_id");
+  }),
+
+  /** Finds all TestDriveBookings, sorted by most recent. */
+  findAllBookings: withErrorHandling(async () => {
+    return await TestDriveBooking.find({})
+      .populate({
+        path: "customer_id",
+        select: "name email phone",
+      })
+      .populate({
+        path: "slot_id",
+        select: "location available_date",
+        populate: {
+          path: "seller_id",
+          select: "business_name",
+        },
+      })
+      .populate({
+        path: "slot_id",
+        populate: {
+          path: "model_id",
+          select: "model_name",
+        }
+      })
+      .sort({ booking_date: -1 });
   }),
 
   /** Finds all TestDriveBookings for a given customer, sorted by most recent. */

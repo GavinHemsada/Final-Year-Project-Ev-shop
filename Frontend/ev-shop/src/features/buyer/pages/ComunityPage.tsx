@@ -463,646 +463,665 @@ export const CommunityPage: React.FC<{
 
 
   return (
-    <div className="space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen pb-8">
-      {/* Tab Switcher */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-        className="bg-white rounded-2xl shadow-lg dark:bg-gray-800 dark:border dark:border-gray-700 overflow-hidden"
-      >
-        <div className="flex">
-          <button
-            onClick={() => {
-              setActiveTab("community");
-              setSearchInput("");
-              setSearchQuery("");
-            }}
-            className={`flex-1 px-6 py-5 font-semibold transition-all duration-300 relative ${
-              activeTab === "community"
-                ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
-                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <FaUsers className="text-xl" />
-              <span>Community Posts</span>
-            </div>
-            {activeTab === "community" && (
-              <motion.div
-                layoutId="activeTab"
-                className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-purple-600"
-                initial={false}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("myPosts")}
-            className={`flex-1 px-6 py-5 font-semibold transition-all duration-300 relative ${
-              activeTab === "myPosts"
-                ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
-                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <FaUser className="text-xl" />
-              <span>My Posts</span>
-            </div>
-            {activeTab === "myPosts" && (
-              <motion.div
-                layoutId="activeTab"
-                className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-purple-600"
-                initial={false}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              />
-            )}
-          </button>
+    <div className="min-h-screen pb-12 px-4 sm:px-6 lg:px-8 dark:from-gray-900 dark:via-blue-900/20 dark:to-blue-900/20">
+      <div className="max-w-7xl mx-auto space-y-8 pt-8">
+        {/* Header Section */}
+        <motion.div
+          initial={{ opacity: 0, y: -30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="text-center mb-12"
+        >
+          <h1 className="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-blue-600 via-blue-600 to-sky-600 bg-clip-text text-transparent mb-4">
+            Community Hub
+          </h1>
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            Connect, share, and engage with our vibrant community
+          </p>
+        </motion.div>
 
-        </div>
-      </motion.div>
-
-      {/* Search Bar for Community Posts */}
-      {activeTab === "community" && (
+        {/* Tab Switcher with Glassmorphism */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="bg-white p-5 rounded-2xl shadow-lg dark:bg-gray-800 dark:border dark:border-gray-700"
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="backdrop-blur-xl bg-white/70 dark:bg-gray-800/70 rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/50 overflow-hidden"
         >
-          <div className="flex items-center gap-3">
-            <div className="flex-1 relative">
-              <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && setSearchQuery(searchInput)
-                }
-                placeholder="Search posts by title or content..."
-                className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all"
-              />
-            </div>
+          <div className="flex p-2 gap-2">
             <button
-              onClick={() => setSearchQuery(searchInput)}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg flex items-center gap-2"
-              aria-label="Search"
+              onClick={() => {
+                setActiveTab("community");
+                setSearchInput("");
+                setSearchQuery("");
+              }}
+              className={`flex-1 px-8 py-4 font-bold rounded-2xl transition-all duration-500 relative overflow-hidden group ${
+                activeTab === "community"
+                  ? "text-white shadow-xl"
+                  : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+              }`}
             >
-              <SearchIcon className="h-5 w-5" />
-              <span className="font-semibold">Search</span>
+              {activeTab === "community" && (
+                <motion.div
+                  layoutId="activeTabBg"
+                  className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-600 to-sky-600"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+              <div className="flex items-center justify-center gap-3 relative z-10">
+                <FaUsers className="text-2xl" />
+                <span className="text-lg">Community Posts</span>
+              </div>
             </button>
-            {searchInput && (
-              <button
-                onClick={() => {
-                  setSearchInput("");
-                  setSearchQuery("");
-                }}
-                className="px-4 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors font-semibold"
-              >
-                Clear
-              </button>
-            )}
+            <button
+              onClick={() => setActiveTab("myPosts")}
+              className={`flex-1 px-8 py-4 font-bold rounded-2xl transition-all duration-500 relative overflow-hidden group ${
+                activeTab === "myPosts"
+                  ? "text-white shadow-xl"
+                  : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+              }`}
+            >
+              {activeTab === "myPosts" && (
+                <motion.div
+                  layoutId="activeTabBg"
+                  className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-600 to-sky-600"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+              <div className="flex items-center justify-center gap-3 relative z-10">
+                <FaUser className="text-2xl" />
+                <span className="text-lg">My Posts</span>
+              </div>
+            </button>
           </div>
-          {searchQuery && (
+        </motion.div>
+
+        {/* Search Bar for Community Posts */}
+        {activeTab === "community" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="backdrop-blur-xl bg-white/70 dark:bg-gray-800/70 p-6 rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/50"
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex-1 relative group">
+                <SearchIcon className="absolute left-5 top-1/2 transform -translate-y-1/2 h-6 w-6 text-blue-500 group-focus-within:text-sky-500 transition-colors duration-300" />
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && setSearchQuery(searchInput)
+                  }
+                  placeholder="Search posts by title or content..."
+                  className="w-full pl-14 pr-6 py-4 bg-white/50 dark:bg-gray-700/50 border-2 border-blue-200/50 dark:border-blue-500/30 rounded-2xl focus:ring-4 focus:ring-blue-500/30 focus:border-blue-500 dark:text-white transition-all duration-300 placeholder-gray-400 text-lg font-medium backdrop-blur-sm"
+                />
+              </div>
+              <button
+                onClick={() => setSearchQuery(searchInput)}
+                className="px-8 py-4 bg-gradient-to-r from-blue-600 via-blue-600 to-sky-600 text-white rounded-2xl hover:shadow-2xl hover:scale-105 transition-all duration-300 flex items-center gap-3 font-bold text-lg"
+                aria-label="Search"
+              >
+                <SearchIcon className="h-6 w-6" />
+                <span>Search</span>
+              </button>
+              {searchInput && (
+                <motion.button
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  onClick={() => {
+                    setSearchInput("");
+                    setSearchQuery("");
+                  }}
+                  className="px-6 py-4 bg-gray-200/80 dark:bg-gray-700/80 text-gray-800 dark:text-gray-200 rounded-2xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-300 font-bold backdrop-blur-sm"
+                >
+                  Clear
+                </motion.button>
+              )}
+            </div>
+            {searchQuery && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="mt-4 text-base text-gray-600 dark:text-gray-300"
+              >
+                Showing results for:{" "}
+                <span className="font-bold text-transparent bg-gradient-to-r from-blue-600 to-sky-600 bg-clip-text">
+                  "{searchQuery}"
+                </span>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Create/Edit Post Section */}
+        <AnimatePresence>
+          {showPostForm && (
+            <motion.div
+              initial={{ opacity: 0, y: -30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -30, scale: 0.95 }}
+              transition={{ duration: 0.4, type: "spring" }}
+              className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 p-8 rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/50"
+            >
+              <div className="flex items-center gap-4 mb-8">
+                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 via-blue-500 to-sky-500 flex items-center justify-center shadow-lg">
+                  <FaPlusCircle className="h-8 w-8 text-white" />
+                </div>
+                <h2 className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-sky-600 bg-clip-text text-transparent">
+                  {editingPost ? "Edit Post" : "Create New Post"}
+                </h2>
+              </div>
+              <form onSubmit={handlePostSubmit} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-3 uppercase tracking-wide">
+                    Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
+                    required
+                    minLength={5}
+                    placeholder="Enter post title (min 5 characters)"
+                    className="w-full px-6 py-4 bg-white/50 dark:bg-gray-700/50 border-2 border-blue-200/50 dark:border-blue-500/30 rounded-2xl focus:ring-4 focus:ring-blue-500/30 focus:border-blue-500 dark:text-white transition-all duration-300 text-lg font-medium backdrop-blur-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-3 uppercase tracking-wide">
+                    Content *
+                  </label>
+                  <textarea
+                    value={formData.content}
+                    onChange={(e) =>
+                      setFormData({ ...formData, content: e.target.value })
+                    }
+                    required
+                    rows={6}
+                    placeholder="What's on your mind? Share your thoughts with the community..."
+                    className="w-full px-6 py-4 bg-white/50 dark:bg-gray-700/50 border-2 border-blue-200/50 dark:border-blue-500/30 rounded-2xl focus:ring-4 focus:ring-blue-500/30 focus:border-blue-500 dark:text-white resize-none transition-all duration-300 text-lg font-medium backdrop-blur-sm"
+                  />
+                </div>
+                <div className="flex gap-4 pt-4">
+                  <button
+                    type="submit"
+                    disabled={
+                      createPostMutation.isPending || updatePostMutation.isPending
+                    }
+                    className="flex-1 bg-gradient-to-r from-blue-600 via-blue-600 to-sky-600 text-white py-4 rounded-2xl font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    {createPostMutation.isPending ||
+                    updatePostMutation.isPending ? (
+                      <Loader size={10} color="#ffffff" />
+                    ) : editingPost ? (
+                      "Update Post"
+                    ) : (
+                      "Create Post"
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPostForm(false);
+                      setEditingPost(null);
+                      setFormData({ title: "", content: "" });
+                    }}
+                    className="flex-1 bg-gray-200/80 dark:bg-gray-700/80 text-gray-800 dark:text-gray-200 py-4 rounded-2xl font-bold text-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-300 backdrop-blur-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Create Post Button */}
+        {!showPostForm && activeTab === "myPosts" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="backdrop-blur-xl bg-white/70 dark:bg-gray-800/70 p-6 rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/50"
+          >
+            <button
+              onClick={() => setShowPostForm(true)}
+              className="w-full text-left p-6 border-3 border-dashed border-blue-300/60 dark:border-blue-500/40 rounded-2xl hover:border-blue-500 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-sky-50/50 dark:hover:from-blue-900/20 dark:hover:to-sky-900/20 transition-all duration-300 group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 via-blue-500 to-sky-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                  <FaPlusCircle className="h-7 w-7 text-white" />
+                </div>
+                <p className="text-gray-700 dark:text-gray-300 font-bold text-lg group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-sky-600 group-hover:bg-clip-text transition-all duration-300">
+                  What's on your mind? Create a new post...
+                </p>
+              </div>
+            </button>
+          </motion.div>
+        )}
+
+
+
+        {/* Posts and Replies Feed */}
+        <div className="space-y-6">
+          {/* Error State */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="backdrop-blur-xl bg-red-50/80 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-700 rounded-2xl p-6 shadow-xl"
+            >
+              <div className="flex items-center gap-4">
+                <svg className="h-8 w-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-red-800 dark:text-red-200 font-bold text-lg">
+                  Failed to load posts. Please try again later.
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Loading State */}
+          {isLoading ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="mt-3 text-sm text-gray-600 dark:text-gray-400"
+              className="backdrop-blur-xl bg-white/70 dark:bg-gray-800/70 rounded-3xl shadow-2xl p-16 text-center border border-white/20 dark:border-gray-700/50"
             >
-              Showing results for:{" "}
-              <span className="font-semibold text-blue-600 dark:text-blue-400">
-                "{searchQuery}"
-              </span>
+              <Loader size={16} color="#2563eb" />
+              <p className="mt-6 text-gray-600 dark:text-gray-300 text-xl font-semibold">Loading posts...</p>
             </motion.div>
-          )}
-        </motion.div>
-      )}
-
-      {/* Create/Edit Post Section */}
-      <AnimatePresence>
-        {showPostForm && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="bg-white p-6 rounded-2xl shadow-xl dark:bg-gray-800 dark:border dark:border-gray-700 border border-gray-100"
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <FaPlusCircle className="h-6 w-6 text-white" />
-              </div>
-              <h2 className="text-2xl font-bold dark:text-white">
-                {editingPost ? "Edit Post" : "Create New Post"}
-              </h2>
-            </div>
-            <form onSubmit={handlePostSubmit} className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Title *
-                </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  required
-                  minLength={5}
-                  placeholder="Enter post title (min 5 characters)"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Content *
-                </label>
-                <textarea
-                  value={formData.content}
-                  onChange={(e) =>
-                    setFormData({ ...formData, content: e.target.value })
-                  }
-                  required
-                  rows={5}
-                  placeholder="What's on your mind? Share your thoughts with the community..."
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none transition-all"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={
-                    createPostMutation.isPending || updatePostMutation.isPending
-                  }
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  {createPostMutation.isPending ||
-                  updatePostMutation.isPending ? (
-                    <Loader size={10} color="#ffffff" />
-                  ) : editingPost ? (
-                    "Update Post"
-                  ) : (
-                    "Create Post"
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPostForm(false);
-                    setEditingPost(null);
-                    setFormData({ title: "", content: "" });
-                  }}
-                  className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-colors dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Create Post Button */}
-      {!showPostForm && activeTab === "myPosts" && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="bg-white p-5 rounded-2xl shadow-lg dark:bg-gray-800 dark:border dark:border-gray-700"
-        >
-          <button
-            onClick={() => setShowPostForm(true)}
-            className="w-full text-left p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-300 dark:border-gray-600 dark:hover:border-blue-600 dark:hover:bg-blue-900/20 group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <FaPlusCircle className="h-5 w-5 text-white" />
-              </div>
-              <p className="text-gray-600 dark:text-gray-400 font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                What's on your mind? Create a new post...
-              </p>
-            </div>
-          </button>
-        </motion.div>
-      )}
-
-
-
-      {/* Posts and Replies Feed */}
-      <div className="space-y-6">
-        {/* Error State */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4"
-          >
-            <div className="flex items-center gap-3">
-              <svg className="h-5 w-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-red-800 dark:text-red-200 font-medium">
-                Failed to load posts. Please try again later.
-              </p>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Loading State */}
-        {isLoading ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-12 text-center"
-          >
-            <Loader size={12} color="#3b82f6" />
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading posts...</p>
-          </motion.div>
-        ) : displayedPosts.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white p-12 rounded-2xl shadow-lg dark:bg-gray-800 dark:border dark:border-gray-700 text-center"
-          >
-            <div className="max-w-md mx-auto">
-              <div className="h-24 w-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 flex items-center justify-center">
-                <ChatBubbleIcon className="h-12 w-12 text-blue-500 dark:text-blue-400" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                {activeTab === "community"
-                  ? searchQuery
-                    ? "No posts found"
-                    : "No posts yet"
-                  : activeTab === "myPosts"
-                  ? "No posts yet"
-                  : "No replied posts yet"}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                {activeTab === "community"
-                  ? searchQuery
-                    ? "Try adjusting your search terms or browse all posts."
-                    : "Be the first to share something with the community!"
-                  : activeTab === "myPosts"
-                  ? "Start sharing your thoughts with the community!"
-                  : "Start engaging by replying to community posts!"}
-              </p>
-              {activeTab === "myPosts" && !showPostForm && (
-                <button
-                  onClick={() => setShowPostForm(true)}
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
-                >
-                  <FaPlusCircle className="h-5 w-5" />
-                  Create Your First Post
-                </button>
-              )}
-            </div>
-          </motion.div>
-        ) : (
-          <>
-            <div className="space-y-6">
-              {paginatedPosts.map((post, index) => (
-                <motion.div
-                  key={post._id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                >
-                  <PostItem
-                    post={post}
-                    userId={userId}
-                    userRole={userRole}
-                    onEdit={handleEditClick}
-                    onDelete={handleDeletePost}
-                    onView={handleViewPost}
-                    showEditDelete={activeTab === "myPosts"}
-                    formatDate={formatDate}
-                  />
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-8 flex items-center justify-center gap-2"
-              >
-                {/* Previous Button */}
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-
-                {/* Page Numbers */}
-                <div className="flex gap-2">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                        currentPage === page
-                          ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-                          : "bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Next Button */}
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </motion.div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Replies Modal/Drawer */}
-      <AnimatePresence>
-        {showReplies && selectedPost && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => {
-              setShowReplies(false);
-              setSelectedPost(null);
-              setReplies([]);
-            }}
-          >
+          ) : displayedPosts.length === 0 ? (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-gray-200 dark:border-gray-700"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="backdrop-blur-xl bg-white/70 dark:bg-gray-800/70 p-16 rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/50 text-center"
             >
-              {/* Header */}
-              <div className="p-6 border-b dark:border-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-800">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-bold dark:text-white mb-2">
-                      {selectedPost.title}
-                    </h2>
-                    <p className="text-gray-700 dark:text-gray-300 mb-3">
-                      {selectedPost.content}
-                    </p>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-700 px-3 py-1 rounded-full">
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                          />
-                        </svg>
-                        {selectedPost.views} Views
-                      </span>
-                      <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-700 px-3 py-1 rounded-full">
-                        <ChatBubbleIcon className="h-4 w-4" />
-                        {selectedPost.reply_count} Replies
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setShowReplies(false);
-                      setSelectedPost(null);
-                      setReplies([]);
-                    }}
-                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-white dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                  >
-                    <svg
-                      className="h-6 w-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
+              <div className="max-w-md mx-auto">
+                <div className="h-32 w-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-100 via-blue-100 to-sky-100 dark:from-blue-900/40 dark:via-blue-900/40 dark:to-sky-900/40 flex items-center justify-center shadow-xl">
+                  <ChatBubbleIcon className="h-16 w-16 text-blue-600 dark:text-blue-400" />
                 </div>
-              </div>
-
-              {/* Replies List */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-gray-900">
-                {replies.length === 0 ? (
-                  <div className="text-center py-12">
-                    <ChatBubbleIcon className="h-16 w-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-                    <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">
-                      No replies yet. Be the first to reply!
-                    </p>
-                  </div>
-                ) : (
-                  replies.map((reply, index) => {
-                    // Determine author info - handle user, seller, or financial
-                    const isSeller =
-                      reply.seller_id && reply.seller_id.business_name;
-                    const isFinancial =
-                      reply.financial_id && reply.financial_id.name;
-
-                    let authorName = "";
-                    let authorImage: string | undefined = undefined;
-                    let authorInitial = "";
-                    let authorId = "";
-
-                    if (isSeller && reply.seller_id) {
-                      authorName = reply.seller_id.business_name || "Seller";
-                      authorImage = reply.seller_id.shop_logo;
-                      authorInitial = authorName.charAt(0).toUpperCase();
-                      authorId = reply.seller_id._id;
-                    } else if (isFinancial && reply.financial_id) {
-                      authorName = reply.financial_id.name;
-                      authorInitial = authorName.charAt(0).toUpperCase();
-                      authorId = reply.financial_id._id;
-                    } else if (reply.user_id) {
-                      authorName = reply.user_id.name;
-                      authorImage = reply.user_id.profile_image;
-                      authorInitial = authorName.charAt(0).toUpperCase();
-                      authorId = reply.user_id._id;
-                    } else {
-                      authorName = "Unknown";
-                      authorInitial = "?";
-                    }
-
-                    const isEditing = editingReply?._id === reply._id;
-
-                    const isOwnReply = authorId === userId;
-
-                    return (
-                      <motion.div
-                        key={reply._id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                        className="bg-white dark:bg-gray-800 border-l-4 border-blue-500 pl-5 py-4 rounded-r-xl shadow-md"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            {authorImage ? (
-                              <img
-                                src={`${apiURL}${authorImage}`}
-                                alt={authorName}
-                                className="h-10 w-10 rounded-full object-cover ring-2 ring-blue-100 dark:ring-blue-900"
-                              />
-                            ) : (
-                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-md">
-                                {authorInitial}
-                              </div>
-                            )}
-                            <div>
-                              <span className="font-semibold text-gray-900 dark:text-white block">
-                                {authorName}
-                              </span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {formatDate(reply.createdAt)}
-                              </span>
-                            </div>
-                          </div>
-                          {isOwnReply && (
-                            <div className="relative reply-menu-container">
-                              <button
-                                onClick={() => setReplyMenuOpen(replyMenuOpen === reply._id ? null : reply._id)}
-                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                              >
-                                <svg
-                                  className="h-5 w-5 text-gray-500 dark:text-gray-400"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                </svg>
-                              </button>
-                              {replyMenuOpen === reply._id && (
-                                <motion.div
-                                  initial={{ opacity: 0, scale: 0.95 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  exit={{ opacity: 0, scale: 0.95 }}
-                                  className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 z-10"
-                                >
-                                  <button
-                                    onClick={() => handleEditReply(reply)}
-                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2 rounded-t-lg"
-                                  >
-                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteReply(reply._id)}
-                                    className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 rounded-b-lg"
-                                  >
-                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                    Delete
-                                  </button>
-                                </motion.div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        {isEditing ? (
-                          <div className="space-y-3">
-                            <textarea
-                              value={editReplyContent}
-                              onChange={(e) => setEditReplyContent(e.target.value)}
-                              rows={3}
-                              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none transition-all"
-                            />
-                            <div className="flex gap-3">
-                              <button
-                                onClick={() => handleUpdateReply(reply._id)}
-                                disabled={updateReplyMutation.isPending}
-                                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50"
-                              >
-                                {updateReplyMutation.isPending ? "Updating..." : "Update Reply"}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingReply(null);
-                                  setEditReplyContent("");
-                                }}
-                                className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-xl font-semibold hover:bg-gray-300 transition-colors dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                            {reply.content}
-                          </p>
-                        )}
-                      </motion.div>
-                    );
-                  })
+                <h3 className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-sky-600 bg-clip-text text-transparent mb-4">
+                  {activeTab === "community"
+                    ? searchQuery
+                      ? "No posts found"
+                      : "No posts yet"
+                    : activeTab === "myPosts"
+                    ? "No posts yet"
+                    : "No replied posts yet"}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-8 text-lg">
+                  {activeTab === "community"
+                    ? searchQuery
+                      ? "Try adjusting your search terms or browse all posts."
+                      : "Be the first to share something with the community!"
+                    : activeTab === "myPosts"
+                    ? "Start sharing your thoughts with the community!"
+                    : "Start engaging by replying to community posts!"}
+                </p>
+                {activeTab === "myPosts" && !showPostForm && (
+                  <button
+                    onClick={() => setShowPostForm(true)}
+                    className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 via-blue-600 to-sky-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                  >
+                    <FaPlusCircle className="h-6 w-6" />
+                    Create Your First Post
+                  </button>
                 )}
               </div>
-
-              {/* Reply Form */}
-              {userId && (
-                <div className="p-6 border-t dark:border-gray-700 bg-white dark:bg-gray-800">
-                  <form onSubmit={handleCreateReply} className="space-y-3">
-                    <textarea
-                      value={newReply}
-                      onChange={(e) => setNewReply(e.target.value)}
-                      required
-                      rows={3}
-                      placeholder="Write a reply..."
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none transition-all"
-                    />
-                    <div className="flex gap-3">
-                      <button
-                        type="submit"
-                        disabled={isSubmittingReply || !newReply.trim()}
-                        className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                      >
-                        {isSubmittingReply ? "Posting..." : "Post Reply"}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          ) : (
+            <>
+              <div className="space-y-6">
+                {paginatedPosts.map((post, index) => (
+                  <motion.div
+                    key={post._id}
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: index * 0.08, type: "spring" }}
+                  >
+                    <PostItem
+                      post={post}
+                      userId={userId}
+                      userRole={userRole}
+                      onEdit={handleEditClick}
+                      onDelete={handleDeletePost}
+                      onView={handleViewPost}
+                      showEditDelete={activeTab === "myPosts"}
+                      formatDate={formatDate}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-12 flex items-center justify-center gap-3"
+                >
+                  {/* Previous Button */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="p-3 rounded-2xl backdrop-blur-xl bg-white/70 dark:bg-gray-800/70 border border-white/20 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 disabled:hover:scale-100"
+                  >
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Page Numbers */}
+                  <div className="flex gap-2">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-5 py-3 rounded-2xl font-bold transition-all duration-300 shadow-lg ${
+                          currentPage === page
+                            ? "bg-gradient-to-r from-blue-600 via-blue-600 to-sky-600 text-white scale-110 shadow-2xl"
+                            : "backdrop-blur-xl bg-white/70 dark:bg-gray-800/70 border border-white/20 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:scale-105"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Next Button */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-3 rounded-2xl backdrop-blur-xl bg-white/70 dark:bg-gray-800/70 border border-white/20 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 disabled:hover:scale-100"
+                  >
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </motion.div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Replies Modal/Drawer */}
+        <AnimatePresence>
+          {showReplies && selectedPost && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4"
+              onClick={() => {
+                setShowReplies(false);
+                setSelectedPost(null);
+                setReplies([]);
+              }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                transition={{ type: "spring", damping: 25 }}
+                onClick={(e) => e.stopPropagation()}
+                className="backdrop-blur-2xl bg-white/90 dark:bg-gray-800/90 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[110vh] overflow-hidden flex flex-col border-2 border-white/30 dark:border-gray-700/50"
+              >
+                {/* Header */}
+                <div className="p-8 border-b-2 dark:border-gray-700/50 bg-gradient-to-r from-blue-100/80 via-blue-100/80 to-sky-100/80 dark:from-gray-800/80 dark:via-blue-900/30 dark:to-sky-900/30 backdrop-blur-xl">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h2 className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-sky-600 bg-clip-text text-transparent mb-3">
+                        {selectedPost.title}
+                      </h2>
+                      <p className="text-gray-700 dark:text-gray-200 mb-4 text-lg leading-relaxed">
+                        {selectedPost.content}
+                      </p>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="flex items-center gap-2 text-gray-600 dark:text-gray-300 bg-white/60 dark:bg-gray-700/60 px-4 py-2 rounded-full font-semibold backdrop-blur-sm">
+                          <svg
+                            className="h-5 w-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            />
+                          </svg>
+                          {selectedPost.views} Views
+                        </span>
+                        <span className="flex items-center gap-2 text-gray-600 dark:text-gray-300 bg-white/60 dark:bg-gray-700/60 px-4 py-2 rounded-full font-semibold backdrop-blur-sm">
+                          <ChatBubbleIcon className="h-5 w-5" />
+                          {selectedPost.reply_count} Replies
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowReplies(false);
+                        setSelectedPost(null);
+                        setReplies([]);
+                      }}
+                      className="p-3 text-gray-500 hover:text-gray-900 hover:bg-white/60 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700/60 rounded-2xl transition-all duration-300 backdrop-blur-sm hover:scale-110"
+                    >
+                      <svg
+                        className="h-7 w-7"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2.5}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Replies List */}
+                <div className="flex-1 overflow-y-auto p-8 space-y-5 bg-gradient-to-br from-gray-50/80 to-blue-50/80 dark:from-gray-900/80 dark:to-blue-900/20 backdrop-blur-xl">
+                  {replies.length === 0 ? (
+                    <div className="text-center py-16">
+                      <ChatBubbleIcon className="h-20 w-20 mx-auto text-blue-300 dark:text-blue-600 mb-6" />
+                      <p className="text-gray-500 dark:text-gray-400 text-xl font-bold">
+                        No replies yet. Be the first to reply!
+                      </p>
+                    </div>
+                  ) : (
+                    replies.map((reply, index) => {
+                      // Determine author info - handle user, seller, or financial
+                      const isSeller =
+                        reply.seller_id && reply.seller_id.business_name;
+                      const isFinancial =
+                        reply.financial_id && reply.financial_id.name;
+
+                      let authorName = "";
+                      let authorImage: string | undefined = undefined;
+                      let authorInitial = "";
+                      let authorId = "";
+
+                      if (isSeller && reply.seller_id) {
+                        authorName = reply.seller_id.business_name || "Seller";
+                        authorImage = reply.seller_id.shop_logo;
+                        authorInitial = authorName.charAt(0).toUpperCase();
+                        authorId = reply.seller_id._id;
+                      } else if (isFinancial && reply.financial_id) {
+                        authorName = reply.financial_id.name;
+                        authorInitial = authorName.charAt(0).toUpperCase();
+                        authorId = reply.financial_id._id;
+                      } else if (reply.user_id) {
+                        authorName = reply.user_id.name;
+                        authorImage = reply.user_id.profile_image;
+                        authorInitial = authorName.charAt(0).toUpperCase();
+                        authorId = reply.user_id._id;
+                      } else {
+                        authorName = "Unknown";
+                        authorInitial = "?";
+                      }
+
+                      const isEditing = editingReply?._id === reply._id;
+
+                      const isOwnReply = authorId === userId;
+
+                      return (
+                        <motion.div
+                          key={reply._id}
+                          initial={{ opacity: 0, x: -30 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.3, delay: index * 0.05, type: "spring" }}
+                          className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border-l-4 border-blue-500 pl-6 py-5 rounded-r-2xl shadow-xl hover:shadow-2xl transition-all duration-300"
+                        >
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-4">
+                              {authorImage ? (
+                                <img
+                                  src={`${apiURL}${authorImage}`}
+                                  alt={authorName}
+                                  className="h-12 w-12 rounded-full object-cover ring-4 ring-blue-200 dark:ring-blue-700 shadow-lg"
+                                />
+                              ) : (
+                                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 via-blue-500 to-sky-500 flex items-center justify-center text-white text-base font-bold shadow-lg">
+                                  {authorInitial}
+                                </div>
+                              )}
+                              <div>
+                                <span className="font-bold text-gray-900 dark:text-white block text-lg">
+                                  {authorName}
+                                </span>
+                                <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                                  {formatDate(reply.createdAt)}
+                                </span>
+                              </div>
+                            </div>
+                            {isOwnReply && (
+                              <div className="relative reply-menu-container">
+                                <button
+                                  onClick={() => setReplyMenuOpen(replyMenuOpen === reply._id ? null : reply._id)}
+                                  className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-xl transition-all duration-300"
+                                >
+                                  <svg
+                                    className="h-6 w-6 text-gray-500 dark:text-gray-400"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                  </svg>
+                                </button>
+                                {replyMenuOpen === reply._id && (
+                                  <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    className="absolute right-0 mt-2 w-52 backdrop-blur-xl bg-white/90 dark:bg-gray-700/90 rounded-2xl shadow-2xl border-2 border-white/30 dark:border-gray-600/50 z-10 overflow-hidden"
+                                  >
+                                    <button
+                                      onClick={() => handleEditReply(reply)}
+                                      className="w-full px-5 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-blue-100 dark:hover:bg-blue-900/30 flex items-center gap-3 transition-all duration-300"
+                                    >
+                                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                      </svg>
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteReply(reply._id)}
+                                      className="w-full px-5 py-3 text-left text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-3 transition-all duration-300"
+                                    >
+                                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                      Delete
+                                    </button>
+                                  </motion.div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {isEditing ? (
+                            <div className="space-y-4">
+                              <textarea
+                                value={editReplyContent}
+                                onChange={(e) => setEditReplyContent(e.target.value)}
+                                rows={3}
+                                className="w-full px-5 py-4 bg-white/50 dark:bg-gray-700/50 border-2 border-blue-200/50 dark:border-blue-500/30 rounded-2xl focus:ring-4 focus:ring-blue-500/30 focus:border-blue-500 dark:text-white resize-none transition-all duration-300 text-base font-medium backdrop-blur-sm"
+                              />
+                              <div className="flex gap-3">
+                                <button
+                                  onClick={() => handleUpdateReply(reply._id)}
+                                  disabled={updateReplyMutation.isPending}
+                                  className="flex-1 bg-gradient-to-r from-blue-600 via-blue-600 to-sky-600 text-white py-3 rounded-2xl font-bold hover:shadow-xl hover:scale-105 transition-all duration-300 disabled:opacity-50"
+                                >
+                                  {updateReplyMutation.isPending ? "Updating..." : "Update Reply"}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingReply(null);
+                                    setEditReplyContent("");
+                                  }}
+                                  className="flex-1 bg-gray-200/80 dark:bg-gray-700/80 text-gray-800 dark:text-gray-200 py-3 rounded-2xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-300 backdrop-blur-sm"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-gray-700 dark:text-gray-200 leading-relaxed text-base font-medium">
+                              {reply.content}
+                            </p>
+                          )}
+                        </motion.div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Reply Form */}
+                {userId && (
+                  <div className="p-8 border-t-2 dark:border-gray-700/50 backdrop-blur-xl bg-white/80 dark:bg-gray-800/80">
+                    <form onSubmit={handleCreateReply} className="space-y-4">
+                      <textarea
+                        value={newReply}
+                        onChange={(e) => setNewReply(e.target.value)}
+                        required
+                        rows={3}
+                        placeholder="Write a reply..."
+                        className="w-full px-6 py-4 bg-white/50 dark:bg-gray-700/50 border-2 border-blue-200/50 dark:border-blue-500/30 rounded-2xl focus:ring-4 focus:ring-blue-500/30 focus:border-blue-500 dark:text-white resize-none transition-all duration-300 text-lg font-medium backdrop-blur-sm"
+                      />
+                      <div className="flex gap-4">
+                        <button
+                          type="submit"
+                          disabled={isSubmittingReply || !newReply.trim()}
+                          className="flex-1 bg-gradient-to-r from-blue-600 via-blue-600 to-sky-600 text-white py-4 rounded-2xl font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                        >
+                          {isSubmittingReply ? "Posting..." : "Post Reply"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };

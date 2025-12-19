@@ -4,6 +4,7 @@ import { adminService } from "../adminService";
 import { Loader } from "@/components/Loader";
 import { TrashIcon } from "@/assets/icons/icons";
 import type { AlertProps } from "@/types";
+import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 
 export const SellersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void }> = ({
   setAlert,
@@ -35,10 +36,17 @@ export const SellersPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
 
   const filteredSellers = Array.isArray(sellers)
     ? sellers.filter((seller: any) =>
+        seller.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         seller.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         seller.email?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
+
+  const reportData = filteredSellers.map(seller => ({
+    name: seller.business_name || seller.name || "N/A",
+    email: seller.email || "N/A",
+    phone: seller.phone || "N/A"
+  }));
 
   if (isLoading) {
     return (
@@ -50,15 +58,27 @@ export const SellersPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center sm:flex-row flex-col gap-4">
         <h2 className="text-2xl font-bold dark:text-white">Sellers Management</h2>
-        <input
-          type="text"
-          placeholder="Search sellers..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-        />
+        <div className="flex gap-3 w-full sm:w-auto">
+          <ReportGeneratorButton
+            data={reportData}
+            columns={[
+              { header: "Name", dataKey: "name" },
+              { header: "Email", dataKey: "email" },
+              { header: "Phone", dataKey: "phone" },
+            ]}
+            title="Sellers Management Report"
+            filename="sellers_report"
+          />
+          <input
+            type="text"
+            placeholder="Search sellers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white flex-1 sm:flex-none"
+          />
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:border dark:border-gray-700 overflow-hidden">
@@ -91,7 +111,7 @@ export const SellersPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
                 filteredSellers.map((seller: any) => (
                   <tr key={seller._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {seller.name || "N/A"}
+                      {seller.business_name || seller.name || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {seller.email || "N/A"}
@@ -122,4 +142,3 @@ export const SellersPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
     </div>
   );
 };
-

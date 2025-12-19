@@ -25,13 +25,17 @@ export default function ProtectedRoute({
   }
 
   // Check if user has at least one allowed role
-  // const hasAccess = user.roles.filter((r) => allowedRoles.includes(r));
-  const hasAccess = allowedRoles.includes(role!);
-  console.log(role);
-  console.log(hasAccess);
-  // if (hasAccess.length === 0) {
-  //   return <Navigate to="/unauthorized" replace />;
-  // }
+  const roleToCheck = typeof role === 'string' ? role.trim() : role;
+  const hasAccess = allowedRoles.some(r => r === roleToCheck);
+  
+  console.log('ProtectedRouter Debug:', { 
+    userRole: role, 
+    roleToCheck,
+    allowedRoles, 
+    hasAccess,
+    roleType: typeof role 
+  });
+
   if (!hasAccess) {
     return <Navigate to="/unauthorized" replace />;
   }

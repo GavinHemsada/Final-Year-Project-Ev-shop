@@ -11,6 +11,7 @@ import {
   ChevronLeftIcon,
   SunIcon,
   MoonIcon,
+  BarChartIcon,
 } from "@/assets/icons/icons";
 import type { AdminActiveTab } from "@/types";
 import { useTheme } from "@/context/ThemeContext";
@@ -141,6 +142,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon={<SettingsIcon className="h-5 w-5" />}
           active={activeTab === "settings"}
           onClick={() => setActiveTab("settings")}
+          isExpanded={isExpanded}
+        />
+        <SidebarLink
+          text="Community"
+          icon={<UserIcon className="h-5 w-5" />} // Using UserIcon as placeholder/generic based on plan
+          active={activeTab === "community"}
+          onClick={() => setActiveTab("community")}
+          isExpanded={isExpanded}
+        />
+        <SidebarLink
+          text="Complaints"
+          icon={<ReviewsIcon />} // Using ReviewsIcon as closest match
+          active={activeTab === "complaints"}
+          onClick={() => setActiveTab("complaints")}
+          isExpanded={isExpanded}
+        />
+        <SidebarLink
+          text="Test Drives"
+          icon={<CarIcon className="h-5 w-5" />}
+          active={activeTab === "testDrives"}
+          onClick={() => setActiveTab("testDrives")}
+          isExpanded={isExpanded}
+        />
+        <SidebarLink
+          text="ML Pipeline"
+          icon={<BarChartIcon className="h-5 w-5" />}
+          active={activeTab === "mlPipeline"}
+          onClick={() => setActiveTab("mlPipeline")}
           isExpanded={isExpanded}
         />
       </nav>

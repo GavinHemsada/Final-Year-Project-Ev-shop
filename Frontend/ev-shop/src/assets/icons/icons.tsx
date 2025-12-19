@@ -801,6 +801,20 @@ export const ExclamationTriangleIcon: React.FC<IconProps> = ({ className }) => (
   </svg>
 );
 
+export const StarIcon: React.FC<IconProps> = ({ className }) => (
+  <svg
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    stroke="none"
+  >
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+  </svg>
+);
+
 export const SettingsIcon: React.FC<IconProps> = ({ className }) => (
   <svg
     className={className}
@@ -856,8 +870,3 @@ export const PhotographIcon: React.FC<{ className?: string }> = ({
   </svg>
 );
 
-export const StarIcon = ({ fill = "currentColor" }: { fill?: string }) => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill={fill} xmlns="http://www.w3.org/2000/svg">
-    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
-  </svg>
-);

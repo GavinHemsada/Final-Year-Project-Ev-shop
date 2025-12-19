@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { adminService } from "../adminService";
 import { Loader } from "@/components/Loader";
+import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 
 export const PaymentsPage: React.FC<{ setAlert: (alert: any) => void }> = ({
   setAlert,
@@ -20,6 +21,14 @@ export const PaymentsPage: React.FC<{ setAlert: (alert: any) => void }> = ({
       )
     : [];
 
+  const reportData = filteredPayments.map(payment => ({
+    orderId: payment.order_id?.slice(-8) || "N/A",
+    amount: `LKR ${payment.amount?.toLocaleString("en-US") || "0"}`,
+    status: payment.status || "pending",
+    method: payment.payment_method || "N/A",
+    date: payment.createdAt ? new Date(payment.createdAt).toLocaleDateString() : "N/A"
+  }));
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -30,15 +39,29 @@ export const PaymentsPage: React.FC<{ setAlert: (alert: any) => void }> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center sm:flex-row flex-col gap-4">
         <h2 className="text-2xl font-bold dark:text-white">Payments Management</h2>
-        <input
-          type="text"
-          placeholder="Search payments..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-        />
+        <div className="flex gap-3 w-full sm:w-auto">
+          <ReportGeneratorButton
+            data={reportData}
+            columns={[
+              { header: "Order ID", dataKey: "orderId" },
+              { header: "Amount", dataKey: "amount" },
+              { header: "Status", dataKey: "status" },
+              { header: "Method", dataKey: "method" },
+              { header: "Date", dataKey: "date" },
+            ]}
+            title="Payments Management Report"
+            filename="payments_report"
+          />
+          <input
+            type="text"
+            placeholder="Search payments..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white flex-1 sm:flex-none"
+          />
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:border dark:border-gray-700 overflow-hidden">
@@ -110,4 +133,3 @@ export const PaymentsPage: React.FC<{ setAlert: (alert: any) => void }> = ({
     </div>
   );
 };
-

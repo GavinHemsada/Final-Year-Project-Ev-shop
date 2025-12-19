@@ -14,6 +14,7 @@ import { useAddToCart } from "@/hooks/useCart";
 import { useToast } from "@/context/ToastContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
+import { SellerDetailsModal } from "./SellerDetailsModal";
 
 const apiURL = import.meta.env.VITE_API_URL;
 
@@ -151,6 +152,14 @@ export const VehicleCard: React.FC<{
   const userId = useAppSelector(selectUserId);
   const addToCartMutation = useAddToCart();
   const { showToast } = useToast();
+  const [isSellerModalOpen, setIsSellerModalOpen] = React.useState(false);
+
+  // Handle seller click
+  const handleSellerClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsSellerModalOpen(true);
+  };
   // React Query for Saved Status
   const { data: isSaved = false } = useQuery({
     queryKey: queryKeys.isVehicleSaved(userId || "", vehicle._id),
@@ -411,7 +420,10 @@ export const VehicleCard: React.FC<{
       <div className="p-6" onClick={handleCardClick}>
         {/* Seller Info Section */}
         <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex-shrink-0">
+          <div 
+            className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={handleSellerClick}
+          >
             {/* Seller Logo/Profile Image */}
             {sellerLogo ? (
               <img
@@ -431,7 +443,10 @@ export const VehicleCard: React.FC<{
               Sold by
             </p>
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
+              <p 
+                className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                onClick={handleSellerClick}
+              >
                 {sellerShopName}
               </p>
               {/* Available EV Count */}
@@ -447,6 +462,13 @@ export const VehicleCard: React.FC<{
             </div>
           </div>
         </div>
+
+        {/* Seller Details Modal */}
+        <SellerDetailsModal 
+          isOpen={isSellerModalOpen} 
+          onClose={() => setIsSellerModalOpen(false)} 
+          sellerId={seller_id._id} 
+        />
 
         <div className="flex justify-between items-start">
           <div className="flex-1">

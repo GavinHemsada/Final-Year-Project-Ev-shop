@@ -14,6 +14,10 @@ import { FinancialPage } from "./FinancialPage";
 import { ReviewsPage } from "./ReviewsPage";
 import { PaymentsPage } from "./PaymentsPage";
 import { SettingsPage } from "./SettingsPage";
+import { CommunityManagementPage } from "./CommunityManagementPage";
+import { ComplaintManagementPage } from "./ComplaintManagementPage";
+import { TestDrivesManagementPage } from "./TestDrivesManagementPage";
+import { MLPipelinePage } from "./MLPipelinePage";
 import { Alert, ConfirmAlert } from "@/components/MessageAlert";
 
 const notifications: any[] = [];
@@ -67,10 +71,18 @@ const AdminDashboard: React.FC = () => {
         return <PaymentsPage setAlert={handleSetAlert} />;
       case "settings":
         return <SettingsPage setAlert={handleSetAlert} />;
+      case "community":
+        return <CommunityManagementPage setAlert={handleSetAlert} />;
+      case "complaints":
+        return <ComplaintManagementPage setAlert={handleSetAlert} />;
+      case "testDrives":
+        return <TestDrivesManagementPage setAlert={handleSetAlert} />;
+      case "mlPipeline":
+        return <MLPipelinePage setAlert={handleSetAlert} />;
       default:
         return <AdminDashboardPage setAlert={handleSetAlert} />;
     }
-  };
+  }; 
 
   const handleLogout = () => {
     if (logout) dispatch(logout());
@@ -84,8 +96,8 @@ const AdminDashboard: React.FC = () => {
         alert={confirmAlert}
         onClose={handleCloseConfirmAlert}
         onConfirm={() => {
-          if (confirmAlert?.onConfirm) {
-            confirmAlert.onConfirm();
+          if (confirmAlert?.onConfirmAction) {
+            confirmAlert.onConfirmAction();
           }
           handleCloseConfirmAlert();
         }}

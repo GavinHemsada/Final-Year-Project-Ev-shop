@@ -4,6 +4,7 @@ import { adminService } from "../adminService";
 import { Loader } from "@/components/Loader";
 import { TrashIcon } from "@/assets/icons/icons";
 import type { AlertProps } from "@/types";
+import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 
 export const EVListingsPage: React.FC<{ setAlert: (alert: AlertProps | null) => void }> = ({
   setAlert,
@@ -35,10 +36,18 @@ export const EVListingsPage: React.FC<{ setAlert: (alert: AlertProps | null) => 
 
   const filteredListings = Array.isArray(listings)
     ? listings.filter((listing: any) =>
-        listing.model_id?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        listing.model_id?.model_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        listing.seller_id?.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         listing.seller_id?.name?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
+
+  const reportData = filteredListings.map(listing => ({
+    model: listing.model_id?.model_name || "N/A",
+    seller: listing.seller_id?.business_name || listing.seller_id?.name || "N/A",
+    price: `LKR ${listing.price?.toLocaleString("en-US") || "0"}`,
+    status: listing.status || "active"
+  }));
 
   if (isLoading) {
     return (
@@ -50,15 +59,28 @@ export const EVListingsPage: React.FC<{ setAlert: (alert: AlertProps | null) => 
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center sm:flex-row flex-col gap-4">
         <h2 className="text-2xl font-bold dark:text-white">EV Listings Management</h2>
-        <input
-          type="text"
-          placeholder="Search listings..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-        />
+        <div className="flex gap-3 w-full sm:w-auto">
+          <ReportGeneratorButton
+            data={reportData}
+            columns={[
+              { header: "Model", dataKey: "model" },
+              { header: "Seller", dataKey: "seller" },
+              { header: "Price", dataKey: "price" },
+              { header: "Status", dataKey: "status" },
+            ]}
+            title="EV Listings Report"
+            filename="ev_listings_report"
+          />
+          <input
+            type="text"
+            placeholder="Search listings..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white flex-1 sm:flex-none"
+          />
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:border dark:border-gray-700 overflow-hidden">
@@ -94,10 +116,10 @@ export const EVListingsPage: React.FC<{ setAlert: (alert: AlertProps | null) => 
                 filteredListings.map((listing: any) => (
                   <tr key={listing._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {listing.model_id?.name || "N/A"}
+                      {listing.model_id?.model_name || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {listing.seller_id?.name || "N/A"}
+                      {listing.seller_id?.business_name || listing.seller_id?.name || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       LKR {listing.price?.toLocaleString("en-US") || "0"}
@@ -136,4 +158,3 @@ export const EVListingsPage: React.FC<{ setAlert: (alert: AlertProps | null) => 
     </div>
   );
 };
-

@@ -267,6 +267,25 @@ export const testDriveRouter = (): Router => {
 
   /**
    * @swagger
+   * /test-drive/bookings:
+   *   get:
+   *     summary: Get all test drive bookings
+   *     description: Retrieves a list of all test drive bookings. Requires admin privileges.
+   *     tags: [Test Drive Bookings]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       '200':
+   *         description: A list of all test drive bookings.
+   *       '401':
+   *         description: Unauthorized.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.get("/bookings", (req, res) => controller.getAllBookings(req, res));
+
+  /**
+   * @swagger
    * /test-drive/bookings/customer/{customerId}:
    *   get:
    *     summary: Get bookings by customer ID

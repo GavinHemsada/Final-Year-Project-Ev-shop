@@ -85,6 +85,7 @@ export const AdminActiveTabs = {
   Reviews: "reviews",
   Payments: "payments",
   Settings: "settings",
+  Community: "community",
 } as const;
 
 export type AdminActiveTabs =
@@ -99,4 +100,8 @@ export type AdminActiveTab =
   | "financial"
   | "reviews"
   | "payments"
-  | "settings";
+  | "settings"
+  | "community"
+  | "complaints"
+  | "testDrives"
+  | "mlPipeline";

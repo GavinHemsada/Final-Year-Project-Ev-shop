@@ -84,7 +84,7 @@ INSTRUCTIONS:
 - If the question cannot be answered with available data, say so clearly`;
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-2.5-flash-lite",
     });
 
     const result = await model.generateContent(prompt);
@@ -178,14 +178,14 @@ async function handleEvQuestion(
           popularity: modelCounts[`${ev.brand} ${ev.model_name}`] || 0,
         }))
         .sort((a: any, b: any) => b.popularity - a.popularity)
-        .slice(0, 10);
-      sortCriteria = "popularity (number of listings)";
+      .slice(0, 5);
+      sortCriteria = "popularity";
     } else if (question.includes("fastest") || question.includes("fast")) {
       // Sort by range
       relevantEvs = filteredEvs
         .filter((ev) => ev.range_km !== null)
         .sort((a, b) => (b.range_km || 0) - (a.range_km || 0))
-        .slice(0, 10);
+        .slice(0, 5);
       sortCriteria = "driving range";
     } else if (
       question.includes("budget") ||
@@ -195,8 +195,8 @@ async function handleEvQuestion(
       question.includes("low price")
     ) {
       // Sort by price (lowest first)
-      relevantEvs = filteredEvs.sort((a, b) => a.price - b.price).slice(0, 10);
-      sortCriteria = "price (lowest to highest)";
+      relevantEvs = filteredEvs.sort((a, b) => a.price - b.price).slice(0, 5);
+      sortCriteria = "price";
     } else if (
       question.includes("best model") ||
       question.includes("best ev")
@@ -211,32 +211,20 @@ async function handleEvQuestion(
             (ev.battery_capacity_kwh || 0) * 0.3,
         }))
         .sort((a: any, b: any) => b.score - a.score)
-        .slice(0, 10);
-      sortCriteria = "overall value (range, price, battery)";
+        .slice(0, 5);
+      sortCriteria = "overall value";
     } else {
-      // Default: show top 10 by range
+      // Default: show top 5 by range
       relevantEvs = filteredEvs
         .sort((a, b) => (b.range_km || 0) - (a.range_km || 0))
-        .slice(0, 10);
+        .slice(0, 5);
     }
 
-    // Format EV data for prompt
+    // Format EV data for prompt (Compact format to save tokens)
     const evListText = relevantEvs
       .map(
-        (ev, index) => `
-${index + 1}. ${ev.brand} ${ev.model_name} (${ev.year})
-   - Price: LKR ${ev.price.toLocaleString()}
-   - Range: ${ev.range_km ? `${ev.range_km} km` : "N/A"}
-   - Battery: ${
-     ev.battery_capacity_kwh ? `${ev.battery_capacity_kwh} kWh` : "N/A"
-   }
-   - Charging Time: ${
-     ev.charging_time_hours ? `${ev.charging_time_hours} hours` : "N/A"
-   }
-   - Category: ${ev.category}
-   - Condition: ${ev.condition}
-   - Color: ${ev.color}
-   - Seller: ${ev.seller}`
+        (ev, index) =>
+          `${index + 1}. ${ev.brand} ${ev.model_name} (${ev.year}) | LKR ${ev.price.toLocaleString()} | Comb: ${ev.range_km}km, ${ev.battery_capacity_kwh}kWh | ${ev.color} | ${ev.condition}`
       )
       .join("\n");
 
@@ -273,7 +261,7 @@ INSTRUCTIONS:
 - Make the response engaging and easy to read`;
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash-lite",
     });
 
     const result = await model.generateContent(prompt);
