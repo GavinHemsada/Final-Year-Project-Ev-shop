@@ -32,19 +32,19 @@ export const PostItem: React.FC<{
     const isFinance = post.financial_id && post.financial_id.name;
     const isUser = !isSeller && !isFinance;
 
-    let displayName = post.user_id?.name;
+    let displayName = post.user_id?.name || "Unknown User";
     let displayImage = post.user_id?.profile_image;
 
     // If seller
     if (isSeller && post.seller_id) {
-      displayName = post.seller_id.business_name || post.user_id.name;
-      displayImage = post.seller_id.shop_logo || post.user_id.profile_image;
+      displayName = post.seller_id.business_name || post.user_id?.name || "Unknown User";
+      displayImage = post.seller_id.shop_logo || post.user_id?.profile_image;
     }
 
     // If finance (only apply if not seller)
     else if (isFinance) {
-      displayName = post.financial_id?.name || post.user_id.name;
-      displayImage = post.user_id.profile_image;
+      displayName = post.financial_id?.name || post.user_id?.name || "Unknown User";
+      displayImage = post.user_id?.profile_image;
     }
 
     const isPostByUser = post.user_id?._id === userId && userRole?.includes("user");
