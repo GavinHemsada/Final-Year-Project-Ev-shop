@@ -273,9 +273,18 @@ export const MyReviewsPage: React.FC<{
                            "Vehicle Model"}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Sold by: {(review.target_id as any)?.business_name || 
+                          {(review.target_type === "service") ? 
+                          (
+                              "Provided by: " + (review.target_id as any)?.business_name || 
                                    (review.target_id as any)?.seller_id?.business_name || // Fallback
-                                   "Seller"}
+                                   "Seller"
+                          ) : 
+                          (
+                              "Sold by: " + (review.target_id as any)?.business_name || // Fallback
+                              (review.target_id as any)?.seller_id?.business_name ||
+                                   "Seller"
+                          )
+                          }
                         </p>
                         {activeTab === 'service' && (
                           <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs rounded-full">

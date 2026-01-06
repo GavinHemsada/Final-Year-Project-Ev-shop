@@ -36,6 +36,12 @@ export interface IReviewRepository {
    */
   getAllReviews(): Promise<IReview[] | null>;
   /**
+   * Retrieves all reviews for a specific listing.
+   * @param listingId - The ID of the listing.
+   * @returns A promise that resolves to an array of review documents or null.
+   */
+  getReviewbyListingId(listingId: string): Promise<IReview[] | null>;
+  /**
    * Updates an existing review.
    * @param id - The ID of the review to update.
    * @param reviewData - The partial DTO containing the fields to update.
@@ -63,7 +69,7 @@ export const ReviewRepository: IReviewRepository = {
   getAllReviews: withErrorHandling(async () => {
     return await Review.find()
       .populate("reviewer_id", "name profile_image")
-      .populate("target_id", "_id business_name shop_logo")
+      .populate("target_id", "business_name shop_logo")
       .populate({
         path: "order_id",
         select: "listing_id",
@@ -76,6 +82,24 @@ export const ReviewRepository: IReviewRepository = {
           },
         },
       });
+  }),
+  /** Retrieves all reviews for a specific listing, populating reviewer and order details. */
+  getReviewbyListingId: withErrorHandling(async (listingId) => {
+    return await Review.find()
+      .populate("reviewer_id", "name profile_image")
+      .populate("target_id", "business_name shop_logo")
+      .populate({
+        path: "order_id",
+        select: "listing_id",
+        populate: {
+          path: "listing_id",
+          select: "_id model_id",
+          populate: {
+            path: "model_id",
+            select: "model_name",
+          },
+        },
+      }).then(reviews => reviews.filter(review => review.order_id && (review.order_id as any).listing_id._id.toString() === listingId));
   }),
   /** Retrieves all reviews for a specific target, populating reviewer details. */
   getReviewByTargetId: withErrorHandling(async (targetId) => {

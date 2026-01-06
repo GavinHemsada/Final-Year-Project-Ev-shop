@@ -211,6 +211,7 @@ export interface BuyerBookingData {
   slot_id: {
     _id: string;
     location: string;
+    seller_id: string;
     model_id: {
       _id: string;
       model_name: string;

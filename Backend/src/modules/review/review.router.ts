@@ -83,7 +83,13 @@ export const reviewRouter = (): Router => {
       res // Note: Path is /review/reviews/target/:targetId
     ) => reviewController.getReviewByTargetId(req, res)
   );
-
+  router.get(
+    "/reviews/listing/:listingId",
+    (
+      req,
+      res // Note: Path is /review/reviews/listing/:listingId
+    ) => reviewController.getReviewbyListingId(req, res)
+  );
   /**
    * @swagger
    * /review/reviews/reviewer/{reviewerId}:

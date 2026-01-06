@@ -10,7 +10,10 @@ export const buyerService = {
     const response = await axiosPrivate.get(`/user/${id}`);
     return response.data;
   },
-
+  getSellerProfile: async (id: string) => {
+    const response = await axiosPrivate.get(`/seller/${id}`);
+    return response.data;
+  },
   // cart operations
   addToCart: async (
     userId: string,
@@ -296,6 +299,10 @@ export const buyerService = {
   // reviews operations
   getAllReviews: async () => {
     const response = await axiosPrivate.get(`/review/reviews`);
+    return response.data;
+  },
+  getReviewsByTargetId: async (listingId: string) => {
+    const response = await axiosPrivate.get(`/review/reviews/listing/${listingId}`);
     return response.data;
   },
   getReviewsByReviewer: async (reviewerId: string) => {

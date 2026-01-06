@@ -21,6 +21,7 @@ import type {
   AlertProps,
   ConfirmAlertProps,
 } from "@/types";
+import { ListingType } from "@/types/enum";
 import { Alert, ConfirmAlert } from "@/components/MessageAlert";
 
 const OrderHistory = lazy(() => import("./OrderHistoryPage"));
@@ -68,6 +69,7 @@ const App: React.FC = () => {
   const [priceMin, setPriceMin] = useState<number | "">("");
   const [priceMax, setPriceMax] = useState<number | "">("");
   const [selectedModel, setSelectedModel] = useState<string>("All");
+  const [listingType, setListingType] = useState<ListingType | "All">("All");
   const [sellerSearch, setSellerSearch] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("default");
 
@@ -170,6 +172,10 @@ const App: React.FC = () => {
         if (selectedModel !== "All" && vehicle.model_id?.model_name !== selectedModel) {
           return false;
         }
+        // Listing Type Filter
+        if (listingType !== "All" && vehicle.listing_type !== listingType) {
+          return false;
+        }
         // Price Filter
         if (priceMin !== "" && vehicle.price < priceMin) return false;
         if (priceMax !== "" && vehicle.price > priceMax) return false;
@@ -194,8 +200,8 @@ const App: React.FC = () => {
         }
       });
     },
-    [vehicles, searchTerm, selectedModel, priceMin, priceMax, sellerSearch, sortBy, getReviewCount]
-  ); 
+    [vehicles, searchTerm, listingType, selectedModel, priceMin, priceMax, sellerSearch, sortBy, getReviewCount]
+  );
 
   const paginatedVehicles = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -316,6 +322,22 @@ const App: React.FC = () => {
                         onChange={(e) => setSellerSearch(e.target.value)}
                         className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm dark:text-white"
                       />
+                    </div>
+
+                    {/* Listing Type Filter */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                        Listing Type
+                      </label>
+                      <select
+                        value={listingType}
+                        onChange={(e) => setListingType(e.target.value as ListingType | "All")}
+                        className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm dark:text-white"
+                      >
+                        <option value="All">All Types</option>
+                        <option value={ListingType.SALE}>For Sale</option>
+                        <option value={ListingType.LEASE}>For Lease</option>
+                      </select>
                     </div>
 
                     {/* Price Range */}
@@ -501,7 +523,7 @@ const App: React.FC = () => {
         </button>
       </div>
 
-      {isChatOpen && <Chatbot onClose={toggleChat} />}
+      {isChatOpen && <Chatbot onClose={toggleChat} userName={user?.name} />}
       {isBecomeSellerModalOpen && (
         <BecomeSellerPage
           onClose={setSellermodeOpen}

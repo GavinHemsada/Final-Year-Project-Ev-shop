@@ -323,6 +323,21 @@ export const ChevronLeftIcon: React.FC<IconProps> = ({ className }) => (
   </svg>
 );
 
+export const ChevronUpIcon: React.FC<IconProps> = ({ className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="3.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M18 15l-6-6-6 6" />
+  </svg>
+);
+
 // This is the component for the icon.
 // You can add this to your main `icons.tsx` file.
 

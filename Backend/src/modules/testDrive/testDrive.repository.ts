@@ -316,7 +316,7 @@ export const TestDriveRepository: ITestDriveRepository = {
     })
       .populate({
         path: "slot_id",
-        select: "location",
+        select: "location, seller_id",
         populate: {
           path: "model_id",
           select: "model_name",

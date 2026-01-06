@@ -10,6 +10,8 @@ import { selectUserId } from "@/context/authSlice";
 import { useToast } from "@/context/ToastContext";
 import type { Vehicle } from "@/types";
 
+import { ReviewSection } from "@/components/ReviewSection";
+
 const apiURL = import.meta.env.VITE_API_URL;
 const swiperModules = [Navigation, Autoplay, Pagination, Thumbs];
 
@@ -478,6 +480,16 @@ const VehicleDetailsPage: React.FC = () => {
                 </p>
               </div>
             )}
+
+            {/* Reviews Section */}
+            {vehicle._id && (
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                  Reviews
+                </h2>
+                <ReviewSection vehicleId={vehicle._id} defaultOpen={true} />
+              </div>
+            )}
           </div>
 
           {/* Sidebar - Action Buttons */}
@@ -537,7 +549,7 @@ const VehicleDetailsPage: React.FC = () => {
                     {addToCartMutation.isPending ? "Adding..." : "Add to Cart"}
                   </button>
                   <button
-                    disabled
+                    disabled={vehicle?.listing_type === "sale"}
                     className="w-full bg-white border-2 border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Apply for Lease

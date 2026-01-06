@@ -5,7 +5,6 @@ import { useAppSelector } from "@/hooks/useAppSelector";
 import { selectUserId } from "@/context/authSlice";
 import { buyerService } from "../buyerService";
 import { LazyVehicleCard } from "@/components/EvModelCard";
-import { Loader } from "@/components/Loader";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
 
@@ -14,7 +13,6 @@ const SavedVehicles: React.FC = () => {
 
   const {
     data: savedVehiclesData,
-    isLoading,
     isError,
   } = useQuery({
     queryKey: queryKeys.savedVehicles(userId!),
@@ -59,18 +57,18 @@ const SavedVehicles: React.FC = () => {
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="bg-white p-8 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
-        <h1 className="text-3xl font-bold mb-6 dark:text-white">
-          Saved Vehicles
-        </h1>
-        <div className="flex justify-center items-center py-16">
-          <Loader size={40} color="#4f46e5" />
-        </div>
-      </div>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <div className="bg-white p-8 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
+  //       <h1 className="text-3xl font-bold mb-6 dark:text-white">
+  //         Saved Vehicles
+  //       </h1>
+  //       <div className="flex justify-center items-center py-16">
+  //         <Loader size={40} color="#4f46e5" />
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   if (isError) {
     return (

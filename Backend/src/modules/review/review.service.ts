@@ -17,6 +17,16 @@ export interface IReviewService {
     error?: string;
   }>;
   /**
+   * Retrieves all reviews for a specific listing.
+   * @param listingId - The ID of the listing.
+   * @returns A promise that resolves to an object containing an array of reviews or an error.
+   */
+  getReviewbyListingId(listingId: string): Promise<{
+    success: boolean;
+    reviews?: any[];
+    error?: string;
+  }>;
+  /**
    * Retrieves all reviews for a specific target entity (e.g., a product or seller).
    * @param targetId - The ID of the target entity.
    * @returns A promise that resolves to an object containing an array of reviews or an error.
@@ -102,7 +112,28 @@ export function reviewService(
         return { success: false, error: "Failed to fetch reviews" };
       }
     },
-
+    getReviewbyListingId: async (listingId: string) => {
+      try {
+        const cacheKey = `reviews_listing_${listingId}`;
+        const reviews = await CacheService.getOrSet(
+          cacheKey,
+          async () => {
+            const listingReviews =
+              await reviewRepo.getReviewbyListingId(listingId);
+            return listingReviews ?? [];
+          },
+          3600 // Cache for 1 hour
+        );
+        if (!reviews)
+          return { success: false, error: "No reviews found for the listing" };
+        return { success: true, reviews };
+      } catch (err) {
+        return {
+          success: false,
+          error: "Failed to fetch reviews for the listing",
+        };
+      }
+    },
     /**
      * Finds all reviews for a specific target (e.g., product, seller), using a cache-aside pattern.
      * Caches the list of reviews for that target for one hour.
@@ -194,6 +225,7 @@ export function reviewService(
           CacheService.delete("reviews"),
           CacheService.delete(`reviews_target_${reviewData.target_id}`),
           CacheService.delete(`reviews_reviewer_${reviewData.reviewer_id}`),
+          CacheService.deletePattern(`reviews_*`),
         ]);
 
         return { success: true, review };

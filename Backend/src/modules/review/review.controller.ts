@@ -19,6 +19,12 @@ export interface IReviewController {
    */
   getReviewByTargetId(req: Request, res: Response): Promise<Response>;
   /**
+   * Handles the HTTP request to get all reviews for a specific listing.
+   * @param req - The Express request object, containing the listing ID in `req.params`.
+   * @param res - The Express response object.
+   */
+  getReviewbyListingId(req: Request, res: Response): Promise<Response>;
+  /**
    * Handles the HTTP request to get all reviews written by a specific user.
    * @param req - The Express request object, containing the reviewer's user ID in `req.params`.
    * @param res - The Express response object.
@@ -82,6 +88,15 @@ export function reviewController(
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "getting reviews by target id");
+      }
+    },
+    getReviewbyListingId: async (req, res) => {
+      try {
+        const { listingId } = req.params;
+        const result = await reviewService.getReviewbyListingId(listingId);
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "getting reviews by listing id");
       }
     },
     /**

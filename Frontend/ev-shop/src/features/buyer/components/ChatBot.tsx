@@ -6,16 +6,30 @@ import { buyerService } from "../buyerService";
 // Define the props interface for the Chatbot component
 type ChatbotProps = {
   onClose: () => void; // Function to call when the chatbot needs to be closed
+  userName?: string; // Optional user name for personalization
 };
 
 // Chatbot functional component definition
-export const Chatbot: React.FC<ChatbotProps> = ({ onClose }) => {
+export const Chatbot: React.FC<ChatbotProps> = ({ onClose, userName }) => {
   // State to manage the input field's value
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   // Ref to automatically scroll to the latest message
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialize with greeting
+  useEffect(() => {
+    if (messages.length === 0) {
+      const greetingName = userName ? ` ${userName}` : "";
+      const initialMessage: ChatMessage = {
+        id: Date.now(),
+        text: `Hi${greetingName}, how can I help you?`,
+        sender: "bot",
+      };
+      setMessages([initialMessage]);
+    }
+  }, [userName]); // Only run when userName changes (or on mount/first render)
 
   // Function to scroll the chat messages to the bottom
   const scrollToBottom = () => {
@@ -149,3 +163,4 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose }) => {
     </div>
   );
 };
+

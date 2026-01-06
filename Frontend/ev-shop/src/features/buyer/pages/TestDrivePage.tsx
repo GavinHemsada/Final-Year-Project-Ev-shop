@@ -488,14 +488,14 @@ export const TestDrivesPage: React.FC<{
 
     const ratingData = {
       reviewer_id: userId,
-      target_id: bookingToRate.slot_id._id,
+      target_id: bookingToRate.slot_id.seller_id,
       target_type: "service",
       testDrive_id: bookingToRate._id, // Using booking ID as order reference
       title: `Test Drive - ${bookingToRate.slot_id?.model_id?.model_name || "EV Model"}`,
       rating: ratingForm.rating,
       comment: ratingForm.comment,
     };
-
+    console.log(ratingData);
     ratingMutation.mutate(ratingData);
   };
 

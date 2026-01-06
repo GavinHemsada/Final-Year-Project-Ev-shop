@@ -47,7 +47,7 @@ const ReviewSchema = new Schema<IReview>(
     /** An optional reference to the `TestDrive` to link the review to a specific test drive experience. */
     testDrive_id: { type: Schema.Types.ObjectId, ref: "TestDriveBooking" },
     /** The ID of the reviewed entity. Note: This field does not have a `ref` because it can refer to different collections (e.g., 'Seller', 'VehicleListing') based on `target_type`. */
-    target_id: { type: Schema.Types.ObjectId, required: true },
+    target_id: { type: Schema.Types.ObjectId, required: true, ref: "Seller" },
     /** The numerical rating, required to be between 1 and 5. */
     rating: { type: Number, min: 1, max: 5, required: true },
     /** An optional title for the review. */

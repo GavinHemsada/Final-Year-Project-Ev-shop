@@ -8,6 +8,7 @@ import { PageLoader, Loader } from "@/components/Loader";
 import { useToast } from "@/context/ToastContext";
 import { ArrowLeftIcon } from "@/assets/icons/icons";
 import type { Vehicle } from "@/types";
+import { ReviewSection } from "@/components/ReviewSection";
 
 const apiURL = import.meta.env.VITE_API_URL;
 const PAYHERE_SANDBOX_URL = "https://sandbox.payhere.lk/pay/checkout";
@@ -184,26 +185,30 @@ const CheckoutPage: React.FC = () => {
                 return (
                   <div
                     key={item._id}
-                    className="flex gap-4 p-4 border border-gray-200 rounded-lg dark:border-gray-700"
+                    className="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg dark:border-gray-700"
                   >
-                    {imageUrl && (
-                      <img
-                        src={imageUrl}
-                        alt={vehicle?.model_id?.model_name || "Vehicle"}
-                        className="w-24 h-24 object-cover rounded"
-                      />
-                    )}
-                    <div className="flex-1">
-                      <h3 className="font-semibold dark:text-white">
-                        {vehicle?.model_id?.model_name || "Vehicle"}
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Quantity: {item.quantity}
-                      </p>
-                      <p className="text-lg font-bold text-blue-600 dark:text-blue-400 mt-2">
-                        LKR {((vehicle?.price || 0) * item.quantity).toLocaleString("en-US")}
-                      </p>
+                    <div className="flex gap-4">
+                      {imageUrl && (
+                        <img
+                          src={imageUrl}
+                          alt={vehicle?.model_id?.model_name || "Vehicle"}
+                          className="w-24 h-24 object-cover rounded"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <h3 className="font-semibold dark:text-white">
+                          {vehicle?.model_id?.model_name || "Vehicle"}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Quantity: {item.quantity}
+                        </p>
+                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400 mt-2">
+                          LKR {((vehicle?.price || 0) * item.quantity).toLocaleString("en-US")}
+                        </p>
+                      </div>
                     </div>
+                    {/* Previous Reviews Section */}
+                    {vehicle?._id && <ReviewSection vehicleId={vehicle._id} />}
                   </div>
                 );
               })}
