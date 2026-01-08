@@ -4,10 +4,8 @@ export const financialService = {
   // Financial Institution Operations
   getFinancialInstitutionProfile: async (userId: string) => {
     // Get all institutions and find the one matching user_id
-    const response = await axiosPrivate.get(`/financial/institutions`);
-    const institutions = response.data?.institutions || [];
-    const institution = institutions.find((inst: any) => inst.user_id?._id === userId || inst.user_id === userId);
-    return institution ? { success: true, institution } : { success: false, error: "Institution not found" };
+    const response = await axiosPrivate.get(`/financial/institutions/user/${userId}`);
+    return response.data;
   },
   getFinancialInstitutionById: async (institutionId: string) => {
     const response = await axiosPrivate.get(`/financial/institutions/${institutionId}`);
@@ -79,5 +77,57 @@ export const financialService = {
     const response = await axiosPrivate.delete(`/financial/applications/${applicationId}`);
     return response.data;
   },
-};
 
+  // Community & Post Operations
+  getCommunityPosts: async (params: any) => {
+    const response = await axiosPrivate.get(`post/posts`, { params });
+    return response.data;
+  },
+  getCommunityPostbyFinancial: async (financialId: string) => {
+    const response = await axiosPrivate.get(`/post/posts/financial/${financialId}`);
+    return response.data;
+  },
+  createCommunityPost: async (postData: {
+    financial_id: string;
+    title: string;
+    content: string;
+  }) => {
+    const response = await axiosPrivate.post(`/post/post`, postData);
+    return response.data;
+  },
+  updateCommunityPost: async (
+    postId: string,
+    postData: { financial_id: string; title: string; content: string }
+  ) => {
+    const response = await axiosPrivate.put(`/post/post/${postId}`, postData);
+    return response.data;
+  },
+  deleteCommunityPost: async (postId: string) => {
+    const response = await axiosPrivate.delete(`/post/post/${postId}`);
+    return response.data;
+  },
+  getPostReplies: async (postId: string) => {
+    const response = await axiosPrivate.get(`/post/replies/post/${postId}`);
+    return response.data;
+  },
+  createPostReply: async (replyData: {
+    financial_id: string;
+    post_id: string;
+    content: string;
+  }) => {
+    const response = await axiosPrivate.post(`/post/reply`, replyData);
+    return response.data;
+  },
+  updatePostReply: async (replyId: string, replyData: { content: string }) => {
+    const response = await axiosPrivate.put(`/post/reply/${replyId}`, replyData);
+    return response.data;
+  },
+  deletePostReply: async (replyId: string) => {
+    const response = await axiosPrivate.delete(`/post/reply/${replyId}`);
+    return response.data;
+  },
+  postView: async (postId: string) => {
+    const response = await axiosPrivate.patch(`/post/post/${postId}/views`);
+    return response.data;
+  },
+};

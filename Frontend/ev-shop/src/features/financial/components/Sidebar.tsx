@@ -11,6 +11,7 @@ import {
 import type { FinancialActiveTab } from "@/types";
 import { useTheme } from "@/context/ThemeContext";
 import { SunIcon, MoonIcon } from "@/assets/icons/icons";
+import { FaUsers } from "react-icons/fa";
 
 type SidebarProps = {
   activeTab: FinancialActiveTab;
@@ -103,6 +104,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon={<UserIcon className="h-5 w-5" />}
           active={activeTab === "profile"}
           onClick={() => setActiveTab("profile")}
+          isExpanded={isExpanded}
+        />
+        <SidebarLink
+          text="Community"
+          icon={<FaUsers className="h-5 w-5" />}
+          active={activeTab === "community"}
+          onClick={() => setActiveTab("community")}
           isExpanded={isExpanded}
         />
         <SidebarLink

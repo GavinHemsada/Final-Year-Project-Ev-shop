@@ -63,6 +63,7 @@ export const FinancialActiveTabs = {
   Products: "products",
   Profile: "profile",
   Notification: "notification",
+  Community: "community",
 } as const;
 
 export type FinancialActiveTabs =
@@ -73,7 +74,8 @@ export type FinancialActiveTab =
   | "applications"
   | "products"
   | "profile"
-  | "notification";
+  | "notification"
+  | "community";
 
 export const AdminActiveTabs = {
   Dashboard: "dashboard",

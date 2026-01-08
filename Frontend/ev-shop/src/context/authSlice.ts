@@ -102,6 +102,7 @@ export const {
 export const selectUser = (state: RootState) => state.auth.user;
 export const selectUserId = (state: RootState) => state.auth.user?.userid ?? null;
 export const selectSellerId = (state: RootState) => state.auth.user?.ids?.sellerid ?? null;
+export const selectFinanceId = (state: RootState) => state.auth.user?.ids?.financeid ?? null;
 export const selectActiveRole = (state: RootState) => state.auth.user?.activeRole ?? null;
 export const selectActiveRoleId = (state: RootState) => {
   if (!state.auth.user) return null;

@@ -111,6 +111,9 @@ export const financialRouter = (): Router => {
     controller.getAllInstitutions(req, res)
   );
 
+  router.get("/institutions/user/:userId", (req, res) =>
+    controller.findInstitutionByUserId(req, res)
+  );
   /**
    * @swagger
    * /financial/institutions/{id}:

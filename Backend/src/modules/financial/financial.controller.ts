@@ -21,6 +21,12 @@ export interface IFinancialController {
    */
   getInstitution(req: Request, res: Response): Promise<Response>;
   /**
+   * Handles the HTTP request to find an institution by a user's ID.
+   * @param req - The Express request object, containing the user ID in `req.params`.
+   * @param res - The Express response object.
+   */
+  findInstitutionByUserId(req: Request, res: Response): Promise<Response>;
+  /**
    * Handles the HTTP request to retrieve all financial institutions.
    * @param req - The Express request object.
    * @param res - The Express response object.
@@ -156,6 +162,14 @@ export function financialController(
         return handleError(res, err, "getInstitution");
       }
     },
+    findInstitutionByUserId: async (req, res) => {
+      try {
+        const result = await service.findInstitutionByUserId(req.params.userId);
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "findInstitutionByUserId");
+      }
+    },
     /**
      * Retrieves a list of all financial institutions.
      */
@@ -233,6 +247,7 @@ export function financialController(
         const result = await service.getProductsByInstitution(
           req.params.institutionId
         );
+        console.log("Controller Result:", result);   
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "getProductsByInstitution");

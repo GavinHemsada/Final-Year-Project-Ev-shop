@@ -1,0 +1,58 @@
+TECHNOLOGY AND TOOLS UTILISED
+=============================
+
+The EV Shop project is built using a modern, robust, and scalable technology stack, leveraging the **MERN** architecture (MongoDB, Express.js, React, Node.js) enriched with TypeScript for type safety, Python for Machine Learning, and various specialized tools for enhanced functionality.
+
+1. FRONTEND TECHNOLOGIES (Client-Side)
+--------------------------------------
+The user interface is a Single Page Application (SPA) designed for performance and interactivity.
+*   **Core Framework:** **React 19** with **TypeScript** is used for building a component-based, type-safe user interface.
+*   **Build Tool:** **Vite** serves as the build tool and development server, offering lightning-fast hot module replacement (HMR) and optimized production builds.
+*   **State Management:**
+    *   **Redux Toolkit:** Manages global application state (e.g., user authentication status, cart contents) with a centralized store.
+    *   **React Query (TanStack Query):** Handles server state management (fetching, caching, synchronizing, and updating data) to reduce API calls and improve performance.
+*   **Styling & UI:**
+    *   **Tailwind CSS:** A utility-first CSS framework for rapid, responsive, and consistent styling.
+    *   **Framer Motion:** Powering complex animations and page transitions for a premium user experience.
+    *   **Lucide React & Heroicons:** Providing a comprehensive set of clean, modern SVG icons.
+*   **Maps & Geolocation:** **Leaflet** and **React-Leaflet** are integrated to render interactive maps for finding repair locations.
+*   **Forms & Validation:** **React Hook Form** coupled with **Yup** ensures efficient form handling and robust client-side validation.
+*   **Data Visualization:** **Recharts** is used to render dynamic charts and graphs in the Admin Dashboard.
+*   **Reporting:** **jsPDF** and **jspdf-autotable** enable the client-side generation and downloading of PDF reports.
+
+2. BACKEND TECHNOLOGIES (Server-Side)
+-------------------------------------
+The server is a RESTful API built to handle complex business logic, data persistence, and external integrations.
+*   **Runtime Environment:** **Node.js** executes the JavaScript code on the server side.
+*   **Framework:** **Express.js** provides the web server framework for routing, middleware integration, and API handling.
+*   **Language:** **TypeScript** is used throughout the backend to ensure code quality and maintainability.
+*   **Database:**
+    *   **MongoDB:** The primary NoSQL database for storing flexible data structures like Users, Orders, and Listings.
+    *   **Mongoose ODM:** An Object Data Modeling library used to enforce schemas and validate data before interactions with MongoDB.
+*   **Caching:** **Redis** is implemented as an in-memory key-value store to cache frequent API responses and manage session data, significantly reducing database load.
+*   **Authentication & Security:**
+    *   **Passport.js:** Handles authentication strategies including Local (email/password), **Google OAuth**, and **Facebook OAuth**.
+    *   **JWT (JSON Web Tokens):** Used for secure, stateless user authorization across API endpoints.
+    *   **Bcrypt:** Hashes passwords securely before storage.
+    *   **Helmet.js:** Secures HTTP headers to protect against common web vulnerabilities.
+    *   **Express-Rate-Limit:** Protects APIs from brute-force attacks by limiting repeated requests.
+*   **Machine Learning Integration:**
+    *   **ONNX Runtime Node:** Allows running pre-trained Machine Learning models directly within the Node.js backend for fast battery health and repair cost predictions.
+    *   **Google Gemini API:** Integrates the **gemini-2.5-flash-lite** model to power the AI Chatbot for natural language processing.
+*   **Utilities:**
+    *   **Nodemailer:** Handles the sending of transactional emails (OTPs, order confirmations).
+    *   **Multer:** Middleware for handling `multipart/form-data` to support file uploads (images, documents).
+    *   **Winston & Morgan:** robust logging libraries for tracking application errors and HTTP traffic.
+
+3. MACHINE LEARNING PIPELINE
+----------------------------
+*   **Language:** **Python** is used for the data science and model training phase.
+*   **Libraries:** **Scikit-learn** and **Pandas** (implied) are used for data preprocessing and training Random Forest regression models.
+*   **Format:** Models are exported to **.onnx** (Open Neural Network Exchange) format to ensure cross-platform compatibility and efficient inference in the Node.js environment.
+
+4. DEVELOPMENT & DEPLOYMENT TOOLS
+---------------------------------
+*   **Version Control:** **Git** is used for source code management.
+*   **Package Manager:** **NPM** manages dependencies for both frontend and backend.
+*   **Testing:** **Jest** (Backend) framework is configured for running unit and integration tests.
+*   **API Documentation:** **Swagger (OpenAPI)** allows for interactive API documentation and testing.

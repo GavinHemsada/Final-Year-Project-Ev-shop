@@ -33,6 +33,14 @@ export interface IFinancialService {
     id: string
   ): Promise<{ success: boolean; institution?: any; error?: string }>;
   /**
+   * Retrieves a financial institution by the associated user's ID.
+   * @param userId - The ID of the user.
+   * @returns A promise that resolves to an object containing the institution data or an error.
+   */
+  findInstitutionByUserId(
+    userId: string
+  ): Promise<{ success: boolean; institution?: any; error?: string }>;
+  /**
    * Retrieves all financial institutions.
    * @returns A promise that resolves to an object containing an array of all institutions or an error.
    */
@@ -246,6 +254,25 @@ export function financialService(
       } catch (err) {
         return { success: false, error: "Failed to fetch institution" };
       }
+    },
+    findInstitutionByUserId: async (userId) => {
+      try {
+        const cacheKey = `institution_user_${userId}`;
+        // Attempt to get from cache, otherwise fetch from repository and set cache.
+        const institution = await CacheService.getOrSet(
+          cacheKey,
+          async () => {
+            const data = await repo.findInstitutionByUserId(userId);
+            return data ?? null;
+          },
+          3600
+        ); // Cache for 1 hour
+        if (!institution)
+          return { success: false, error: "Institution not found" };
+        return { success: true, institution };
+      } catch (err) {
+        return { success: false, error: "Failed to fetch institution" };
+      }   
     },
     /**
      * Retrieves all financial institutions, utilizing a cache-aside pattern.

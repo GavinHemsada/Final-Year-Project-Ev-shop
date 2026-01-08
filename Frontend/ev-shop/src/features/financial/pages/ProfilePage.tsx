@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from "react";
-import {useAppSelector } from "@/hooks/useAppSelector";
-import { selectUserId } from "@/context/authSlice";
 import { financialService } from "../financialService";
 import type { AlertProps } from "@/types";
 import { Loader } from "@/components/Loader";
 
 export const ProfilePage: React.FC<{
   setAlert?: (alert: AlertProps | null) => void;
-}> = ({ setAlert }) => {
-  const userId = useAppSelector(selectUserId);
-  const [institution, setInstitution] = useState<any>(null);
+  institution?: any;
+}> = ({ setAlert, institution }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -22,42 +19,18 @@ export const ProfilePage: React.FC<{
   });
 
   useEffect(() => {
-    if (userId) {
-      fetchProfile();
-    }
-  }, [userId]);
-
-  const fetchProfile = async () => {
-    if (!userId) return;
-    try {
-      setIsLoading(true);
-      const response = await financialService.getFinancialInstitutionProfile(
-        userId
-      );
-      const inst = response?.institution;
-      if (inst) {
-        setInstitution(inst);
-        setFormData({
-          name: inst.name || "",
-          type: inst.type || "",
-          description: inst.description || "",
-          website: inst.website || "",
-          contact_email: inst.contact_email || "",
-          contact_phone: inst.contact_phone || "",
-        });
-      }
-    } catch (error: any) {
-      console.error("Failed to fetch profile:", error);
-      setAlert?.({
-        id: Date.now(),
-        title: "Error",
-        message: "Failed to load profile",
-        type: "error",
+    if (institution) {
+      setFormData({
+        name: institution.name || "",
+        type: institution.type || "",
+        description: institution.description || "",
+        website: institution.website || "",
+        contact_email: institution.contact_email || "",
+        contact_phone: institution.contact_phone || "",
       });
-    } finally {
       setIsLoading(false);
     }
-  };
+  }, [institution]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +40,7 @@ export const ProfilePage: React.FC<{
       setIsSaving(true);
       await financialService.updateFinancialInstitution(
         institution._id,
-        formData
+        { ...formData, user_id: institution.user_id }
       );
       setAlert?.({
         id: Date.now(),
@@ -75,13 +48,12 @@ export const ProfilePage: React.FC<{
         message: "Profile updated successfully!",
         type: "success",
       });
-      fetchProfile();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to update profile:", error);
       setAlert?.({
         id: Date.now(),
         title: "Error",
-        message: error?.response?.data?.message || "Failed to update profile",
+        message: (error as any)?.response?.data?.message || "Failed to update profile",
         type: "error",
       });
     } finally {

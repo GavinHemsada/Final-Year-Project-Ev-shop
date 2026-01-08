@@ -7,7 +7,7 @@ import type {
   ConfirmAlertProps,
 } from "@/types";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
-import { selectUserId, logout, selectRoles, setFinanceId, selectActiveRoleId } from "@/context/authSlice";
+import { selectUserId, logout, selectRoles, setFinanceId } from "@/context/authSlice";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "../components/Sidebar";
 import { Header } from "../components/Header";
@@ -15,6 +15,7 @@ import { NotificationPage } from "./NotificationPage";
 import { ApplicationsPage } from "./ApplicationsPage";
 import { ProductsPage } from "./ProductsPage";
 import { ProfilePage } from "./ProfilePage";
+import { CommunityPage } from "./ComunityPage";
 import { Alert, ConfirmAlert } from "@/components/MessageAlert";
 import {
   DollarSignIcon,
@@ -24,13 +25,15 @@ import {
 } from "@/assets/icons/icons";
 import { StatCard } from "../components/StatsCards";
 import { financialService } from "../financialService";
-import { useQueries, type UseQueryOptions } from "@tanstack/react-query";
-import { queryKeys } from "@/config/queryKeys";
+import { useQueries, useQuery } from "@tanstack/react-query";
 
 const notifications: Notification[] = [
-  { id: 1, message: "New application received", time: "2 hours ago" },
-  { id: 2, message: "Product approval pending", time: "1 day ago" },
-];
+  { id: 101, message: "New application received from Kasun Perera", time: "2 hours ago" },
+  { id: 102, message: "Documents verified for Amal Silva", time: "5 hours ago" },
+  { id: 103, message: "Product 'Green Wheel Loan' updated", time: "1 day ago" },
+  { id: 104, message: "Monthly report generated", time: "2 days ago" },
+  { id: 105, message: "System maintenance scheduled for Friday", time: "3 days ago" },
+] as any;
 
 const FinancialDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<FinancialActiveTab>("dashboard");
@@ -49,32 +52,38 @@ const FinancialDashboard: React.FC = () => {
 
   const userID = useAppSelector(selectUserId);
 
+  const queryResult = useQuery({
+    queryKey: ["financialInstitution", userID],
+    queryFn: () => financialService.getFinancialInstitutionProfile(userID!),
+    enabled: !!userID,
+    staleTime: 10 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  const institution = queryResult.data;
+  const isInstitutionLoading = queryResult.isLoading;
+
+  const institutionId = institution?._id;
+
   const results = useQueries({
     queries: [
       {
-        queryKey: ["financialInstitution", userID],
-        queryFn: () => financialService.getFinancialInstitutionProfile(userID!),
-        enabled: !!userID,
+        queryKey: ["financialProducts", institutionId],
+        queryFn: () =>
+          financialService.getProductsByInstitution(institutionId!),
+        enabled: !!institutionId,
         staleTime: 10 * 60 * 1000,
         refetchOnMount: false,
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
       },
       {
-        queryKey: ["financialProducts", useAppSelector(selectActiveRoleId)],
+        queryKey: ["financialApplications", institutionId],
         queryFn: () =>
-          financialService.getProductsByInstitution(useAppSelector(selectActiveRoleId)!),
-        enabled: !!useAppSelector(selectActiveRoleId),
-        staleTime: 10 * 60 * 1000,
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: false,
-      },
-      {
-        queryKey: ["financialApplications", useAppSelector(selectActiveRoleId)],
-        queryFn: () =>
-          financialService.getApplicationsByInstitution(useAppSelector(selectActiveRoleId)!),
-        enabled: !!useAppSelector(selectActiveRoleId),
+          financialService.getApplicationsByInstitution(institutionId!),
+        enabled: !!institutionId,
         staleTime: 10 * 60 * 1000,
         refetchOnMount: false,
         refetchOnWindowFocus: false,
@@ -84,21 +93,21 @@ const FinancialDashboard: React.FC = () => {
   });
 
   useEffect(() => {
-    const institutionProfile = results[0].data;
-    if (institutionProfile && institutionProfile.institution?._id) {
-      dispatch(setFinanceId(institutionProfile.institution._id));
+    if (institution && institution._id) {
+      dispatch(setFinanceId(institution._id));
     }
-  }, [results[0].data, dispatch]);
+  }, [institution, dispatch]);
 
   useEffect(() => {
     if (roles) setUserRole(roles);
   }, [roles]);
 
-  const [institutionQuery, productsQuery, applicationsQuery] = results;
+  const [productsQuery, applicationsQuery] = results;
 
-  const institution = institutionQuery.data?.institution;
-  const products = productsQuery.data?.products || [];
+  const products = productsQuery.data || [];
   const applications = applicationsQuery.data?.applications || [];
+
+
 
   const handleSetAlert = useCallback((alertData: AlertProps | null) => {
     setAlert(alertData);
@@ -137,14 +146,22 @@ const FinancialDashboard: React.FC = () => {
       case "applications":
         return <ApplicationsPage setAlert={handleSetAlert} />;
       case "products":
-        return <ProductsPage setAlert={handleSetAlert} />;
+        return <ProductsPage setAlert={handleSetAlert} products={products} />;
       case "profile":
-        return <ProfilePage setAlert={handleSetAlert} />;
+        return <ProfilePage setAlert={handleSetAlert} institution={institution} />;
       case "notification":
         return (
           <NotificationPage
             notifications={notifications}
             setAlert={handleSetAlert}
+          />
+        );
+      case "community":
+        return (
+          <CommunityPage
+            setAlert={handleSetAlert}
+            setConfirmAlert={handleSetConfirmAlert}
+            financialId={institution?._id}
           />
         );
       default:
@@ -165,6 +182,14 @@ const FinancialDashboard: React.FC = () => {
     if (logout) logout();
     navigate("/auth/login");
   };
+
+  if (isInstitutionLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <>
