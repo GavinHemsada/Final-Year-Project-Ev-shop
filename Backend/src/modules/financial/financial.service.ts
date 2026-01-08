@@ -212,7 +212,11 @@ export function financialService(
         if (existingInstitution)
           return { success: false, error: "User already has an institution" };
         const sellers = await repo.findAllInstitutions();
-        if (sellers && sellers.length > 0 && sellers.some(s => s.name === data.name)) {
+        if (
+          sellers &&
+          sellers.length > 0 &&
+          sellers.some((s) => s.name === data.name)
+        ) {
           return { success: false, error: "Institution name already exists" };
         }
         // Assign role and save user.
@@ -272,7 +276,7 @@ export function financialService(
         return { success: true, institution };
       } catch (err) {
         return { success: false, error: "Failed to fetch institution" };
-      }   
+      }
     },
     /**
      * Retrieves all financial institutions, utilizing a cache-aside pattern.
@@ -400,13 +404,16 @@ export function financialService(
           cacheKey,
           async () => {
             const data = await repo.findAllProducts(activeOnly);
-            return data ?? [];
+            // Ensure we always return an array, even if repository returns null
+            const result = Array.isArray(data) ? data : [];
+            return result;
           },
           3600
         ); // Cache for 1 hour
 
-        if (!products) return { success: false, error: "No products found" };
-        return { success: true, products };
+        // Always return products array (even if empty) - empty array is valid
+        const productsArray = Array.isArray(products) ? products : [];
+        return { success: true, products: productsArray };
       } catch (err) {
         return { success: false, error: "Failed to fetch products" };
       }
@@ -496,10 +503,14 @@ export function financialService(
         if (!product) return { success: false, error: "Product not found" };
         if (!product.is_active)
           return { success: false, error: "Product is not active" };
-        const hasApplication = await repo.checkApplictionStatesbyUserID(
+        const existingApplications = await repo.checkApplictionStatesbyUserID(
           data.user_id
         );
-        if (!hasApplication)
+        if (
+          existingApplications &&
+          Array.isArray(existingApplications) &&
+          existingApplications.length > 0
+        )
           return { success: false, error: "User already has an application" };
         // Handle file uploads.
         let filePaths: string[] = [];

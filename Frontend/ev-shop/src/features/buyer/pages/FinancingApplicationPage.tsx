@@ -1,12 +1,6 @@
 import React, { useState } from "react";
-import {
-  CheckCircleIcon,
-  ClockIcon,
-  FileTextIcon,
-  XCircleIcon,
-  CloseIcon,
-} from "@/assets/icons/icons";
-import type { AlertProps } from "@/types";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeftIcon, CloseIcon } from "@/assets/icons/icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { buyerService } from "../buyerService";
 import { useAppSelector } from "@/hooks/useAppSelector";
@@ -15,47 +9,7 @@ import { PageLoader } from "@/components/Loader";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-
-const getStatusInfo = (status: string) => {
-  switch (status.toLowerCase()) {
-    case "approved":
-      return {
-        icon: <CheckCircleIcon className="h-5 w-5 text-green-500" />,
-        color: "text-green-500 dark:text-green-400",
-        label: "Approved",
-      };
-    case "under_review":
-      return {
-        icon: <ClockIcon className="h-5 w-5 text-yellow-500" />,
-        color: "text-yellow-500 dark:text-yellow-400",
-        label: "Under Review",
-      };
-    case "pending":
-      return {
-        icon: <ClockIcon className="h-5 w-5 text-yellow-500" />,
-        color: "text-yellow-500 dark:text-yellow-400",
-        label: "Pending",
-      };
-    case "rejected":
-      return {
-        icon: <XCircleIcon className="h-5 w-5 text-red-500" />,
-        color: "text-red-500 dark:text-red-400",
-        label: "Rejected",
-      };
-    case "completed":
-      return {
-        icon: <CheckCircleIcon className="h-5 w-5 text-green-500" />,
-        color: "text-green-500 dark:text-green-400",
-        label: "Completed",
-      };
-    default:
-      return {
-        icon: <FileTextIcon className="h-5 w-5 text-gray-500" />,
-        color: "text-gray-500 dark:text-gray-400",
-        label: status,
-      };
-  }
-};
+import { useToast } from "@/context/ToastContext";
 
 // Helper function to format interest rate
 const formatInterestRate = (min?: number, max?: number) => {
@@ -363,16 +317,14 @@ const ApplicationModal: React.FC<{
   );
 };
 
-export const FinancingPage: React.FC<{
-  setAlert?: (alert: AlertProps | null) => void;
-}> = ({ setAlert }) => {
+export const FinancingApplicationPage: React.FC = () => {
+  const { listingId } = useParams<{ listingId: string }>();
+  const navigate = useNavigate();
   const userID = useAppSelector(selectUserId);
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"products" | "applications">(
-    "products"
-  );
 
   // Fetch active financing products
   const {
@@ -384,19 +336,13 @@ export const FinancingPage: React.FC<{
     queryFn: async () => {
       try {
         const response = await buyerService.getFinancingOptions();
-        // The backend handleResult returns the products array directly (not wrapped)
-        // So response is either:
-        // - An array of products (success case)
-        // - An object with message property (error case)
         if (Array.isArray(response)) {
           return response;
         }
-        // If it's an error object with message
         if (response && typeof response === "object" && "message" in response) {
           console.error("Error fetching products:", response.message);
           return [];
         }
-        // Fallback: if response has products property (shouldn't happen but just in case)
         if (
           response &&
           typeof response === "object" &&
@@ -412,27 +358,8 @@ export const FinancingPage: React.FC<{
     },
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
-  // Fetch user's financing applications
-  const {
-    data: applicationsData,
-    isLoading: applicationsLoading,
-    error: applicationsError,
-  } = useQuery({
-    queryKey: ["userFinancingApplications", userID],
-    queryFn: async () => {
-      if (!userID) return [];
-      const response = await buyerService.getUserFinancingApplications(userID);
-      if (response.success && response.applications) {
-        return response.applications;
-      }
-      return [];
-    },
-    enabled: !!userID,
-    staleTime: 10 * 60 * 1000, // 10 minutes
-  });
 
   const products = productsData || [];
-  const applications = applicationsData || [];
 
   // Mutation for submitting application
   const submitApplicationMutation = useMutation({
@@ -444,6 +371,10 @@ export const FinancingPage: React.FC<{
       const data = new FormData();
       data.append("user_id", userID);
       data.append("product_id", selectedProduct._id);
+      // Include listing ID if available
+      if (listingId) {
+        data.append("list_id", listingId);
+      }
       data.append("message_text", formData.message_text || "");
       data.append(
         "application_data",
@@ -472,18 +403,20 @@ export const FinancingPage: React.FC<{
       });
       setIsModalOpen(false);
       setSelectedProduct(null);
-      setAlert?.({
-        id: Date.now(),
-        title: "Success",
-        message: "Your financing application has been submitted successfully!",
+      showToast({
+        text: "Your financing application has been submitted successfully!",
         type: "success",
       });
+      // Navigate back to vehicle details or dashboard after successful submission
+      if (listingId) {
+        navigate(`/user/vehicle/${listingId}`);
+      } else {
+        navigate("/user/dashboard");
+      }
     },
     onError: (error: any) => {
-      setAlert?.({
-        id: Date.now(),
-        title: "Error",
-        message:
+      showToast({
+        text:
           error?.response?.data?.message ||
           "Failed to submit application. Please try again.",
         type: "error",
@@ -505,193 +438,141 @@ export const FinancingPage: React.FC<{
     submitApplicationMutation.mutate(data);
   };
 
-  if (productsLoading || applicationsLoading) {
+  if (productsLoading) {
     return <PageLoader />;
   }
 
   return (
-    <div className="space-y-12">
-      {/* Tab Navigation */}
-      <div className="bg-white p-8 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-          <h1 className="text-3xl font-bold dark:text-white">Financing</h1>
+    <div className="bg-white rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
+      {/* Back Button */}
+      <div className="p-6 pb-0">
+        <button
+          onClick={() => {
+            if (listingId) {
+              navigate(`/user/vehicle/${listingId}`);
+            } else {
+              navigate("/user/dashboard");
+            }
+          }}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+        >
+          <ArrowLeftIcon className="h-5 w-5" />
+          <span>Back</span>
+        </button>
+      </div>
 
-          <div className="relative">
-            <select
-              value={activeTab}
-              onChange={(e) =>
-                setActiveTab(e.target.value as "products" | "applications")
-              }
-              className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 pr-8"
-            >
-              <option value="products">Available Options</option>
-              <option value="applications">My Applications</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300">
-              <svg
-                className="fill-current h-4 w-4"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-              >
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-              </svg>
-            </div>
+      <div className="p-6">
+        <h1 className="text-3xl font-bold mb-2 dark:text-white">
+          Apply for Financing
+        </h1>
+        <p className="text-gray-500 dark:text-gray-400 mb-8">
+          Select a financing option and apply for your lease
+        </p>
+
+        {productsError ? (
+          <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
+            <p className="text-red-500 text-center py-8">
+              Failed to load financing products. Please try again later.
+            </p>
           </div>
-        </div>
+        ) : products.length === 0 ? (
+          <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
+            <p className="text-gray-500 text-center py-8 dark:text-gray-400">
+              No active financing products available at the moment.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {products.map((product: any) => {
+              const institution = product.institution_id;
+              const institutionName =
+                institution?.name || "Unknown Institution";
+              const institutionLogo =
+                institution?.logo ||
+                "https://placehold.co/40x40/3498db/ffffff?text=" +
+                  institutionName.charAt(0);
 
-      {/* Section for Available Financing Options */}
-      {activeTab === "products" && (
-        <div className="mt-6">
-          {productsError ? (
-            <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
-              <p className="text-red-500 text-center py-8">
-                Failed to load financing products. Please try again later.
-              </p>
-            </div>
-          ) : products.length === 0 ? (
-            <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
-              <p className="text-gray-500 text-center py-8 dark:text-gray-400">
-                No active financing products available at the moment.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {products.map((product: any) => {
-                const institution = product.institution_id;
-                const institutionName =
-                  institution?.name || "Unknown Institution";
-                const institutionLogo =
-                  institution?.logo ||
-                  "https://placehold.co/40x40/3498db/ffffff?text=" +
-                    institutionName.charAt(0);
-
-                return (
-                  <div
-                    key={product._id}
-                    className="bg-white p-6 rounded-xl shadow-md flex flex-col justify-between hover:shadow-lg transition-shadow dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700"
-                  >
-                    <div>
-                      <div className="flex items-center gap-4 mb-4">
-                        <img
-                          src={institutionLogo}
-                          alt={`${institutionName} logo`}
-                          className="h-10 w-10 rounded-full object-cover bg-gray-200"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = `https://placehold.co/40x40/3498db/ffffff?text=${institutionName.charAt(
-                              0
-                            )}`;
-                          }}
-                        />
-                        <div>
-                          <h3 className="text-xl font-bold dark:text-white">
-                            {product.product_name}
-                          </h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            by {institutionName}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="text-gray-600 my-3 dark:text-gray-300">
-                        {product.description || "No description available."}
-                      </p>
-                      <div className="text-sm space-y-2 mt-4 pt-4 border-t dark:border-gray-700">
-                        <p className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">
-                            Interest Rate:
-                          </span>
-                          <span className="font-semibold dark:text-white">
-                            {formatInterestRate(
-                              product.interest_rate_min,
-                              product.interest_rate_max
-                            )}
-                          </span>
-                        </p>
-                        <p className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">
-                            Loan Term:
-                          </span>
-                          <span className="font-semibold dark:text-white">
-                            {formatLoanTerm(
-                              product.term_months_min,
-                              product.term_months_max
-                            )}
-                          </span>
+              return (
+                <div
+                  key={product._id}
+                  className="bg-white p-6 rounded-xl shadow-md flex flex-col justify-between hover:shadow-lg transition-shadow dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700"
+                >
+                  <div>
+                    <div className="flex items-center gap-4 mb-4">
+                      <img
+                        src={institutionLogo}
+                        alt={`${institutionName} logo`}
+                        className="h-10 w-10 rounded-full object-cover bg-gray-200"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://placehold.co/40x40/3498db/ffffff?text=${institutionName.charAt(
+                            0
+                          )}`;
+                        }}
+                      />
+                      <div>
+                        <h3 className="text-xl font-bold dark:text-white">
+                          {product.product_name}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          by {institutionName}
                         </p>
                       </div>
                     </div>
+                    <p className="text-gray-600 my-3 dark:text-gray-300">
+                      {product.description || "No description available."}
+                    </p>
+                    <div className="text-sm space-y-2 mt-4 pt-4 border-t dark:border-gray-700">
+                      <p className="flex justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          Interest Rate:
+                        </span>
+                        <span className="font-semibold dark:text-white">
+                          {formatInterestRate(
+                            product.interest_rate_min,
+                            product.interest_rate_max
+                          )}
+                        </span>
+                      </p>
+                      <p className="flex justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          Loan Term:
+                        </span>
+                        <span className="font-semibold dark:text-white">
+                          {formatLoanTerm(
+                            product.term_months_min,
+                            product.term_months_max
+                          )}
+                        </span>
+                      </p>
+                    </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Section for User's Finance Applications */}
-      {activeTab === "applications" && (
-        <div className="mt-6">
-          <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
-            {applications.length > 0 ? (
-              <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                {applications.map((app: any) => {
-                  const statusInfo = getStatusInfo(app.status || "pending");
-                  const product = app.product_id;
-                  const institution = product?.institution_id;
-                  const submittedDate = app.createdAt || app.submitted_date;
-                  return (
-                    <li
-                      key={app._id}
-                      className="py-4 flex items-center justify-between"
-                    >
-                      <div>
-                        <p className="font-semibold text-lg dark:text-white">
-                          {product?.product_name || "Unknown Product"}
-                        </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {institution?.name || "Unknown Institution"} &middot;
-                          Submitted on{" "}
-                          {submittedDate
-                            ? new Date(submittedDate).toLocaleDateString()
-                            : "N/A"}
-                        </p>
-                      </div>
-                      <div
-                        className={`flex items-center gap-2 ${statusInfo.color}`}
-                      >
-                        {statusInfo.icon}
-                        <span className="font-semibold">{statusInfo.label}</span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : applicationsError ? (
-              <p className="text-red-500 text-center py-8">
-                Failed to load your applications. Please try again later.
-              </p>
-            ) : (
-              <p className="text-gray-500 text-center py-8 dark:text-gray-400">
-                You have not submitted any finance applications.
-              </p>
-            )}
+                  <button
+                    onClick={() => handleApplyNow(product)}
+                    className="mt-6 w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                  >
+                    Apply for Loan
+                  </button>
+                </div>
+              );
+            })}
           </div>
-        </div>
-      )}
-    </div>
+        )}
 
-      {/* Application Modal */}
-      {selectedProduct && (
-        <ApplicationModal
-          product={selectedProduct}
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          onSubmit={handleSubmitApplication}
-          isLoading={submitApplicationMutation.isPending}
-        />
-      )}
+        {/* Application Modal */}
+        {selectedProduct && (
+          <ApplicationModal
+            product={selectedProduct}
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            onSubmit={handleSubmitApplication}
+            isLoading={submitApplicationMutation.isPending}
+          />
+        )}
+      </div>
     </div>
   );
 };
 
-export default FinancingPage;
+export default FinancingApplicationPage;
+

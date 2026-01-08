@@ -252,7 +252,7 @@ const VehicleDetailsPage: React.FC = () => {
     : null;
 
   const sellerAddress = vehicle?.seller_id?.street_address;
-  console.log(vehicle)
+  console.log(vehicle);
   if (!vehicle) {
     return (
       <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
@@ -523,10 +523,12 @@ const VehicleDetailsPage: React.FC = () => {
                         must complete the full payment and collect the vehicle
                         within <strong>14 days</strong>. Failure to do so will
                         result in the cancellation of the advance payment.
-                        <br /><br />
+                        <br />
+                        <br />
                         <span className="text-red-600 dark:text-red-400 font-semibold">
-                          ⚠️ Important: The LKR 50,000 advance payment is non-refundable 
-                          and will be deducted from the total vehicle cost.
+                          ⚠️ Important: The LKR 50,000 advance payment is
+                          non-refundable and will be deducted from the total
+                          vehicle cost.
                         </span>
                       </p>
                     </div>
@@ -549,12 +551,16 @@ const VehicleDetailsPage: React.FC = () => {
                     {addToCartMutation.isPending ? "Adding..." : "Add to Cart"}
                   </button>
                   <button
+                    onClick={() => {
+                      if (vehicle?.listing_type === "lease" && vehicle._id) {
+                        navigate(`/user/financing/apply/${vehicle._id}`);
+                      }
+                    }}
                     disabled={vehicle?.listing_type === "sale"}
-                    className="w-full bg-white border-2 border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-white border-2 border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600"
                   >
                     Apply for Lease
                   </button>
-
                 </div>
 
                 {!userId && (
@@ -567,8 +573,6 @@ const VehicleDetailsPage: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Alert Component */}
     </div>
   );
 };
