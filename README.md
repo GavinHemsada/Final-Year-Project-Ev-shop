@@ -231,7 +231,7 @@ npm test
 
 ## License
 
-This project was created as a **Final Year Project for BIT Semester 6**.
+This project was created as a **Final Year Project for BIT**.
 
 A dedicated open-source license file (e.g., MIT/ISC) has **not** been added at the root of this repository yet.  
 Before any public or commercial use, please add an appropriate `LICENSE` file and update the backend `package.json` and Swagger metadata if needed.
