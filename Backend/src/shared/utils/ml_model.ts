@@ -49,7 +49,8 @@ const repairCostModelPath = path.join(
 );
 
 const batterySessionPromise = ort.InferenceSession.create(batteryModelPath);
-const repairCostSessionPromise = ort.InferenceSession.create(repairCostModelPath);
+const repairCostSessionPromise =
+  ort.InferenceSession.create(repairCostModelPath);
 
 export const MlModels = async () => {
   const batterySession = await batterySessionPromise;

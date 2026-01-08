@@ -4,6 +4,8 @@ import { IUserRepository } from "../user/user.repository";
 import { getChatbotResponse } from "../../shared/utils/chatbot";
 import CacheService from "../../shared/cache/CacheService";
 import { IEvRepository } from "../ev/ev.repository";
+import { ITestDriveRepository } from "../testDrive/testDrive.repository";
+import { IRepairLocationRepository } from "../repairLocation/repairLocation.repository";
 
 /**
  * Defines the interface for the chatbot service, outlining methods for managing conversations and predictions.
@@ -125,12 +127,17 @@ export interface IChatbotService {
  *
  * @param chatbotRepo - The repository for chatbot data access.
  * @param userRepo - The repository for user data access.
+ * @param evRepo - The repository for EV data access.
+ * @param testDriveRepo - The repository for test drive data access (optional).
+ * @param repairLocationRepo - The repository for repair location data access (optional).
  * @returns An implementation of the IChatbotService interface.
  */
 export function chatbotService(
   chatbotRepo: IChatbotRepository,
   userRepo: IUserRepository,
-  evRepo: IEvRepository
+  evRepo: IEvRepository,
+  testDriveRepo?: ITestDriveRepository,
+  repairLocationRepo?: IRepairLocationRepository
 ): IChatbotService {
   return {
     /**
@@ -213,7 +220,12 @@ export function chatbotService(
      */
     getRespons: async (question) => {
       try {
-        const response = await getChatbotResponse(question, evRepo);
+        const response = await getChatbotResponse(
+          question,
+          evRepo,
+          testDriveRepo,
+          repairLocationRepo
+        );
         if (!response)
           return { success: false, error: "Failed to get response" };
         return { success: true, response };
@@ -380,20 +392,27 @@ export function chatbotService(
      */
     createPrediction: async (data) => {
       try {
-        const conversation = await chatbotRepo.findConversationById(
-          data.conversation_id
-        );
-        if (!conversation)
-          return { success: false, error: "Conversation not found" };
+        // Only validate conversation if conversation_id is provided
+        if (data.conversation_id) {
+          const conversation = await chatbotRepo.findConversationById(
+            data.conversation_id
+          );
+          if (!conversation)
+            return { success: false, error: "Conversation not found" };
+        }
+
         const prediction = await chatbotRepo.createPrediction(data);
 
         // Invalidate relevant caches
-        await Promise.all([
-          CacheService.delete("predictions"),
-          CacheService.delete(
-            `predictions_conversation_${data.conversation_id}`
-          ),
-        ]);
+        const cacheDeletes = [CacheService.delete("predictions")];
+        if (data.conversation_id) {
+          cacheDeletes.push(
+            CacheService.delete(
+              `predictions_conversation_${data.conversation_id}`
+            )
+          );
+        }
+        await Promise.all(cacheDeletes);
 
         return { success: true, prediction };
       } catch (err) {
@@ -414,13 +433,18 @@ export function chatbotService(
           return { success: false, error: "Prediction not found" };
 
         // Invalidate relevant caches
-        await Promise.all([
+        const cacheDeletes = [
           CacheService.delete(`prediction_${id}`),
           CacheService.delete("predictions"),
-          CacheService.delete(
-            `predictions_conversation_${existing.conversation_id}`
-          ),
-        ]);
+        ];
+        if (existing.conversation_id) {
+          cacheDeletes.push(
+            CacheService.delete(
+              `predictions_conversation_${existing.conversation_id}`
+            )
+          );
+        }
+        await Promise.all(cacheDeletes);
 
         return { success: true, prediction };
       } catch (err) {
@@ -440,13 +464,18 @@ export function chatbotService(
         if (!success) return { success: false, error: "Prediction not found" };
 
         // Invalidate relevant caches
-        await Promise.all([
+        const cacheDeletes = [
           CacheService.delete(`prediction_${id}`),
           CacheService.delete("predictions"),
-          CacheService.delete(
-            `predictions_conversation_${existing.conversation_id}`
-          ),
-        ]);
+        ];
+        if (existing.conversation_id) {
+          cacheDeletes.push(
+            CacheService.delete(
+              `predictions_conversation_${existing.conversation_id}`
+            )
+          );
+        }
+        await Promise.all(cacheDeletes);
 
         return { success: true };
       } catch (err) {

@@ -1,4 +1,11 @@
-import { IsArray, IsMongoId, IsNotEmpty, IsString } from "class-validator";
+import {
+  IsArray,
+  IsMongoId,
+  IsNotEmpty,
+  IsString,
+  IsObject,
+  IsOptional,
+} from "class-validator";
 
 /**
  * Data Transfer Object (DTO) for creating a new chatbot conversation entry.
@@ -25,22 +32,30 @@ export class ChatbotConversationDTO {
  */
 export class PredictionDTO {
   /**
-   * The MongoDB ObjectId of the conversation this prediction belongs to.
+   * The type of prediction made (e.g., "battery_health", "repair_cost").
+   */
+  @IsString()
+  @IsNotEmpty()
+  type!: string;
+
+  /**
+   * A flexible object containing the user's inputs that led to this prediction.
+   * Stores all input parameters like age_years, mileage, battery_cycles, etc.
+   */
+  @IsObject()
+  user_inputs!: Record<string, any>;
+
+  /**
+   * A flexible object containing the chatbot's prediction result.
+   * Stores the prediction value and any additional metadata.
+   */
+  @IsObject()
+  prediction_result!: Record<string, any>;
+
+  /**
+   * The MongoDB ObjectId of the conversation this prediction belongs to (optional).
    */
   @IsMongoId()
-  conversation_id!: string;
-
-  /**
-   * An array of strings representing the user's inputs that led to this prediction.
-   */
-  @IsArray()
-  @IsString({ each: true })
-  user_inputs!: string[];
-
-  /**
-   * An array of strings representing the chatbot's predicted responses.
-   */
-  @IsArray()
-  @IsString({ each: true })
-  prediction_result!: string[];
+  @IsOptional()
+  conversation_id?: string;
 }

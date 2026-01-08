@@ -102,6 +102,28 @@ export const buyerService = {
     const response = await axiosPrivate.post(`/chatbot/ask`, { question });
     return response.data;
   },
+  
+  // prediction operations
+  predictBatteryHealth: async (data: any) => {
+    const response = await axiosPrivate.post(`/ml-test/battery-health`, data);
+    return response.data;
+  },
+  
+  predictRepairCost: async (data: any) => {
+    const response = await axiosPrivate.post(`/ml-test/repair-cost`, data);
+    return response.data;
+  },
+  
+  // save prediction to database
+  savePrediction: async (predictionData: {
+    type: string;
+    user_inputs: Record<string, any>;
+    prediction_result: Record<string, any>;
+    conversation_id?: string;
+  }) => {
+    const response = await axiosPrivate.post(`/chatbot/predictions`, predictionData);
+    return response.data;
+  },
 
   // financing operations
   getFinancingTypes: async () => {
@@ -109,7 +131,7 @@ export const buyerService = {
     return response.data;
   },
   getFinancingOptions: async () => {
-    const response = await axiosPrivate.get(`/financial/products`);
+    const response = await axiosPrivate.get(`/financial/products?activeOnly=true`);
     return response.data;
   },
   getUserFinancingApplications: async (userId: string) => {
@@ -118,10 +140,15 @@ export const buyerService = {
     );
     return response.data;
   },
-  submitFinancingApplication: async (applicationData: any) => {
+  submitFinancingApplication: async (formData: FormData) => {
     const response = await axiosPrivate.post(
       `/financial/applications`,
-      applicationData
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
     );
     return response.data;
   },

@@ -217,6 +217,13 @@ export class FinancingApplicationDTO {
   product_id!: string;
 
   /**
+   * An optional ID of the vehicle listing this application is for (for lease applications).
+   */
+  @IsOptional()
+  @IsString()
+  list_id?: string;
+
+  /**
    * An optional message from the applicant to the institution.
    */
   @IsOptional()

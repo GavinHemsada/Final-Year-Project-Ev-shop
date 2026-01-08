@@ -7,12 +7,14 @@ import { Schema, model, Document, Types } from "mongoose";
 export interface IPrediction extends Document {
   /** The unique identifier for the prediction document. */
   _id: Types.ObjectId;
-  /** The ID of the `ChatbotConversation` this prediction is a part of. */
-  conversation_id: Types.ObjectId;
+  /** The type of prediction made (e.g., "battery_health", "repair_cost"). */
+  type: string;
   /** A flexible object containing the user's inputs that led to this prediction. */
   user_inputs: Record<string, any>;
   /** A flexible object containing the chatbot's predicted responses or actions. */
   prediction_result: Record<string, any>;
+  /** Optional reference to a conversation this prediction belongs to. */
+  conversation_id?: Types.ObjectId;
 }
 
 /**
@@ -20,12 +22,10 @@ export interface IPrediction extends Document {
  */
 const PredictionSchema = new Schema<IPrediction>(
   {
-    /** A reference to the parent `ChatbotConversation` document. */
-    conversation_id: {
-      type: Schema.Types.ObjectId,
-      ref: "ChatbotConversation",
-      required: true,
-    },
+    /**
+     * The type of prediction made (e.g., "battery_health", "repair_cost").
+     */
+    type: { type: String, required: true },
     /**
      * A flexible object to store the user's inputs. Using `type: Object` allows for
      * storing various structured data that contributed to the prediction.
@@ -35,6 +35,14 @@ const PredictionSchema = new Schema<IPrediction>(
      * A flexible object to store the chatbot's prediction result.
      */
     prediction_result: { type: Object, required: true },
+    /**
+     * Optional reference to a conversation this prediction belongs to.
+     */
+    conversation_id: {
+      type: Schema.Types.ObjectId,
+      ref: "ChatbotConversation",
+      required: false,
+    },
   },
   { timestamps: true }
 );

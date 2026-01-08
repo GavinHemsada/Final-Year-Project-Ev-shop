@@ -242,7 +242,9 @@ container.register<IChatbotService>("ChatbotService", {
     chatbotService(
       c.resolve<IChatbotRepository>("ChatbotRepository"),
       c.resolve<IUserRepository>("UserRepository"),
-      c.resolve<IEvRepository>("EvRepository")
+      c.resolve<IEvRepository>("EvRepository"),
+      c.resolve<ITestDriveRepository>("TestDriveRepository"),
+      c.resolve<IRepairLocationRepository>("RepairLocationRepository")
     ),
 });
 
