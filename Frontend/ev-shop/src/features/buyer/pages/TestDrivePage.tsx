@@ -105,6 +105,17 @@ export const TestDrivesPage: React.FC<{
   const filteredSlots = useMemo(() => {
     let filtered = slots;
 
+    // Get today's date at midnight for comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Filter out past dates - only show today and future slots
+    filtered = filtered.filter((slot: any) => {
+      const slotDate = new Date(slot.available_date);
+      slotDate.setHours(0, 0, 0, 0);
+      return slotDate >= today;
+    });
+
     // Filter by search query (model name)
     if (searchQuery.trim()) {
       filtered = filtered.filter((slot: any) => {
