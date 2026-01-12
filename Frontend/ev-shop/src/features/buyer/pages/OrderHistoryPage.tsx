@@ -6,6 +6,8 @@ import { buyerService } from "../buyerService";
 import { StarIcon, CloseIcon } from "@/assets/icons/icons";
 import { useState } from "react";
 import { useToast } from "@/context/ToastContext";
+import { useNavigate } from "react-router-dom";
+import { type Application } from "@/types";
 
 const getStatusChip = (status: Order["order_status"]): string => {
   switch (status?.toLowerCase()) {
@@ -24,10 +26,13 @@ const getStatusChip = (status: Order["order_status"]): string => {
   }
 };
 
-const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = () => {
+const OrderHistory: React.FC<{
+  setAlert?: (alert: AlertProps | null) => void;
+}> = () => {
   const userId = useAppSelector(selectUserId);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [rating, setRating] = useState(0);
@@ -47,6 +52,24 @@ const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> 
     queryKey: ["userReviews", userId],
     queryFn: () => buyerService.getReviewsByReviewer(userId!),
     enabled: !!userId,
+  });
+
+  // Fetch user's financing applications
+  const { data: financingApplications } = useQuery({
+    queryKey: ["userFinancingApplications", userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      const response = await buyerService.getUserFinancingApplications(userId);
+      if (response.success && response.applications) {
+        return response.applications;
+      }
+      if (Array.isArray(response)) {
+        return response;
+      }
+      return [];
+    },
+    enabled: !!userId,
+    staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
   const submitReviewMutation = useMutation({
@@ -72,10 +95,23 @@ const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> 
   const getOrderReview = (orderId: string) => {
     if (!userReviews) return null;
     return userReviews.find((review: any) => {
-       const revOrderId = typeof review.order_id === 'object' && review.order_id !== null
-            ? (review.order_id as any)._id
-            : review.order_id;
-       return revOrderId === orderId;
+      const revOrderId =
+        typeof review.order_id === "object" && review.order_id !== null
+          ? (review.order_id as any)._id
+          : review.order_id;
+      return revOrderId === orderId;
+    });
+  };
+
+  // Helper function to find financing application for an order
+  const getOrderFinancingApplication = (orderId: string) => {
+    if (!financingApplications) return null;
+    return financingApplications.find((app: any) => {
+      const appOrderId =
+        typeof app.order_id === "object" && app.order_id !== null
+          ? (app.order_id as any)._id
+          : app.order_id;
+      return appOrderId === orderId;
     });
   };
 
@@ -113,9 +149,9 @@ const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> 
 
   const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedOrder || !userId) return;
-    
+
     if (rating === 0) {
       showToast({
         text: "Please select a rating",
@@ -127,11 +163,12 @@ const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> 
     const reviewData = {
       reviewer_id: userId,
       target_type: "product",
-      target_id: (selectedOrder.seller_id as any)?._id || selectedOrder.seller_id,
+      target_id:
+        (selectedOrder.seller_id as any)?._id || selectedOrder.seller_id,
       order_id: selectedOrder._id,
       rating,
       title,
-      comment: comment || undefined, 
+      comment: comment || undefined,
     };
 
     submitReviewMutation.mutate(reviewData);
@@ -142,7 +179,7 @@ const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> 
       <div className="bg-white p-8 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <h1 className="text-3xl font-bold dark:text-white">My Orders</h1>
-          
+
           <div className="relative">
             <select
               value={filterStatus}
@@ -155,8 +192,12 @@ const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> 
               <option value="Cancelled">Cancelled</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300">
-              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+              <svg
+                className="fill-current h-4 w-4"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+              >
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
               </svg>
             </div>
           </div>
@@ -190,18 +231,25 @@ const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> 
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-              {(!filteredOrders || filteredOrders.length === 0) ? (
+              {!filteredOrders || filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td
+                    colSpan={7}
+                    className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
+                  >
                     No orders found.
                   </td>
                 </tr>
               ) : (
                 filteredOrders.map((order: Order) => {
-                  const modelName = order.listing_id?.model_id?.model_name || "N/A";
-                  const listingPrice = order.listing_id?.price || order.total_amount;
-                  const sellerLocation = order.seller_id?.street_address || "N/A";
-                  const canRate = order.order_status?.toLowerCase() === "completed";
+                  const modelName =
+                    order.listing_id?.model_id?.model_name || "N/A";
+                  const listingPrice =
+                    order.listing_id?.price || order.total_amount;
+                  const sellerLocation =
+                    order.seller_id?.street_address || "N/A";
+                  const canRate =
+                    order.order_status?.toLowerCase() === "completed";
 
                   return (
                     <tr
@@ -212,14 +260,17 @@ const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> 
                         {order._id?.slice(-8).toUpperCase() || "N/A"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {order.order_date ? new Date(order.order_date).toLocaleDateString() : "N/A"}
+                        {order.order_date
+                          ? new Date(order.order_date).toLocaleDateString()
+                          : "N/A"}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
                         <div className="font-medium">{modelName}</div>
                         {order.listing_id?.color && (
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             {order.listing_id.color}
-                            {order.listing_id.registration_year && ` • ${order.listing_id.registration_year}`}
+                            {order.listing_id.registration_year &&
+                              ` • ${order.listing_id.registration_year}`}
                           </div>
                         )}
                       </td>
@@ -236,12 +287,61 @@ const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> 
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900 dark:text-white">
-                        {listingPrice ? `LKR ${listingPrice.toLocaleString()}` : "N/A"}
+                        {listingPrice
+                          ? `LKR ${listingPrice.toLocaleString()}`
+                          : "N/A"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
-                        {canRate && (
-                          <>
-                            {(() => {
+                        <div className="flex items-center justify-center gap-2">
+                          {(() => {
+                            const financingApp: Application | null =
+                              getOrderFinancingApplication(order._id);
+                            // const hasLoanApplication = financingApp !== null;
+                            const hasLoanApplication = financingApp?.order_id === order._id;
+                            const isPendingLease =
+                              order.order_status?.toLowerCase() === "confirmed" &&
+                              (order.listing_id?.listing_type?.toLowerCase() ===
+                                "lease" ||
+                                order.listing_id?.listing_type?.toLowerCase() ===
+                                  "forlease") && !hasLoanApplication;
+
+                            // If order has loan application and is pending, show disabled button
+                            if (
+                              hasLoanApplication &&
+                              financingApp?.status?.toLowerCase() === "pending"
+                            ) {
+                              return (
+                                <button
+                                  disabled
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-400 text-white text-xs font-medium rounded-lg cursor-not-allowed opacity-60 dark:bg-gray-600"
+                                >
+                                  Loan is Pending
+                                </button>
+                              );
+                            }
+
+                            if(financingApp?.status?.toLowerCase() === "approved"){
+                              return (
+                              <button
+                              disabled
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-400 text-white text-xs font-medium rounded-lg cursor-not-allowed opacity-60 dark:bg-blue-600"
+                            >
+                              Loan is Approved
+                            </button>
+                            );
+                            }
+                            if(financingApp?.status?.toLowerCase() === "rejected"){
+                              return (
+                                <button
+                                  disabled
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-400 text-white text-xs font-medium rounded-lg cursor-not-allowed opacity-60 dark:bg-red-600"
+                                >
+                                  Loan is Rejected
+                                </button>
+                              );
+                            }
+                            // If order has loan application and is completed, show rating button
+                            if (financingApp?.status?.toLowerCase() === "approved" && canRate) {
                               const existingReview = getOrderReview(order._id);
                               if (existingReview) {
                                 return (
@@ -268,9 +368,63 @@ const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> 
                                   Rate
                                 </button>
                               );
-                            })()}
-                          </>
-                        )}
+                            }
+
+                            // Original logic for pending lease orders without loan application
+                            if (isPendingLease) {
+                              return (
+                                <button
+                                  onClick={() => {
+                                    if (order._id) {
+                                      navigate(
+                                        `/user/financing/apply/${order._id}`
+                                      );
+                                    } else {
+                                      showToast({
+                                        text: "Order information not available",
+                                        type: "error",
+                                      });
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors dark:bg-green-700 dark:hover:bg-green-600"
+                                >
+                                  Apply Lease
+                                </button>
+                              );
+                            }
+
+                            // Original logic for completed orders without loan application
+                            if (canRate) {
+                              const existingReview = getOrderReview(order._id);
+                              if (existingReview) {
+                                return (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <svg
+                                      className="h-5 w-5 text-yellow-400 fill-yellow-400"
+                                      fill="currentColor"
+                                      viewBox="0 0 20 20"
+                                    >
+                                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                    <span className="font-semibold text-gray-900 dark:text-white">
+                                      {existingReview.rating}
+                                    </span>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <button
+                                  onClick={() => handleRate(order)}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600"
+                                >
+                                  <StarIcon />
+                                  Rate
+                                </button>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -292,8 +446,10 @@ const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> 
               <CloseIcon />
             </button>
 
-            <h2 className="text-2xl font-bold mb-4 dark:text-white">Rate Your Purchase</h2>
-            
+            <h2 className="text-2xl font-bold mb-4 dark:text-white">
+              Rate Your Purchase
+            </h2>
+
             <div className="mb-4">
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Order: {selectedOrder._id?.slice(-8).toUpperCase()}
@@ -376,7 +532,9 @@ const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> 
                   disabled={submitReviewMutation.isPending}
                   className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitReviewMutation.isPending ? "Submitting..." : "Submit Review"}
+                  {submitReviewMutation.isPending
+                    ? "Submitting..."
+                    : "Submit Review"}
                 </button>
                 <button
                   type="button"

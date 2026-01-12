@@ -11,15 +11,32 @@ export const CommunityManagementPage: React.FC<{
 }> = ({ setAlert }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [viewingPost, setViewingPost] = useState<any | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch all posts
+  // Fetch all posts (without pagination to get all posts)
   const { data: postsData, isLoading: postsLoading } = useQuery({
     queryKey: ["adminCommunityPosts", searchTerm],
-    queryFn: () => adminService.getAllCommunityPosts({ search: searchTerm }),
+    queryFn: async () => {
+      // Fetch all posts without pagination limit
+      const response = await adminService.getAllCommunityPosts({
+        search: searchTerm,
+      });
+      return response;
+    },
   });
 
-  const posts = postsData?.posts || []; // Adjust based on actual API response structure
+  // Handle different response structures
+  // Backend returns { posts: [...], total: number } via handleResult which unwraps it
+  const posts = Array.isArray(postsData)
+    ? postsData
+    : postsData?.posts && Array.isArray(postsData.posts)
+    ? postsData.posts
+    : postsData?.data?.posts && Array.isArray(postsData.data.posts)
+    ? postsData.data.posts
+    : postsData?.data && Array.isArray(postsData.data)
+    ? postsData.data
+    : [];
 
   // Delete Post Mutation
   const deletePostMutation = useMutation({
@@ -48,13 +65,24 @@ export const CommunityManagementPage: React.FC<{
     enabled: !!selectedPostId,
   });
 
-  const replies = repliesData?.replies || [];
+  // Handle different response structures for replies
+  const replies = Array.isArray(repliesData)
+    ? repliesData
+    : repliesData?.replies && Array.isArray(repliesData.replies)
+    ? repliesData.replies
+    : repliesData?.data?.replies && Array.isArray(repliesData.data.replies)
+    ? repliesData.data.replies
+    : repliesData?.data && Array.isArray(repliesData.data)
+    ? repliesData.data
+    : [];
 
   // Delete Reply Mutation
   const deleteReplyMutation = useMutation({
     mutationFn: (replyId: string) => adminService.deletePostReply(replyId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminPostReplies", selectedPostId] });
+      queryClient.invalidateQueries({
+        queryKey: ["adminPostReplies", selectedPostId],
+      });
       setAlert({
         id: Date.now(),
         type: "success",
@@ -71,10 +99,16 @@ export const CommunityManagementPage: React.FC<{
   });
 
   const reportData = posts.map((post: any) => ({
-    title: post.title,
-    author: post.user_id?.name || "Unknown",
+    title: post.title || "N/A",
+    author:
+      post.user_id?.name ||
+      post.seller_id?.business_name ||
+      post.financial_id?.name ||
+      "Unknown",
     replies: post.reply_count || 0,
-    date: post.createdAt ? new Date(post.createdAt).toLocaleDateString() : "N/A"
+    date: post.createdAt
+      ? new Date(post.createdAt).toLocaleDateString()
+      : "N/A",
   }));
 
   if (postsLoading) {
@@ -115,7 +149,13 @@ export const CommunityManagementPage: React.FC<{
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Posts List */}
-        <div className={`lg:col-span-${selectedPostId ? "2" : "3"} transition-all duration-300`}>
+        <div
+          className={
+            selectedPostId
+              ? "lg:col-span-2 transition-all duration-300"
+              : "lg:col-span-3 transition-all duration-300"
+          }
+        >
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:border dark:border-gray-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -149,10 +189,16 @@ export const CommunityManagementPage: React.FC<{
                     posts.map((post: any) => (
                       <tr
                         key={post._id}
-                        className={`hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
-                          selectedPostId === post._id ? "bg-blue-50 dark:bg-blue-900/20" : ""
+                        className={`hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer ${
+                          selectedPostId === post._id
+                            ? "bg-blue-200 text-white dark:bg-blue-600 dark:text-white"
+                            : ""
                         }`}
-                        onClick={() => setSelectedPostId(post._id === selectedPostId ? null : post._id)}
+                        onClick={() =>
+                          setSelectedPostId(
+                            post._id === selectedPostId ? null : post._id
+                          )
+                        }
                       >
                         <td className="px-6 py-4">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -161,9 +207,21 @@ export const CommunityManagementPage: React.FC<{
                           <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
                             {post.content}
                           </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingPost(post);
+                            }}
+                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs mt-1"
+                          >
+                            View Full Post
+                          </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {post.user_id?.name || "Unknown"}
+                          {post.user_id?.name ||
+                            post.seller_id?.business_name ||
+                            post.financial_id?.name ||
+                            "Unknown"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {post.reply_count || 0}
@@ -172,7 +230,11 @@ export const CommunityManagementPage: React.FC<{
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (window.confirm("Are you sure you want to delete this post?")) {
+                              if (
+                                window.confirm(
+                                  "Are you sure you want to delete this post?"
+                                )
+                              ) {
                                 deletePostMutation.mutate(post._id);
                               }
                             }}
@@ -191,50 +253,106 @@ export const CommunityManagementPage: React.FC<{
           </div>
         </div>
 
+        {/* Full Post View Modal */}
+        {viewingPost && (
+          <div className="fixed inset-0 bg-white-200/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-xl font-bold dark:text-white">
+                  {viewingPost.title}
+                </h3>
+                <button
+                  onClick={() => setViewingPost(null)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="mb-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                  By:{" "}
+                  {viewingPost.user_id?.name ||
+                    viewingPost.seller_id?.business_name ||
+                    viewingPost.financial_id?.name ||
+                    "Unknown"}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Date:{" "}
+                  {viewingPost.createdAt
+                    ? new Date(viewingPost.createdAt).toLocaleDateString()
+                    : "N/A"}
+                </p>
+              </div>
+              <div className="prose dark:prose-invert max-w-none">
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                  {viewingPost.content}
+                </p>
+              </div>
+              <div className="mt-4 flex gap-2 text-sm text-gray-500 dark:text-gray-400">
+                <span>Views: {viewingPost.views || 0}</span>
+                <span>•</span>
+                <span>Replies: {viewingPost.reply_count || 0}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Replies Panel (conditionally rendered) */}
         {selectedPostId && (
           <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:border dark:border-gray-700 overflow-hidden flex flex-col max-h-[calc(100vh-200px)]">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Replies</h3>
-              <button 
+              <h3 className="font-semibold text-gray-900 dark:text-white">
+                Replies
+              </h3>
+              <button
                 onClick={() => setSelectedPostId(null)}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 Close
               </button>
             </div>
-            
+
             <div className="overflow-y-auto p-4 space-y-4 flex-1">
               {repliesLoading ? (
                 <div className="flex justify-center py-4">
                   <Loader size={30} color="#4f46e5" />
                 </div>
               ) : replies.length === 0 ? (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-4">No replies yet.</p>
+                <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+                  No replies yet.
+                </p>
               ) : (
                 replies.map((reply: any) => (
-                  <div key={reply._id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-600">
+                  <div
+                    key={reply._id}
+                    className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-600"
+                  >
                     <div className="flex justify-between items-start mb-2">
-                       <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                         {reply.user_id?.name || "Unknown"}
-                       </span>
-                       <button
-                         onClick={() => {
-                           if (window.confirm("Delete this reply?")) {
-                             deleteReplyMutation.mutate(reply._id);
-                           }
-                         }}
-                         className="text-red-500 hover:text-red-700"
-                         title="Delete Reply"
-                       >
-                         <TrashIcon className="h-4 w-4" />
-                       </button>
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        {reply.user_id?.name ||
+                          reply.seller_id?.business_name ||
+                          reply.financial_id?.name ||
+                          "Unknown"}
+                      </span>
+                      <button
+                        onClick={() => {
+                          if (window.confirm("Delete this reply?")) {
+                            deleteReplyMutation.mutate(reply._id);
+                          }
+                        }}
+                        className="text-red-500 hover:text-red-700"
+                        title="Delete Reply"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-300 break-words">
-                      {reply.content}
+                      {reply.content || "No content"}
                     </p>
                     <div className="mt-2 text-xs text-gray-400">
-                      {new Date(reply.createdAt).toLocaleDateString()}
+                      {reply.createdAt
+                        ? new Date(reply.createdAt).toLocaleDateString()
+                        : "N/A"}
                     </div>
                   </div>
                 ))

@@ -72,15 +72,37 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = React.m
     setActiveTab("notification");
   };
 
+  const formatTime = (dateString?: string) => {
+    if (!dateString) return "Recently";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return "Just now";
+    if (diffInSeconds < 3600)
+      return `${Math.floor(diffInSeconds / 60)} min ago`;
+    if (diffInSeconds < 86400)
+      return `${Math.floor(diffInSeconds / 3600)} hr ago`;
+    if (diffInSeconds < 604800)
+      return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    return date.toLocaleDateString();
+  };
+
   /**
    * Handles clicking on an individual notification.
    * It closes the dropdown and navigates to the 'notification' tab.
+   * Marks notification as read if it's unread.
    */
-  const handleView = (notification: Notification) => {
+  const handleView = async (notification: Notification) => {
+    const notificationId = notification._id || notification.id;
+    const isRead = notification.is_read || false;
+    
+    // Only mark as read if it's currently unread
+    if (!isRead && notificationId) {
+      notificationIsReadMutation.mutate(notificationId);
+    }
     setIsOpen(false);
     setActiveTab("notification");
-    notificationIsReadMutation.mutate(notification._id);
-    console.log(notification);
   };
 
   return (
@@ -112,34 +134,39 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = React.m
           {/* Scrollable list of notifications. */}
           <div className="flex flex-col max-h-96 overflow-y-auto">
             {/* Map over the notifications array to render each item. */}
-            {notifications.map((notif) => (
-              <div
-                key={notif._id}
-                className={`p-4 border-b cursor-pointer dark:border-gray-700 ${
-                  !notif.is_read 
-                    ? 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30' 
-                    : 'hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-                onClick={() => handleView(notif)}
-              >
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  {notif.message}
-                </p>
+            {notifications.slice(0, 5).map((notif) => {
+              const notificationId = notif._id || notif.id;
+              const isRead = notif.is_read || false;
 
-                {/* Notification metadata and action link. */}
-                <div className="flex items-center justify-between mt-1">
-                  <p className="text-xs text-blue-600 dark:text-blue-400">
-                    {notif.time}
-                  </p>
-                  <a
-                    onClick={() => handleView(notif)}
-                    className="text-sm font-semibold text-blue-600 hover:underline"
-                  >
-                    View details
-                  </a>
+              return (
+                <div
+                  key={notificationId}
+                  className={`p-4 border-b hover:bg-gray-50 cursor-pointer dark:border-gray-700 dark:hover:bg-gray-700 ${
+                    !isRead ? "bg-blue-50 dark:bg-blue-900/20" : ""
+                  }`}
+                  onClick={() => handleView(notif)}
+                >
+                  <div className="flex items-start gap-2">
+                    {!isRead && (
+                      <span className="h-2 w-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></span>
+                    )}
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                        {notif.title || "Notification"}
+                      </p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        {notif.message}
+                      </p>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-xs text-blue-600 dark:text-blue-400">
+                          {formatTime(notif.createdAt || notif.time)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Message displayed when there are no notifications. */}
             {notifications.length === 0 && (

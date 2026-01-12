@@ -35,14 +35,21 @@ export const ReviewsPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
   });
 
   const filteredReviews = Array.isArray(reviews)
-    ? reviews.filter((review: any) =>
-        review.comment?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        review.user_id?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+    ? reviews.filter((review: any) => {
+        const reviewerName = review.reviewer_id?.name || review.user_id?.name || "";
+        const comment = review.comment || "";
+        const productName = review.order_id?.listing_id?.model_id?.model_name || "";
+        return (
+          reviewerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          productName.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      })
     : [];
 
   const reportData = filteredReviews.map(review => ({
-    user: review.user_id?.name || "Anonymous",
+    reviewer: review.reviewer_id?.name || review.user_id?.name || "Anonymous",
+    product: review.order_id?.listing_id?.model_id?.model_name || "N/A",
     rating: review.rating || "N/A",
     comment: review.comment || "N/A"
   }));
@@ -63,7 +70,8 @@ export const ReviewsPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
           <ReportGeneratorButton
             data={reportData}
             columns={[
-              { header: "User", dataKey: "user" },
+              { header: "Reviewer", dataKey: "reviewer" },
+              { header: "Product", dataKey: "product" },
               { header: "Rating", dataKey: "rating" },
               { header: "Comment", dataKey: "comment" },
             ]}
@@ -86,7 +94,10 @@ export const ReviewsPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  User
+                  Reviewer
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Product
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Rating
@@ -102,7 +113,7 @@ export const ReviewsPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredReviews.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     No reviews found
                   </td>
                 </tr>
@@ -110,7 +121,10 @@ export const ReviewsPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
                 filteredReviews.map((review: any) => (
                   <tr key={review._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {review.user_id?.name || "Anonymous"}
+                      {review.reviewer_id?.name || review.user_id?.name || "Anonymous"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {review.order_id?.listing_id?.model_id?.model_name || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {Array.from({ length: review.rating || 0 })

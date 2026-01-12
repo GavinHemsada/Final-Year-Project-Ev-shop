@@ -1,13 +1,17 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import type {
   FinancialActiveTab,
   UserRole,
-  Notification,
   AlertProps,
   ConfirmAlertProps,
 } from "@/types";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
-import { selectUserId, logout, selectRoles, setFinanceId } from "@/context/authSlice";
+import {
+  selectUserId,
+  logout,
+  selectRoles,
+  setFinanceId,
+} from "@/context/authSlice";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "../components/Sidebar";
 import { Header } from "../components/Header";
@@ -26,14 +30,22 @@ import {
 import { StatCard } from "../components/StatsCards";
 import { financialService } from "../financialService";
 import { useQueries, useQuery } from "@tanstack/react-query";
-
-const notifications: Notification[] = [
-  { id: 101, message: "New application received from Kasun Perera", time: "2 hours ago" },
-  { id: 102, message: "Documents verified for Amal Silva", time: "5 hours ago" },
-  { id: 103, message: "Product 'Green Wheel Loan' updated", time: "1 day ago" },
-  { id: 104, message: "Monthly report generated", time: "2 days ago" },
-  { id: 105, message: "System maintenance scheduled for Friday", time: "3 days ago" },
-] as any;
+import {
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Area,
+  AreaChart,
+} from "recharts";
+import { PageLoader } from "@/components/Loader";
 
 const FinancialDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<FinancialActiveTab>("dashboard");
@@ -89,6 +101,16 @@ const FinancialDashboard: React.FC = () => {
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
       },
+      {
+        queryKey: ["financialNotifications", institutionId],
+        queryFn: () => financialService.getUserNotifications(institutionId!),
+        enabled: !!institutionId,
+        staleTime: 10000, // 10 seconds
+        refetchOnMount: true,
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true,
+        refetchInterval: 30000, // Refetch every 30 seconds
+      },
     ],
   });
 
@@ -102,12 +124,23 @@ const FinancialDashboard: React.FC = () => {
     if (roles) setUserRole(roles);
   }, [roles]);
 
-  const [productsQuery, applicationsQuery] = results;
+  const [productsQuery, applicationsQuery, notificationsQuery] = results;
 
-  const products = productsQuery.data || [];
-  const applications = applicationsQuery.data?.applications || [];
+  // Backend unwraps responses via handleResult, so data is directly the array/object
+  // Products: backend returns { success: true, products: [...] } -> unwrapped to products array
+  const products = Array.isArray(productsQuery.data)
+    ? productsQuery.data
+    : productsQuery.data?.products || [];
 
+  // Applications: frontend service returns { success: true, applications: [...] } (not unwrapped)
+  const applications =
+    applicationsQuery.data?.applications ||
+    (Array.isArray(applicationsQuery.data) ? applicationsQuery.data : []);
 
+  // Notifications: backend returns { success: true, notifications: [...] } -> unwrapped to notifications array
+  const notifications = Array.isArray(notificationsQuery.data)
+    ? notificationsQuery.data
+    : notificationsQuery.data?.notifications || [];
 
   const handleSetAlert = useCallback((alertData: AlertProps | null) => {
     setAlert(alertData);
@@ -148,12 +181,15 @@ const FinancialDashboard: React.FC = () => {
       case "products":
         return <ProductsPage setAlert={handleSetAlert} products={products} />;
       case "profile":
-        return <ProfilePage setAlert={handleSetAlert} institution={institution} />;
+        return (
+          <ProfilePage setAlert={handleSetAlert} institution={institution} />
+        );
       case "notification":
         return (
           <NotificationPage
             notifications={notifications}
             setAlert={handleSetAlert}
+            isLoading={notificationsQuery.isLoading}
           />
         );
       case "community":
@@ -289,18 +325,93 @@ const FinancialDashboardPage: React.FC<{
     alert: ConfirmAlertProps | null,
     handler?: () => void
   ) => void;
-}> = ({ institutionId, products, applications, setActiveTab }) => {
+}> = ({ products, applications, setActiveTab }) => {
   const totalProducts = products.length;
   const totalApplications = applications.length;
   const pendingApplications = applications.filter(
-    (app) => app.status === "PENDING"
+    (app) => app.status?.toUpperCase() === "PENDING" || app.status?.toUpperCase() === "UNDER_REVIEW"
   ).length;
   const approvedApplications = applications.filter(
-    (app) => app.status === "APPROVED"
+    (app) => app.status?.toUpperCase() === "APPROVED"
   ).length;
 
+  // Process application data for trends chart
+  const applicationTrendsData = useMemo(() => {
+    const months = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    
+    // Get last 6 months
+    const last6Months = [];
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(currentYear, currentMonth - i, 1);
+      last6Months.push(date.toLocaleDateString("en-US", { month: "short" }));
+    }
+
+    // Group applications by month
+    const monthlyData: { [key: string]: number } = {};
+    last6Months.forEach((month) => {
+      monthlyData[month] = 0;
+    });
+
+    applications.forEach((app: any) => {
+      if (app.createdAt || app.submitted_date) {
+        const date = new Date(app.createdAt || app.submitted_date);
+        const monthKey = date.toLocaleDateString("en-US", { month: "short" });
+        if (monthlyData.hasOwnProperty(monthKey)) {
+          monthlyData[monthKey]++;
+        }
+      }
+    });
+
+    return last6Months.map((month) => ({
+      month,
+      applications: monthlyData[month] || 0,
+    }));
+  }, [applications]);
+
+  // Process product data for distribution chart
+  const productDistributionData = useMemo(() => {
+    if (products.length === 0) return [];
+    
+    const distribution: { [key: string]: number } = {};
+    products.forEach((product: any) => {
+      const name = product.product_name || "Unknown Product";
+      distribution[name] = (distribution[name] || 0) + 1;
+    });
+
+    const colors = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"];
+    return Object.entries(distribution).map(([name, value], index) => ({
+      name,
+      value,
+      color: colors[index % colors.length],
+    }));
+  }, [products]);
+
+  const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"];
+
+  // Get recent applications (sorted by date, most recent first)
+  const recentApplications = useMemo(() => {
+    return [...applications]
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.submitted_date || 0).getTime();
+        const dateB = new Date(b.createdAt || b.submitted_date || 0).getTime();
+        return dateB - dateA;
+      })
+      .slice(0, 5);
+  }, [applications]);
+
+  const getStatusColor = (status: string) => {
+    const statusUpper = status?.toUpperCase();
+    if (statusUpper === "APPROVED") return "text-green-600 dark:text-green-400";
+    if (statusUpper === "PENDING" || statusUpper === "UNDER_REVIEW") return "text-yellow-600 dark:text-yellow-400";
+    if (statusUpper === "REJECTED") return "text-red-600 dark:text-red-400";
+    return "text-gray-600 dark:text-gray-400";
+  };
+
   return (
-    <>
+    <div className="space-y-6">
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Products"
@@ -327,34 +438,131 @@ const FinancialDashboardPage: React.FC<{
           bgColor="bg-green-100"
         />
       </div>
-      <div className="mt-10 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-none dark:border dark:border-gray-700">
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Application Trends Chart */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-none dark:border dark:border-gray-700">
+          <h3 className="text-lg font-semibold mb-4 dark:text-white">
+            Application Trends
+          </h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={applicationTrendsData}>
+              <defs>
+                <linearGradient id="colorApplications" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-600" />
+              <XAxis
+                dataKey="month"
+                stroke="#6b7280"
+                className="dark:stroke-gray-400"
+                tick={{ fill: "#6b7280" }}
+              />
+              <YAxis
+                stroke="#6b7280"
+                className="dark:stroke-gray-400"
+                tick={{ fill: "#6b7280" }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "white",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="applications"
+                stroke="#8b5cf6"
+                fillOpacity={1}
+                fill="url(#colorApplications)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Product Distribution Chart */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-none dark:border dark:border-gray-700">
+          <h3 className="text-lg font-semibold mb-4 dark:text-white">
+            Product Distribution
+          </h3>
+          {productDistributionData.length === 0 ? (
+            <div className="flex justify-center items-center h-[300px] text-gray-500 dark:text-gray-400">
+              No products available
+            </div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={productDistributionData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {productDistributionData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.color || COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex flex-wrap justify-center gap-4 mt-4">
+                {productDistributionData.map((entry, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: entry.color || COLORS[index % COLORS.length] }}
+                    />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {entry.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Applications */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-none dark:border dark:border-gray-700">
         <h2 className="text-xl font-bold mb-4 dark:text-white">
           Recent Applications
         </h2>
-        {applications.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400">
+        {recentApplications.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400 text-center py-8">
             No applications yet. Applications will appear here once users submit
             financing requests.
           </p>
         ) : (
-          <div className="space-y-4">
-            {applications.slice(0, 5).map((app) => (
+          <div className="space-y-3">
+            {recentApplications.map((app) => (
               <div
                 key={app._id}
-                className="p-4 border border-gray-200 rounded-lg dark:border-gray-700"
+                className="p-4 border border-gray-200 rounded-lg dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-semibold dark:text-white">
-                      Application #{app._id.slice(-6)}
+                      Application #{app._id?.slice(-8)?.toUpperCase() || "N/A"}
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Status: {app.status}
+                    <p className={`text-sm font-medium ${getStatusColor(app.status || "")}`}>
+                      Status: {app.status?.toUpperCase() || "PENDING"}
                     </p>
                   </div>
                   <button
                     onClick={() => setActiveTab("applications")}
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                    className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                   >
                     View Details
                   </button>
@@ -364,9 +572,8 @@ const FinancialDashboardPage: React.FC<{
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 };
 
 export default FinancialDashboard;
-

@@ -11,8 +11,8 @@ export interface IFinancingApplication extends Document {
   user_id: Types.ObjectId;
   /** The ID of the `FinancialProduct` being applied for. */
   product_id: Types.ObjectId;
-  /** An optional ID of the mailing list the applicant subscribed to. */
-  list_id: Types.ObjectId;
+  /** An optional ID of the order this application is for (for lease applications). */
+  order_id?: Types.ObjectId;
   /** An optional message from the applicant to the institution. */
   message_text?: string;
   /** A flexible object containing the core data submitted by the applicant (e.g., name, income, requested amount). */
@@ -42,8 +42,8 @@ const FinancingApplicationSchema = new Schema<IFinancingApplication>(
       ref: "FinancialProduct",
       required: true,
     },
-    /** A reference to the mailing list the applicant subscribed to, if any. */
-    list_id: { type: Schema.Types.ObjectId, ref: "VehicleListing" },
+    /** A reference to the order this application is for, if any. */
+    order_id: { type: Schema.Types.ObjectId, ref: "Order" },
     /** An optional text message from the applicant. */
     message_text: { type: String },
     /** A flexible map to store the applicant's submitted data. */

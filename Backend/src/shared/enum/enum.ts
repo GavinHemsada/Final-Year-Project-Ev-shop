@@ -24,6 +24,8 @@ export enum NotificationType {
   BOOKING_CONFIRMED = "BOOKING_CONFIRMED",
   /** Notification for a cancelled test drive booking. */
   BOOKING_CANCELLED = "BOOKING_CANCELLED",
+  /** Notification for a new financing application submitted. */
+  NEW_FINANCING_APPLICATION = "NEW_FINANCING_APPLICATION",
   /** Notification for an approved finance application. */
   APPLICATION_APPROVED = "APPLICATION_APPROVED",
   /** Notification for a rejected finance application. */

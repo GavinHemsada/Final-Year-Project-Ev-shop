@@ -97,6 +97,66 @@ export const adminService = {
     const response = await axiosPrivate.delete(`/financial/institutions/${financialId}`);
     return response.data;
   },
+  // Financial Products Management
+  getAllFinancialProducts: async () => {
+    const response = await axiosPrivate.get("/financial/products");
+    return response.data?.products || response.data || [];
+  },
+  createFinancialProduct: async (productData: any) => {
+    const response = await axiosPrivate.post("/financial/products", productData);
+    return response.data;
+  },
+  updateFinancialProduct: async (productId: string, productData: any) => {
+    const response = await axiosPrivate.put(`/financial/products/${productId}`, productData);
+    return response.data;
+  },
+  deleteFinancialProduct: async (productId: string) => {
+    const response = await axiosPrivate.delete(`/financial/products/${productId}`);
+    return response.data;
+  },
+  // Financial Applications Management
+  getAllFinancialApplications: async () => {
+    try {
+      // Try to get all applications - if endpoint doesn't exist, fetch via products
+      const response = await axiosPrivate.get("/financial/applications");
+      return response.data?.applications || response.data || [];
+    } catch (error: any) {
+      // Fallback: Get all products and their applications
+      if (error.response?.status === 404) {
+        try {
+          const productsResponse = await axiosPrivate.get("/financial/products");
+          const products = productsResponse.data?.products || productsResponse.data || [];
+          const allApplications: any[] = [];
+          
+          for (const product of products) {
+            try {
+              const appResponse = await axiosPrivate.get(`/financial/applications/product/${product._id}`);
+              const apps = appResponse.data?.applications || appResponse.data || [];
+              allApplications.push(...apps);
+            } catch (err) {
+              console.error(`Failed to get applications for product ${product._id}:`, err);
+            }
+          }
+          return allApplications;
+        } catch (fallbackError) {
+          console.error("Failed to fetch applications via fallback:", fallbackError);
+          return [];
+        }
+      }
+      throw error;
+    }
+  },
+  updateFinancialApplicationStatus: async (applicationId: string, status: string, rejectionReason?: string) => {
+    const response = await axiosPrivate.patch(`/financial/applications/${applicationId}/status`, {
+      status,
+      rejection_reason: rejectionReason
+    });
+    return response.data;
+  },
+  deleteFinancialApplication: async (applicationId: string) => {
+    const response = await axiosPrivate.delete(`/financial/applications/${applicationId}`);
+    return response.data;
+  },
 
   // Reviews Management
   getAllReviews: async () => {
@@ -128,6 +188,9 @@ export const adminService = {
     if (params?.search) {
       queryParams.append("search", params.search);
     }
+    // Set a high limit to get all posts (or remove limit to get all)
+    queryParams.append("limit", "1000");
+    queryParams.append("page", "1");
     const url = `/post/posts${
       queryParams.toString() ? `?${queryParams.toString()}` : ""
     }`;

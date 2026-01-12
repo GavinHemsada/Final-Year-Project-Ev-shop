@@ -5,19 +5,21 @@ import { financialService } from "../financialService";
 import type { AlertProps } from "@/types";
 import { Loader } from "@/components/Loader";
 import { PlusCircleIcon, EditIcon, TrashIcon } from "@/assets/icons/icons";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const ProductsPage: React.FC<{
   setAlert?: (alert: AlertProps | null) => void;
   products?: any[];
 }> = ({ setAlert, products: initialProducts }) => {
   const institutionId = useAppSelector(selectFinanceId);
-  console.log(institutionId);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"myProducts" | "createProduct">(
     "myProducts"
   );
   const [products, setProducts] = useState<any[]>(initialProducts || []);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -40,6 +42,19 @@ export const ProductsPage: React.FC<{
       }
     }
   }, [activeTab, institutionId, initialProducts]);
+
+  // Sync with React Query cache when it updates
+  useEffect(() => {
+    if (institutionId && activeTab === "myProducts") {
+      const queryData = queryClient.getQueryData(["financialProducts", institutionId]);
+      if (queryData) {
+        const prods = Array.isArray(queryData)
+          ? queryData
+          : (queryData as any)?.products || [];
+        setProducts(prods);
+      }
+    }
+  }, [institutionId, queryClient, activeTab]);
 
   const fetchProducts = async () => {
     if (!institutionId) return;
@@ -70,6 +85,74 @@ export const ProductsPage: React.FC<{
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleEdit = (product: any) => {
+    setEditingProductId(product._id);
+    setFormData({
+      product_name: product.product_name || "",
+      product_type: product.product_type || "",
+      description: product.description || "",
+      interest_rate_min: product.interest_rate_min?.toString() || "",
+      interest_rate_max: product.interest_rate_max?.toString() || "",
+      term_months_min: product.term_months_min?.toString() || "",
+      term_months_max: product.term_months_max?.toString() || "",
+      down_payment_min: product.down_payment_min?.toString() || "",
+    });
+    setActiveTab("createProduct");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProductId(null);
+    setFormData({
+      product_name: "",
+      product_type: "",
+      description: "",
+      interest_rate_min: "",
+      interest_rate_max: "",
+      term_months_min: "",
+      term_months_max: "",
+      down_payment_min: "",
+    });
+    setActiveTab("myProducts");
+  };
+
+  const handleDelete = async (productId: string) => {
+    if (!window.confirm("Are you sure you want to delete this product?")) {
+      return;
+    }
+
+    try {
+      // Optimistically update local state
+      const updatedProducts = products.filter(p => p._id !== productId);
+      setProducts(updatedProducts);
+
+      await financialService.deleteProduct(productId);
+      
+      // Invalidate and refetch React Query cache
+      if (institutionId) {
+        await queryClient.invalidateQueries({
+          queryKey: ["financialProducts", institutionId],
+        });
+      }
+
+      setAlert?.({
+        id: Date.now(),
+        title: "Success",
+        message: "Product deleted successfully!",
+        type: "success",
+      });
+    } catch (error: any) {
+      console.error("Failed to delete product:", error);
+      // Revert optimistic update on error
+      fetchProducts();
+      setAlert?.({
+        id: Date.now(),
+        title: "Error",
+        message: error?.response?.data?.message || "Failed to delete product",
+        type: "error",
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!institutionId) {
@@ -97,16 +180,51 @@ export const ProductsPage: React.FC<{
         is_active: true
       };
 
-      await financialService.createProduct(payload);
+      let updatedProduct;
+      if (editingProductId) {
+        // Update existing product
+        const response = await financialService.updateProduct(editingProductId, payload);
+        updatedProduct = response?.product || response;
+        
+        // Optimistically update local state
+        const updatedProducts = products.map(p => 
+          p._id === editingProductId ? { ...p, ...payload } : p
+        );
+        setProducts(updatedProducts);
+
+        setAlert?.({
+          id: Date.now(),
+          title: "Success",
+          message: "Product updated successfully!",
+          type: "success",
+        });
+      } else {
+        // Create new product
+        const response = await financialService.createProduct(payload);
+        updatedProduct = response?.product || response;
+        
+        // Optimistically add to local state
+        if (updatedProduct) {
+          setProducts([...products, updatedProduct]);
+        }
+
+        setAlert?.({
+          id: Date.now(),
+          title: "Success",
+          message: "Product created successfully!",
+          type: "success",
+        });
+      }
       
-      setAlert?.({
-        id: Date.now(),
-        title: "Success",
-        message: "Product created successfully!",
-        type: "success",
-      });
+      // Invalidate and refetch React Query cache
+      if (institutionId) {
+        await queryClient.invalidateQueries({
+          queryKey: ["financialProducts", institutionId],
+        });
+      }
       
       // Reset form and switch tab
+      setEditingProductId(null);
       setFormData({
         product_name: "",
         product_type: "",
@@ -119,11 +237,11 @@ export const ProductsPage: React.FC<{
       });
       setActiveTab("myProducts");
     } catch (error: any) {
-      console.error("Failed to create product:", error);
+      console.error("Failed to save product:", error);
       setAlert?.({
         id: Date.now(),
         title: "Error",
-        message: error?.response?.data?.message || "Failed to create product",
+        message: error?.response?.data?.message || `Failed to ${editingProductId ? 'update' : 'create'} product`,
         type: "error",
       });
     } finally {
@@ -151,7 +269,20 @@ export const ProductsPage: React.FC<{
             My Products
           </button>
           <button
-            onClick={() => setActiveTab("createProduct")}
+            onClick={() => {
+              setEditingProductId(null);
+              setFormData({
+                product_name: "",
+                product_type: "",
+                description: "",
+                interest_rate_min: "",
+                interest_rate_max: "",
+                term_months_min: "",
+                term_months_max: "",
+                down_payment_min: "",
+              });
+              setActiveTab("createProduct");
+            }}
             className={`${
               activeTab === "createProduct"
                 ? "border-blue-500 text-blue-600 dark:text-blue-400"
@@ -159,7 +290,7 @@ export const ProductsPage: React.FC<{
             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}
           >
             <PlusCircleIcon className="h-4 w-4" />
-            Create Product
+            {editingProductId ? "Edit Product" : "Create Product"}
           </button>
         </nav>
       </div>
@@ -190,10 +321,18 @@ export const ProductsPage: React.FC<{
                 className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-none dark:border dark:border-gray-700 relative group"
               >
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                  <button className="p-1 text-blue-600 hover:bg-blue-50 rounded-full dark:hover:bg-gray-700">
+                  <button 
+                    onClick={() => handleEdit(product)}
+                    className="p-1 text-blue-600 hover:bg-blue-50 rounded-full dark:hover:bg-gray-700"
+                    title="Edit Product"
+                  >
                     <EditIcon className="h-5 w-5" />
                   </button>
-                  <button className="p-1 text-red-600 hover:bg-red-50 rounded-full dark:hover:bg-gray-700">
+                  <button 
+                    onClick={() => handleDelete(product._id)}
+                    className="p-1 text-red-600 hover:bg-red-50 rounded-full dark:hover:bg-gray-700"
+                    title="Delete Product"
+                  >
                     <TrashIcon className="h-5 w-5" />
                   </button>
                 </div>
@@ -219,7 +358,7 @@ export const ProductsPage: React.FC<{
                     </div>
                      <div className="flex justify-between">
                         <span>Min Down Payment:</span>
-                        <span className="font-semibold">${product.down_payment_min}</span>
+                        <span className="font-semibold">LKR {product.down_payment_min?.toLocaleString() || product.down_payment_min}</span>
                     </div>
                 </div>
 
@@ -240,6 +379,9 @@ export const ProductsPage: React.FC<{
         )
       ) : (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-none dark:border dark:border-gray-700 max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold mb-6 dark:text-white">
+            {editingProductId ? "Edit Product" : "Create New Product"}
+          </h2>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -356,7 +498,7 @@ export const ProductsPage: React.FC<{
 
             <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Minimum Down Payment ($) *
+                    Minimum Down Payment (LKR) *
                 </label>
                 <input
                     type="number"
@@ -372,7 +514,7 @@ export const ProductsPage: React.FC<{
             <div className="pt-4 flex justify-end gap-3">
                 <button
                     type="button"
-                    onClick={() => setActiveTab("myProducts")}
+                    onClick={handleCancelEdit}
                     className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
                 >
                     Cancel
@@ -382,7 +524,9 @@ export const ProductsPage: React.FC<{
                     disabled={isSubmitting}
                     className="bg-blue-600 dark:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {isSubmitting ? "Creating..." : "Create Product"}
+                    {isSubmitting 
+                      ? (editingProductId ? "Updating..." : "Creating...") 
+                      : (editingProductId ? "Update Product" : "Create Product")}
                 </button>
             </div>
           </form>

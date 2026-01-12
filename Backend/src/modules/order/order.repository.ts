@@ -102,31 +102,42 @@ export const OrderRepository: IOrderRepository = {
       .populate("user_id", "name email")
       .populate("seller_id", "business_name street_address")
       .populate({
-        path: "listing_id", 
-        select: "price color registration_year",
+        path: "listing_id",
+        select: "price color registration_year listing_type",
         populate: {
           path: "model_id",
           select: "model_name",
-        }
+        },
       })
       .populate({
-        path:"booking_id",
+        path: "booking_id",
         select: "booking_date booking_time duration_minutes",
-        populate:{
+        populate: {
           path: "slot_id",
           select: "location, model_id",
-          populate:{
+          populate: {
             path: "model_id",
-            select: "model_name"
-          }
-        }
+            select: "model_name",
+          },
+        },
       })
       .sort({ order_date: -1 });
   }),
 
   /** Retrieves all orders, sorted by most recent. */
   findAll: withErrorHandling(async () => {
-    return await Order.find();
+    return await Order.find()
+      .populate("user_id", "name email")
+      .populate("seller_id", "business_name")
+      .populate({
+        path: "listing_id",
+        select: "location model_id",
+        populate: {
+          path: "model_id",
+          select: "model_name",
+        },
+      })
+      .sort({ order_date: -1 });
   }),
 
   /** Finds an order by ID and updates it with new data. */

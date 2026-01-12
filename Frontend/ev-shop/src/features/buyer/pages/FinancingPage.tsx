@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   CheckCircleIcon,
   ClockIcon,
   FileTextIcon,
   XCircleIcon,
   CloseIcon,
+  EditIcon,
+  TrashIcon,
 } from "@/assets/icons/icons";
 import type { AlertProps } from "@/types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +18,8 @@ import { PageLoader } from "@/components/Loader";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { useToast } from "@/context/ToastContext";
+import { axiosPrivate } from "@/config/config";
 
 const getStatusInfo = (status: string) => {
   switch (status.toLowerCase()) {
@@ -139,7 +144,17 @@ const ApplicationModal: React.FC<{
   onClose: () => void;
   onSubmit: (data: ApplicationFormData) => void;
   isLoading: boolean;
-}> = ({ product, isOpen, onClose, onSubmit, isLoading }) => {
+  application?: any; // For edit mode
+  isEditMode?: boolean;
+}> = ({
+  product,
+  isOpen,
+  onClose,
+  onSubmit,
+  isLoading,
+  application,
+  isEditMode = false,
+}) => {
   const {
     register,
     handleSubmit,
@@ -148,23 +163,107 @@ const ApplicationModal: React.FC<{
     watch,
   } = useForm({
     resolver: yupResolver(applicationSchema) as any,
+    defaultValues:
+      isEditMode && application?.application_data
+        ? {
+            full_name: application.application_data.full_name || "",
+            age: application.application_data.age || "",
+            employment_status:
+              application.application_data.employment_status || "",
+            monthly_income: application.application_data.monthly_income || "",
+            requested_amount:
+              application.application_data.requested_amount || "",
+            repayment_period_months:
+              application.application_data.repayment_period_months || "",
+            message_text: application.message_text || "",
+          }
+        : undefined,
   });
 
-  const selectedFiles = watch("files");
+  const selectedFiles = watch("files" as any);
+
+  // Get existing documents from application
+  const getExistingDocuments = () => {
+    if (!isEditMode || !application?.application_data) return [];
+    const appData = application.application_data;
+    // Handle both Map and object formats
+    if (typeof appData.get === "function") {
+      return appData.get("additional_documents") || [];
+    }
+    return appData.additional_documents || [];
+  };
+
+  const existingDocuments = getExistingDocuments();
+
+  const getFileUrl = (filePath: string) => {
+    // Files are served from /uploads route (static files at root level, not under /api/v1)
+    // The backend serves static files at /uploads, so we need to use the server root URL
+    const apiBaseURL = axiosPrivate.defaults.baseURL || "";
+    // Extract the server base URL (remove /api/v1 if present)
+    // e.g., "http://localhost:3000/api/v1" -> "http://localhost:3000"
+    const serverBaseURL = apiBaseURL.replace(/\/api\/v1\/?$/, "");
+    // Remove leading slash from filePath if present, then add it back
+    const cleanPath = filePath.startsWith("/") ? filePath : `/${filePath}`;
+    // Remove trailing slash from serverBaseURL if present
+    const cleanBaseURL = serverBaseURL.endsWith("/")
+      ? serverBaseURL.slice(0, -1)
+      : serverBaseURL;
+    return `${cleanBaseURL}${cleanPath}`;
+  };
+
+  const handleViewDocument = (filePath: string) => {
+    const url = getFileUrl(filePath);
+    window.open(url, "_blank");
+  };
+
+  const handleDownloadDocument = (filePath: string) => {
+    const url = getFileUrl(filePath);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filePath.split("/").pop() || "document";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleFormSubmit = (data: any) => {
     onSubmit(data as ApplicationFormData);
-    reset();
+    if (!isEditMode) {
+      reset();
+    }
   };
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-md"
+      style={{
+        position: "fixed",
+        width: "100vw",
+        height: "100vh",
+        margin: 0,
+        padding: 0,
+      }}
+    >
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
           <h2 className="text-2xl font-bold dark:text-white">
-            Apply for {product?.product_name}
+            {isEditMode
+              ? "Edit Application"
+              : `Apply for ${product?.product_name}`}
           </h2>
           <button
             onClick={onClose}
@@ -176,7 +275,7 @@ const ApplicationModal: React.FC<{
 
         <form
           onSubmit={handleSubmit(handleFormSubmit)}
-          className="p-6 space-y-6"
+          className="p-6 space-y-6 overflow-y-auto flex-1"
         >
           {/* Full Name */}
           <div>
@@ -321,22 +420,121 @@ const ApplicationModal: React.FC<{
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Supporting Documents (Optional, Max 2 files)
             </label>
+
+            {/* Show existing documents in edit mode */}
+            {isEditMode && existingDocuments.length > 0 && (
+              <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Current Documents:
+                </p>
+                <div className="space-y-2">
+                  {existingDocuments.map((docPath: string, index: number) => {
+                    const fileName =
+                      docPath.split("/").pop() || `Document ${index + 1}`;
+                    const fileExtension =
+                      fileName.split(".").pop()?.toLowerCase() || "";
+                    const isImage = ["jpg", "jpeg", "png", "gif"].includes(
+                      fileExtension
+                    );
+
+                    return (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-white dark:bg-gray-600 rounded border border-gray-200 dark:border-gray-500"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <FileTextIcon className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                            {fileName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {isImage && (
+                            <button
+                              type="button"
+                              onClick={() => handleViewDocument(docPath)}
+                              className="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors dark:text-blue-400 dark:hover:bg-blue-900/20"
+                              title="View Document"
+                            >
+                              <svg
+                                className="h-4 w-4"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                />
+                              </svg>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadDocument(docPath)}
+                            className="p-1.5 text-green-600 rounded hover:bg-green-50 transition-colors dark:text-green-400 dark:hover:bg-green-900/20"
+                            title="Download Document"
+                          >
+                            <svg
+                              className="h-4 w-4"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Upload new files to replace existing documents
+                </p>
+              </div>
+            )}
+
             <input
               type="file"
               multiple
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              {...register("files")}
+              accept=".pdf,application/pdf,.doc,.docx,.jpg,.jpeg,.png,image/jpeg,image/png"
+              {...register("files" as any)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
-            {errors.files && (
+            {(errors as any).files && (
               <p className="mt-1 text-sm text-red-600">
-                {String(errors.files.message)}
+                {String((errors as any).files.message)}
               </p>
             )}
             {selectedFiles && selectedFiles.length > 0 && (
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                {selectedFiles.length} file(s) selected
-              </p>
+              <div className="mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                  New file(s) selected:
+                </p>
+                <ul className="text-xs text-gray-500 dark:text-gray-400 list-disc list-inside">
+                  {Array.from(selectedFiles as FileList).map(
+                    (file: File, index: number) => (
+                      <li key={index}>{file.name}</li>
+                    )
+                  )}
+                </ul>
+              </div>
             )}
           </div>
 
@@ -354,12 +552,19 @@ const ApplicationModal: React.FC<{
               disabled={isLoading}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? "Submitting..." : "Submit Application"}
+              {isLoading
+                ? isEditMode
+                  ? "Updating..."
+                  : "Submitting..."
+                : isEditMode
+                ? "Update Application"
+                : "Submit Application"}
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -368,8 +573,12 @@ export const FinancingPage: React.FC<{
 }> = ({ setAlert }) => {
   const userID = useAppSelector(selectUserId);
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState<any>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"products" | "applications">(
     "products"
   );
@@ -422,15 +631,37 @@ export const FinancingPage: React.FC<{
     queryFn: async () => {
       if (!userID) return [];
       const response = await buyerService.getUserFinancingApplications(userID);
-      if (response.success && response.applications) {
-        return response.applications;
+      // Backend unwraps response via handleResult, so it returns the applications array directly
+      if (Array.isArray(response)) {
+        return response;
+      }
+      // Fallback: handle wrapped response if backend changes
+      if (
+        response &&
+        typeof response === "object" &&
+        "applications" in response
+      ) {
+        return Array.isArray(response.applications)
+          ? response.applications
+          : [];
+      }
+      if (
+        response &&
+        typeof response === "object" &&
+        "success" in response &&
+        response.success &&
+        "applications" in response
+      ) {
+        return Array.isArray(response.applications)
+          ? response.applications
+          : [];
       }
       return [];
     },
     enabled: !!userID,
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
-
+  console.log(applicationsData);
   const products = productsData || [];
   const applications = applicationsData || [];
 
@@ -491,18 +722,121 @@ export const FinancingPage: React.FC<{
     },
   });
 
-  const handleApplyNow = (product: any) => {
-    setSelectedProduct(product);
+  const handleSubmitApplication = (data: ApplicationFormData) => {
+    if (isEditMode && selectedApplication) {
+      updateApplicationMutation.mutate({
+        applicationId: selectedApplication._id,
+        data,
+      });
+    } else {
+      submitApplicationMutation.mutate(data);
+    }
+  };
+
+  // Update application mutation
+  const updateApplicationMutation = useMutation({
+    mutationFn: async ({
+      applicationId,
+      data,
+    }: {
+      applicationId: string;
+      data: ApplicationFormData;
+    }) => {
+      if (!userID || !selectedProduct) {
+        throw new Error("User ID or product not found");
+      }
+
+      const formData = new FormData();
+      formData.append("user_id", userID);
+      formData.append("product_id", selectedProduct._id);
+      formData.append("message_text", data.message_text || "");
+      formData.append(
+        "application_data",
+        JSON.stringify({
+          full_name: data.full_name,
+          age: data.age,
+          employment_status: data.employment_status,
+          monthly_income: data.monthly_income,
+          requested_amount: data.requested_amount,
+          repayment_period_months: data.repayment_period_months,
+        })
+      );
+
+      // Append files if any
+      if (data.files && data.files.length > 0) {
+        Array.from(data.files).forEach((file) => {
+          formData.append("files", file);
+        });
+      }
+
+      return buyerService.updateFinancingApplication(applicationId, formData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["userFinancingApplications", userID],
+      });
+      setIsModalOpen(false);
+      setSelectedProduct(null);
+      setSelectedApplication(null);
+      setIsEditMode(false);
+      showToast({
+        text: "Application updated successfully!",
+        type: "success",
+      });
+    },
+    onError: (error: any) => {
+      showToast({
+        text: error?.response?.data?.message || "Failed to update application",
+        type: "error",
+      });
+    },
+  });
+
+  // Delete application mutation
+  const deleteApplicationMutation = useMutation({
+    mutationFn: async (applicationId: string) => {
+      return buyerService.deleteFinancingApplication(applicationId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["userFinancingApplications", userID],
+      });
+      setDeleteConfirmId(null);
+      showToast({
+        text: "Application deleted successfully!",
+        type: "success",
+      });
+    },
+    onError: (error: any) => {
+      showToast({
+        text: error?.response?.data?.message || "Failed to delete application",
+        type: "error",
+      });
+    },
+  });
+
+  const handleEdit = (application: any) => {
+    setSelectedApplication(application);
+    setSelectedProduct(application.product_id);
+    setIsEditMode(true);
     setIsModalOpen(true);
+  };
+
+  const handleDelete = (applicationId: string) => {
+    setDeleteConfirmId(applicationId);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmId) {
+      deleteApplicationMutation.mutate(deleteConfirmId);
+    }
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedProduct(null);
-  };
-
-  const handleSubmitApplication = (data: ApplicationFormData) => {
-    submitApplicationMutation.mutate(data);
+    setSelectedApplication(null);
+    setIsEditMode(false);
   };
 
   if (productsLoading || applicationsLoading) {
@@ -513,172 +847,208 @@ export const FinancingPage: React.FC<{
     <div className="space-y-12">
       {/* Tab Navigation */}
       <div className="bg-white p-8 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-          <h1 className="text-3xl font-bold dark:text-white">Financing</h1>
-
-          <div className="relative">
-            <select
-              value={activeTab}
-              onChange={(e) =>
-                setActiveTab(e.target.value as "products" | "applications")
-              }
-              className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 pr-8"
-            >
-              <option value="products">Available Options</option>
-              <option value="applications">My Applications</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300">
-              <svg
-                className="fill-current h-4 w-4"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-              >
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-              </svg>
-            </div>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold dark:text-white mb-2">Financing</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Explore financing options and manage your applications.
+          </p>
         </div>
 
-      {/* Section for Available Financing Options */}
-      {activeTab === "products" && (
-        <div className="mt-6">
-          {productsError ? (
-            <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
-              <p className="text-red-500 text-center py-8">
-                Failed to load financing products. Please try again later.
-              </p>
-            </div>
-          ) : products.length === 0 ? (
-            <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
-              <p className="text-gray-500 text-center py-8 dark:text-gray-400">
-                No active financing products available at the moment.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {products.map((product: any) => {
-                const institution = product.institution_id;
-                const institutionName =
-                  institution?.name || "Unknown Institution";
-                const institutionLogo =
-                  institution?.logo ||
-                  "https://placehold.co/40x40/3498db/ffffff?text=" +
-                    institutionName.charAt(0);
+        {/* Tabs */}
+        <div className="flex space-x-1 p-1 rounded-xl">
+          <button
+            onClick={() => setActiveTab("products")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === "products"
+                ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            }`}
+          >
+            Available Options
+          </button>
+          <button
+            onClick={() => setActiveTab("applications")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === "applications"
+                ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            }`}
+          >
+            My Applications
+            {applications.length > 0 && (
+              <span className="ml-2 bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300 px-2 py-0.5 rounded-full text-xs">
+                {applications.length}
+              </span>
+            )}
+          </button>
+        </div>
 
-                return (
-                  <div
-                    key={product._id}
-                    className="bg-white p-6 rounded-xl shadow-md flex flex-col justify-between hover:shadow-lg transition-shadow dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700"
-                  >
-                    <div>
-                      <div className="flex items-center gap-4 mb-4">
-                        <img
-                          src={institutionLogo}
-                          alt={`${institutionName} logo`}
-                          className="h-10 w-10 rounded-full object-cover bg-gray-200"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = `https://placehold.co/40x40/3498db/ffffff?text=${institutionName.charAt(
-                              0
-                            )}`;
-                          }}
-                        />
-                        <div>
-                          <h3 className="text-xl font-bold dark:text-white">
-                            {product.product_name}
-                          </h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            by {institutionName}
+        {/* Section for Available Financing Options */}
+        {activeTab === "products" && (
+          <div className="mt-6">
+            {productsError ? (
+              <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
+                <p className="text-red-500 text-center py-8">
+                  Failed to load financing products. Please try again later.
+                </p>
+              </div>
+            ) : products.length === 0 ? (
+              <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
+                <p className="text-gray-500 text-center py-8 dark:text-gray-400">
+                  No active financing products available at the moment.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {products.map((product: any) => {
+                  const institution = product.institution_id;
+                  const institutionName =
+                    institution?.name || "Unknown Institution";
+                  const institutionLogo =
+                    institution?.logo ||
+                    "https://placehold.co/40x40/3498db/ffffff?text=" +
+                      institutionName.charAt(0);
+
+                  return (
+                    <div
+                      key={product._id}
+                      className="bg-white p-6 rounded-xl shadow-md flex flex-col justify-between hover:shadow-lg transition-shadow dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700"
+                    >
+                      <div>
+                        <div className="flex items-center gap-4 mb-4">
+                          <img
+                            src={institutionLogo}
+                            alt={`${institutionName} logo`}
+                            className="h-10 w-10 rounded-full object-cover bg-gray-200"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = `https://placehold.co/40x40/3498db/ffffff?text=${institutionName.charAt(
+                                0
+                              )}`;
+                            }}
+                          />
+                          <div>
+                            <h3 className="text-xl font-bold dark:text-white">
+                              {product.product_name}
+                            </h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              by {institutionName}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-gray-600 my-3 dark:text-gray-300">
+                          {product.description || "No description available."}
+                        </p>
+                        <div className="text-sm space-y-2 mt-4 pt-4 border-t dark:border-gray-700">
+                          <p className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Interest Rate:
+                            </span>
+                            <span className="font-semibold dark:text-white">
+                              {formatInterestRate(
+                                product.interest_rate_min,
+                                product.interest_rate_max
+                              )}
+                            </span>
+                          </p>
+                          <p className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Loan Term:
+                            </span>
+                            <span className="font-semibold dark:text-white">
+                              {formatLoanTerm(
+                                product.term_months_min,
+                                product.term_months_max
+                              )}
+                            </span>
                           </p>
                         </div>
                       </div>
-                      <p className="text-gray-600 my-3 dark:text-gray-300">
-                        {product.description || "No description available."}
-                      </p>
-                      <div className="text-sm space-y-2 mt-4 pt-4 border-t dark:border-gray-700">
-                        <p className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">
-                            Interest Rate:
-                          </span>
-                          <span className="font-semibold dark:text-white">
-                            {formatInterestRate(
-                              product.interest_rate_min,
-                              product.interest_rate_max
-                            )}
-                          </span>
-                        </p>
-                        <p className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">
-                            Loan Term:
-                          </span>
-                          <span className="font-semibold dark:text-white">
-                            {formatLoanTerm(
-                              product.term_months_min,
-                              product.term_months_max
-                            )}
-                          </span>
-                        </p>
-                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Section for User's Finance Applications */}
-      {activeTab === "applications" && (
-        <div className="mt-6">
-          <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
-            {applications.length > 0 ? (
-              <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                {applications.map((app: any) => {
-                  const statusInfo = getStatusInfo(app.status || "pending");
-                  const product = app.product_id;
-                  const institution = product?.institution_id;
-                  const submittedDate = app.createdAt || app.submitted_date;
-                  return (
-                    <li
-                      key={app._id}
-                      className="py-4 flex items-center justify-between"
-                    >
-                      <div>
-                        <p className="font-semibold text-lg dark:text-white">
-                          {product?.product_name || "Unknown Product"}
-                        </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {institution?.name || "Unknown Institution"} &middot;
-                          Submitted on{" "}
-                          {submittedDate
-                            ? new Date(submittedDate).toLocaleDateString()
-                            : "N/A"}
-                        </p>
-                      </div>
-                      <div
-                        className={`flex items-center gap-2 ${statusInfo.color}`}
-                      >
-                        {statusInfo.icon}
-                        <span className="font-semibold">{statusInfo.label}</span>
-                      </div>
-                    </li>
                   );
                 })}
-              </ul>
-            ) : applicationsError ? (
-              <p className="text-red-500 text-center py-8">
-                Failed to load your applications. Please try again later.
-              </p>
-            ) : (
-              <p className="text-gray-500 text-center py-8 dark:text-gray-400">
-                You have not submitted any finance applications.
-              </p>
+              </div>
             )}
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {/* Section for User's Finance Applications */}
+        {activeTab === "applications" && (
+          <div className="mt-6">
+            <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
+              {applications.length > 0 ? (
+                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {applications.map((app: any) => {
+                    const statusInfo = getStatusInfo(app.status || "pending");
+                    const product = app.product_id;
+                    const institution = product?.institution_id;
+                    const submittedDate = app.createdAt || app.submitted_date;
+                    return (
+                      <li
+                        key={app._id}
+                        className="py-4 flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="font-semibold text-lg dark:text-white">
+                            {product?.product_name || "Unknown Product"}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {institution?.name || "Unknown Institution"}{" "}
+                            &middot; Submitted on{" "}
+                            {submittedDate
+                              ? new Date(submittedDate).toLocaleDateString()
+                              : "N/A"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div
+                            className={`flex items-center gap-2 ${statusInfo.color}`}
+                          >
+                            {statusInfo.icon}
+                            <span className="font-semibold">
+                              {statusInfo.label}
+                            </span>
+                          </div>
+                          {/* Edit and Delete buttons - only show for pending applications */}
+                          {(app.status?.toLowerCase() === "pending" ||
+                            app.status?.toLowerCase() === "under_review") && (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEdit(app)}
+                                className="p-2 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors dark:text-blue-400 dark:hover:bg-blue-900/20"
+                                title="Edit Application"
+                                aria-label="Edit Application"
+                              >
+                                <EditIcon className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(app._id)}
+                                className="p-2 text-red-600 rounded-lg hover:bg-red-50 transition-colors dark:text-red-400 dark:hover:bg-red-900/20"
+                                title="Delete Application"
+                                aria-label="Delete Application"
+                              >
+                                <TrashIcon className="h-5 w-5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : applicationsError ? (
+                <p className="text-red-500 text-center py-8">
+                  Failed to load your applications. Please try again later.
+                </p>
+              ) : (
+                <p className="text-gray-500 text-center py-8 dark:text-gray-400">
+                  You have not submitted any finance applications.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Application Modal */}
       {selectedProduct && (
@@ -687,9 +1057,59 @@ export const FinancingPage: React.FC<{
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           onSubmit={handleSubmitApplication}
-          isLoading={submitApplicationMutation.isPending}
+          isLoading={
+            isEditMode
+              ? updateApplicationMutation.isPending
+              : submitApplicationMutation.isPending
+          }
+          application={selectedApplication}
+          isEditMode={isEditMode}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-md"
+            style={{
+              position: "fixed",
+              width: "100vw",
+              height: "100vh",
+              margin: 0,
+              padding: 0,
+            }}
+          >
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+              <h2 className="text-2xl font-bold mb-4 dark:text-white">
+                Delete Application
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Are you sure you want to delete this application? This action
+                cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirmId(null)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                  disabled={deleteApplicationMutation.isPending}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={deleteApplicationMutation.isPending}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-red-700 dark:hover:bg-red-600"
+                >
+                  {deleteApplicationMutation.isPending
+                    ? "Deleting..."
+                    : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

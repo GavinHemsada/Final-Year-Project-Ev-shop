@@ -35,7 +35,7 @@ export const buyerService = {
     const response = await axiosPrivate.put(`/cart/items/${itemId}`, {
       quantity,
     });
-    return response.data; 
+    return response.data;
   },
   removeCartItem: async (itemId: string) => {
     const response = await axiosPrivate.delete(`/cart/items/${itemId}`);
@@ -102,18 +102,18 @@ export const buyerService = {
     const response = await axiosPrivate.post(`/chatbot/ask`, { question });
     return response.data;
   },
-  
+
   // prediction operations
   predictBatteryHealth: async (data: any) => {
     const response = await axiosPrivate.post(`/ml-test/battery-health`, data);
     return response.data;
   },
-  
+
   predictRepairCost: async (data: any) => {
     const response = await axiosPrivate.post(`/ml-test/repair-cost`, data);
     return response.data;
   },
-  
+
   // save prediction to database
   savePrediction: async (predictionData: {
     type: string;
@@ -121,7 +121,10 @@ export const buyerService = {
     prediction_result: Record<string, any>;
     conversation_id?: string;
   }) => {
-    const response = await axiosPrivate.post(`/chatbot/predictions`, predictionData);
+    const response = await axiosPrivate.post(
+      `/chatbot/predictions`,
+      predictionData
+    );
     return response.data;
   },
 
@@ -131,7 +134,9 @@ export const buyerService = {
     return response.data;
   },
   getFinancingOptions: async () => {
-    const response = await axiosPrivate.get(`/financial/products?activeOnly=true`);
+    const response = await axiosPrivate.get(
+      `/financial/products?activeOnly=true`
+    );
     return response.data;
   },
   getUserFinancingApplications: async (userId: string) => {
@@ -141,18 +146,18 @@ export const buyerService = {
     return response.data;
   },
   submitFinancingApplication: async (formData: FormData) => {
+    // Don't manually set Content-Type - axios automatically sets
+    // multipart/form-data with correct boundary when sending FormData.
+    // Manually setting it would omit the boundary and break file uploads.
     const response = await axiosPrivate.post(
       `/financial/applications`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
+      formData
     );
     return response.data;
   },
-  updateFinancingApplication: async (id: string, applicationData: any) => {
+  updateFinancingApplication: async (id: string, applicationData: FormData) => {
+    // Don't manually set Content-Type - axios automatically sets
+    // multipart/form-data with correct boundary when sending FormData.
     const response = await axiosPrivate.put(
       `/financial/applications/${id}`,
       applicationData
@@ -329,11 +334,15 @@ export const buyerService = {
     return response.data;
   },
   getReviewsByTargetId: async (listingId: string) => {
-    const response = await axiosPrivate.get(`/review/reviews/listing/${listingId}`);
+    const response = await axiosPrivate.get(
+      `/review/reviews/listing/${listingId}`
+    );
     return response.data;
   },
   getReviewsByReviewer: async (reviewerId: string) => {
-    const response = await axiosPrivate.get(`/review/reviews/reviewer/${reviewerId}`);
+    const response = await axiosPrivate.get(
+      `/review/reviews/reviewer/${reviewerId}`
+    );
     return response.data;
   },
   getUserReviews: async (reviewerId: string) => {

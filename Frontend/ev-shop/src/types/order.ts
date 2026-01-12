@@ -7,6 +7,7 @@ export type Order = {
     price: number;
     color?: string;
     registration_year?: number;
+    listing_type?: string;
     model_id?: {
       model_name: string;
     };

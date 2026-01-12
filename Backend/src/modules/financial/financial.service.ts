@@ -4,12 +4,16 @@ import {
   FinancingApplicationDTO,
   UpdateFinancingApplicationDTO,
 } from "../../dtos/financial.DTO";
-import { ApplicationStatus } from "../../shared/enum/enum";
+import {
+  ApplicationStatus,
+  NotificationType,
+  UserRole,
+} from "../../shared/enum/enum";
 import { IFinancialRepository } from "./financial.repository";
 import { IUserRepository } from "../user/user.repository";
-import { UserRole } from "../../shared/enum/enum";
 import { addFiles, deleteFiles } from "../../shared/utils/fileHandel";
 import CacheService from "../../shared/cache/CacheService";
+import { Notification } from "../../entities/Notification";
 
 /**
  * Defines the interface for the financial service, outlining methods for managing institutions, products, and applications.
@@ -503,6 +507,13 @@ export function financialService(
         if (!product) return { success: false, error: "Product not found" };
         if (!product.is_active)
           return { success: false, error: "Product is not active" };
+
+        // Get institution to find the user_id for notification
+        const institution = await repo.findById(
+          product.institution_id.toString()
+        );
+        if (!institution)
+          return { success: false, error: "Institution not found" };
         const existingApplications = await repo.checkApplictionStatesbyUserID(
           data.user_id
         );
@@ -514,8 +525,28 @@ export function financialService(
           return { success: false, error: "User already has an application" };
         // Handle file uploads.
         let filePaths: string[] = [];
+        console.log("Service - Files received:", files ? files.length : 0);
         if (files && files.length > 0) {
-          filePaths = addFiles(files, folderName);
+          console.log(
+            "Service - Processing files:",
+            files.map((f) => ({
+              name: f.originalname,
+              size: f.size,
+              mimetype: f.mimetype,
+            }))
+          );
+          try {
+            filePaths = addFiles(files, folderName);
+            console.log("Service - Files saved to paths:", filePaths);
+          } catch (fileError) {
+            console.error("Service - File upload error:", fileError);
+            return {
+              success: false,
+              error: "Failed to upload files: " + (fileError as Error).message,
+            };
+          }
+        } else {
+          console.log("Service - No files provided");
         }
         const applicationData = {
           ...data,
@@ -534,6 +565,29 @@ export function financialService(
           CacheService.delete(`applications_user_${data.user_id}`),
           CacheService.delete(`applications_product_${data.product_id}`),
         ]);
+
+        // Create notification for the institution user (only if application was created successfully)
+        if (application) {
+          try {
+            // Dynamically import to avoid circular dependencies
+            const userName =
+              (user as any).name || (user as any).email || "A user";
+            const applicationId = application._id?.toString() || "";
+
+            await Notification.create({
+              financial_id: institution._id,
+              title: "New Financing Application",
+              message: `${userName} has submitted a new financing application for ${
+                product.product_name
+              }. Application ID: ${applicationId.slice(-8)}`,
+              type: NotificationType.NEW_FINANCING_APPLICATION,
+              is_read: false,
+            });
+          } catch (notificationError) {
+            // Log error but don't fail the application creation
+            console.error("Failed to create notification:", notificationError);
+          }
+        }
 
         return { success: true, application };
       } catch (err) {
@@ -581,9 +635,11 @@ export function financialService(
           3600
         ); // Cache for 1 hour
 
-        if (!applications)
-          return { success: false, error: "No applications found" };
-        return { success: true, applications };
+        // Return empty array if no applications found (not an error)
+        return {
+          success: true,
+          applications: Array.isArray(applications) ? applications : [],
+        };
       } catch (err) {
         return { success: false, error: "Failed to fetch applications" };
       }
@@ -605,9 +661,11 @@ export function financialService(
           3600
         ); // Cache for 1 hour
 
-        if (!applications)
-          return { success: false, error: "No applications found" };
-        return { success: true, applications };
+        // Return empty array if no applications found (not an error)
+        return {
+          success: true,
+          applications: Array.isArray(applications) ? applications : [],
+        };
       } catch (err) {
         return { success: false, error: "Failed to fetch applications" };
       }

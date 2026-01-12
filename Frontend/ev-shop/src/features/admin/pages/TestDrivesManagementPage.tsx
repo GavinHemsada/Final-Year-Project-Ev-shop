@@ -59,30 +59,41 @@ export const TestDrivesManagementPage: React.FC<{ setAlert: (alert: AlertProps |
   });
 
   // Filtering
-  const filteredBookings = bookings.filter((b: any) =>
-    b.user_id?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    b.seller_id?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    b.model_id?.model_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (b.status || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredBookings = bookings.filter((b: any) => {
+    const userName = b.customer_id?.name || b.user_id?.name || "";
+    const sellerName = b.slot_id?.seller_id?.business_name || b.slot_id?.seller_id?.name || b.seller_id?.business_name || b.seller_id?.name || "";
+    const vehicleName = b.slot_id?.model_id?.model_name || b.model_id?.model_name || "";
+    const status = b.status || "";
+    return (
+      userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sellerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicleName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      status.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
-  const filteredSlots = slots.filter((s: any) =>
-    s.seller_id?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.model_id?.model_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredSlots = slots.filter((s: any) => {
+    const sellerName = s.seller_id?.business_name || s.seller_id?.name || "";
+    const location = s.location || "";
+    const vehicleName = s.model_id?.model_name || "";
+    return (
+      sellerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicleName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
   
   // Report Generation Data Preparation
   const reportData = activeTab === "bookings" 
       ? filteredBookings.map((booking: any) => ({
-          user: booking.user_id?.name || "Unknown",
-          seller: booking.seller_id?.name || "Unknown Seller",
-          vehicle: booking.model_id?.model_name || "Unknown Model",
+          user: booking.customer_id?.name || booking.user_id?.name || "Unknown",
+          seller: booking.slot_id?.seller_id?.business_name || booking.slot_id?.seller_id?.name || booking.seller_id?.business_name || booking.seller_id?.name || "Unknown Seller",
+          vehicle: booking.slot_id?.model_id?.model_name || booking.model_id?.model_name || "Unknown Model",
           datetime: `${new Date(booking.booking_date).toLocaleDateString()} ${booking.booking_time}`,
           status: booking.status
         }))
       : filteredSlots.map((slot: any) => ({
-          seller: slot.seller_id?.name || "Unknown Seller",
+          seller: slot.seller_id?.business_name || slot.seller_id?.name || "Unknown Seller",
           location: slot.location,
           vehicle: slot.model_id?.model_name || "Unknown Model",
           date: new Date(slot.available_date).toLocaleDateString(),
@@ -196,13 +207,13 @@ export const TestDrivesManagementPage: React.FC<{ setAlert: (alert: AlertProps |
                         filteredBookings.map((booking: any) => (
                              <tr key={booking._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                    {booking.user_id?.name || "Unknown"}
+                                    {booking.customer_id?.name || booking.user_id?.name || "Unknown"}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                    {booking.seller_id?.name || "Unknown Seller"}
+                                    {booking.slot_id?.seller_id?.business_name || booking.slot_id?.seller_id?.name || booking.seller_id?.business_name || booking.seller_id?.name || "Unknown Seller"}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                    {booking.model_id?.model_name || "Unknown Model"}
+                                    {booking.slot_id?.model_id?.model_name || booking.model_id?.model_name || "Unknown Model"}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                     {new Date(booking.booking_date).toLocaleDateString()} {booking.booking_time}
@@ -239,7 +250,7 @@ export const TestDrivesManagementPage: React.FC<{ setAlert: (alert: AlertProps |
                         filteredSlots.map((slot: any) => (
                              <tr key={slot._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                    {slot.seller_id?.name || "Unknown Seller"}
+                                    {slot.seller_id?.business_name || slot.seller_id?.name || "Unknown Seller"}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                     {slot.location}

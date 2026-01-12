@@ -256,10 +256,14 @@ export const FinancialRepository: IFinancialRepository = {
       })
       .sort({ createdAt: -1 })
   ),
-  /** Finds all financing applications for a specific product, sorted by most recent, and populates user details. */
+  /** Finds all financing applications for a specific product, sorted by most recent, and populates user and product/institution details. */
   findApplicationsByProductId: withErrorHandling(async (productId) =>
     FinancingApplication.find({ product_id: new Types.ObjectId(productId) })
       .populate("user_id", "name email")
+      .populate({
+        path: "product_id",
+        populate: { path: "institution_id", select: "name" },
+      })
       .sort({ createdAt: -1 })
   ),
   /** Finds a financing application by ID and updates it with new data. */

@@ -35,17 +35,22 @@ export const SellersPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
   });
 
   const filteredSellers = Array.isArray(sellers)
-    ? sellers.filter((seller: any) =>
-        seller.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        seller.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        seller.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+    ? sellers.filter((seller: any) => {
+        const email = seller.user_id?.email || seller.email || "";
+        const phone = seller.user_id?.phone || seller.phone || "";
+        const name = seller.business_name || seller.name || seller.user_id?.name || "";
+        return (
+          name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          phone.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      })
     : [];
 
   const reportData = filteredSellers.map(seller => ({
-    name: seller.business_name || seller.name || "N/A",
-    email: seller.email || "N/A",
-    phone: seller.phone || "N/A"
+    name: seller.business_name || seller.name || seller.user_id?.name || "N/A",
+    email: seller.user_id?.email || seller.email || "N/A",
+    phone: seller.user_id?.phone || seller.phone || "N/A"
   }));
 
   if (isLoading) {
@@ -111,13 +116,13 @@ export const SellersPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
                 filteredSellers.map((seller: any) => (
                   <tr key={seller._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {seller.business_name || seller.name || "N/A"}
+                      {seller.business_name || seller.name || seller.user_id?.name || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {seller.email || "N/A"}
+                      {seller.user_id?.email || seller.email || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {seller.phone || "N/A"}
+                      {seller.user_id?.phone || seller.phone || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button

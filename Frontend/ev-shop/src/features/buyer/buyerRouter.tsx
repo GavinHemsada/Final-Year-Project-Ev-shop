@@ -14,7 +14,7 @@ const BuyerRouter = () => {
       <Route path="dashboard" element={<Dashboard />} />
       <Route path="vehicle/:id" element={<VehicleDetailsPage />} />
       <Route
-        path="financing/apply/:listingId"
+        path="financing/apply/:orderId"
         element={<FinancingApplicationPage />}
       />
       <Route path="checkout" element={<CheckoutPage />} />

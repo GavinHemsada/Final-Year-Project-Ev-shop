@@ -550,17 +550,11 @@ const VehicleDetailsPage: React.FC = () => {
                   >
                     {addToCartMutation.isPending ? "Adding..." : "Add to Cart"}
                   </button>
-                  <button
-                    onClick={() => {
-                      if (vehicle?.listing_type === "lease" && vehicle._id) {
-                        navigate(`/user/financing/apply/${vehicle._id}`);
-                      }
-                    }}
-                    disabled={vehicle?.listing_type === "sale"}
-                    className="w-full bg-white border-2 border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600"
-                  >
-                    Apply for Lease
-                  </button>
+                  {vehicle?.listing_type !== "sale" && (
+                    <span className="text-red-500 dark:text-gray-200">
+                      Available for Lease Options, you can apply lease after pay 50000 LKR advance payment
+                    </span>
+                  )}
                 </div>
 
                 {!userId && (

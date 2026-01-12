@@ -247,7 +247,7 @@ export function financialController(
         const result = await service.getProductsByInstitution(
           req.params.institutionId
         );
-        console.log("Controller Result:", result);   
+        console.log("Controller Result:", result);
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "getProductsByInstitution");
@@ -282,10 +282,29 @@ export function financialController(
      */
     createApplication: async (req, res) => {
       try {
-        const file = req.files as Express.Multer.File[];
-        const result = await service.createApplication(req.body, file);
+        // Handle files - req.files from upload.array() is File[] or undefined
+        let files: Express.Multer.File[] = [];
+        if (req.files) {
+          if (Array.isArray(req.files)) {
+            files = req.files;
+          } else {
+            // This shouldn't happen with upload.array(), but handle it just in case
+            files = [];
+          }
+        }
+        console.log("Controller File:", files);
+        console.log("Controller File Count:", files.length);
+        if (files.length > 0) {
+          console.log(
+            "Controller File Details:",
+            files.map((f) => ({ name: f.originalname, size: f.size }))
+          );
+        }
+        console.log("Controller Body:", req.body);
+        const result = await service.createApplication(req.body, files);
         return handleResult(res, result, 201);
       } catch (err) {
+        console.error("createApplication controller error:", err);
         return handleError(res, err, "createApplication");
       }
     },

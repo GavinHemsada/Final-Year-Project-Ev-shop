@@ -15,24 +15,45 @@ export const upload = multer({
   storage,
   /**
    * A filter function to control which files are accepted.
-   * This filter specifically allows common document types like PDF, Word, ZIP, and text files.
+   * Allows PDF (including alternative MIME types), Word, images, ZIP, and text files.
+   * Also checks file extension as fallback when MIME type may be unreliable.
    */
   fileFilter: (_req, file, cb: FileFilterCallback) => {
-    const allowed = [
+    const allowedMimeTypes = [
+      // PDF - include alternative MIME types used by different systems
       "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/x-pdf",
+      "application/acrobat",
+      "application/vnd.pdf",
+      "text/pdf",
+      // Word documents
+      "application/msword", // .doc
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+      // Images (matching frontend accept attribute)
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/pjpeg",
+      // Other documents
       "application/zip",
       "text/plain",
     ];
 
-    // Check if the file's MIME type is in the allowed list.
-    if (allowed.includes(file.mimetype)) {
-      // Accept the file.
+    // Get file extension for fallback check
+    const fileExt = path.extname(file.originalname).toLowerCase();
+    const allowedExtensions = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png", ".zip", ".txt"];
+
+    // Check MIME type first
+    const validMimeType = allowedMimeTypes.includes(file.mimetype);
+    
+    // Fallback: check file extension (some browsers/OS may report incorrect or empty MIME types for PDFs)
+    const validExtension = allowedExtensions.includes(fileExt);
+    
+    // Accept if either MIME type or extension is valid (PDFs especially may have MIME type issues)
+    if (validMimeType || validExtension) {
       cb(null, true);
     } else {
-      // Reject the file with an error.
-      cb(new Error("Only PDFs, Word, ZIP, and text files are allowed!"));
+      cb(new Error(`File type not allowed. Allowed: PDF, Word, JPEG, PNG, ZIP, and text files. Received: ${file.mimetype || "unknown"} (${fileExt || "no extension"})`));
     }
   },
 });

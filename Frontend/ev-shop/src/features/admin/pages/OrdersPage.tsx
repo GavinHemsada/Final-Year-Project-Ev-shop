@@ -35,10 +35,16 @@ export const OrdersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void
   });
 
   const filteredOrders = Array.isArray(orders)
-    ? orders.filter((order: any) =>
-        order._id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.order_status?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+    ? orders.filter((order: any) => {
+        const modelName = order.listing_id?.model_id?.model_name || "";
+        const orderId = order._id?.toString() || "";
+        const status = order.order_status || "";
+        return (
+          orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          status.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          modelName.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      })
     : [];
   
   const reportData = filteredOrders.map(order => ({
@@ -46,7 +52,8 @@ export const OrdersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void
     date: order.order_date ? new Date(order.order_date).toLocaleDateString() : "N/A",
     status: order.order_status || "pending",
     amount: `LKR ${order.total_amount?.toLocaleString("en-US") || "0"}`,
-    customer: order.user_id?.name || "N/A"
+    customer: order.user_id?.name || "N/A",
+    model: order.listing_id?.model_id?.model_name || "N/A"
   }));
 
   if (isLoading) {
@@ -67,6 +74,7 @@ export const OrdersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void
             columns={[
               { header: "Order ID", dataKey: "id" },
               { header: "Customer", dataKey: "customer" },
+              { header: "Model", dataKey: "model" },
               { header: "Date", dataKey: "date" },
               { header: "Status", dataKey: "status" },
               { header: "Amount", dataKey: "amount" },
@@ -93,6 +101,9 @@ export const OrdersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void
                   Order ID
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Model
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -109,7 +120,7 @@ export const OrdersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     No orders found
                   </td>
                 </tr>
@@ -118,6 +129,9 @@ export const OrdersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void
                   <tr key={order._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {order._id?.slice(-8) || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {order.listing_id?.model_id?.model_name || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span

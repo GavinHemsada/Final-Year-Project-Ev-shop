@@ -4,33 +4,50 @@ export const financialService = {
   // Financial Institution Operations
   getFinancialInstitutionProfile: async (userId: string) => {
     // Get all institutions and find the one matching user_id
-    const response = await axiosPrivate.get(`/financial/institutions/user/${userId}`);
+    const response = await axiosPrivate.get(
+      `/financial/institutions/user/${userId}`
+    );
     return response.data;
   },
   getFinancialInstitutionById: async (institutionId: string) => {
-    const response = await axiosPrivate.get(`/financial/institutions/${institutionId}`);
+    const response = await axiosPrivate.get(
+      `/financial/institutions/${institutionId}`
+    );
     return response.data;
   },
   updateFinancialInstitution: async (institutionId: string, data: any) => {
-    const response = await axiosPrivate.put(`/financial/institutions/${institutionId}`, data);
+    const response = await axiosPrivate.put(
+      `/financial/institutions/${institutionId}`,
+      data
+    );
     return response.data;
   },
 
   // Financial Product Operations
   getProductsByInstitution: async (institutionId: string) => {
-    const response = await axiosPrivate.get(`/financial/products/institution/${institutionId}`);
+    const response = await axiosPrivate.get(
+      `/financial/products/institution/${institutionId}`
+    );
     return response.data;
   },
   createProduct: async (productData: any) => {
-    const response = await axiosPrivate.post(`/financial/products`, productData);
+    const response = await axiosPrivate.post(
+      `/financial/products`,
+      productData
+    );
     return response.data;
   },
   updateProduct: async (productId: string, productData: any) => {
-    const response = await axiosPrivate.put(`/financial/products/${productId}`, productData);
+    const response = await axiosPrivate.put(
+      `/financial/products/${productId}`,
+      productData
+    );
     return response.data;
   },
   deleteProduct: async (productId: string) => {
-    const response = await axiosPrivate.delete(`/financial/products/${productId}`);
+    const response = await axiosPrivate.delete(
+      `/financial/products/${productId}`
+    );
     return response.data;
   },
   getProductById: async (productId: string) => {
@@ -41,40 +58,66 @@ export const financialService = {
   // Financing Application Operations
   getApplicationsByInstitution: async (institutionId: string) => {
     // Get all products for this institution, then get applications for each product
-    // For now, we'll get all applications and filter by product's institution_id
-    // TODO: Add backend route /financial/applications/institution/:institutionId
-    const productsResponse = await axiosPrivate.get(`/financial/products/institution/${institutionId}`);
-    const products = productsResponse.data?.products || [];
+    // Backend unwraps responses via handleResult, so data is directly the array
+    const productsResponse = await axiosPrivate.get(
+      `/financial/products/institution/${institutionId}`
+    );
+    // Backend returns products array directly (unwrapped)
+    const products = Array.isArray(productsResponse.data)
+      ? productsResponse.data
+      : productsResponse.data?.products || [];
     const productIds = products.map((p: any) => p._id);
-    
+
     // Get applications for each product
     const allApplications: any[] = [];
     for (const productId of productIds) {
       try {
-        const appResponse = await axiosPrivate.get(`/financial/applications/product/${productId}`);
-        const apps = appResponse.data?.applications || [];
+        const appResponse = await axiosPrivate.get(
+          `/financial/applications/product/${productId}`
+        );
+        // Backend returns applications array directly (unwrapped)
+        const apps = Array.isArray(appResponse.data)
+          ? appResponse.data
+          : appResponse.data?.applications || [];
         allApplications.push(...apps);
       } catch (error) {
-        console.error(`Failed to get applications for product ${productId}:`, error);
+        console.error(
+          `Failed to get applications for product ${productId}:`,
+          error
+        );
       }
     }
-    
+
     return { success: true, applications: allApplications };
   },
   getApplicationById: async (applicationId: string) => {
-    const response = await axiosPrivate.get(`/financial/applications/${applicationId}`);
+    const response = await axiosPrivate.get(
+      `/financial/applications/${applicationId}`
+    );
     return response.data;
   },
-  updateApplicationStatus: async (applicationId: string, status: string) => {
-    const response = await axiosPrivate.patch(`/financial/applications/${applicationId}/status`, { status });
+  updateApplicationStatus: async (
+    applicationId: string,
+    status: string,
+    rejectionReason?: string
+  ) => {
+    const response = await axiosPrivate.patch(
+      `/financial/applications/${applicationId}/status`,
+      { status, rejection_reason: rejectionReason }
+    );
     return response.data;
   },
   updateApplication: async (applicationId: string, applicationData: any) => {
-    const response = await axiosPrivate.put(`/financial/applications/${applicationId}`, applicationData);
+    const response = await axiosPrivate.put(
+      `/financial/applications/${applicationId}`,
+      applicationData
+    );
     return response.data;
   },
   deleteApplication: async (applicationId: string) => {
-    const response = await axiosPrivate.delete(`/financial/applications/${applicationId}`);
+    const response = await axiosPrivate.delete(
+      `/financial/applications/${applicationId}`
+    );
     return response.data;
   },
 
@@ -84,7 +127,9 @@ export const financialService = {
     return response.data;
   },
   getCommunityPostbyFinancial: async (financialId: string) => {
-    const response = await axiosPrivate.get(`/post/posts/financial/${financialId}`);
+    const response = await axiosPrivate.get(
+      `/post/posts/financial/${financialId}`
+    );
     return response.data;
   },
   createCommunityPost: async (postData: {
@@ -119,7 +164,10 @@ export const financialService = {
     return response.data;
   },
   updatePostReply: async (replyId: string, replyData: { content: string }) => {
-    const response = await axiosPrivate.put(`/post/reply/${replyId}`, replyData);
+    const response = await axiosPrivate.put(
+      `/post/reply/${replyId}`,
+      replyData
+    );
     return response.data;
   },
   deletePostReply: async (replyId: string) => {
@@ -128,6 +176,16 @@ export const financialService = {
   },
   postView: async (postId: string) => {
     const response = await axiosPrivate.patch(`/post/post/${postId}/views`);
+    return response.data;
+  },
+
+  // Notification Operations
+  getUserNotifications: async (userId: string) => {
+    const response = await axiosPrivate.get(`/notification/user/${userId}`);
+    return response.data;
+  },
+  markNotificationAsRead: async (id: string) => {
+    const response = await axiosPrivate.patch(`/notification/${id}/read`);
     return response.data;
   },
 };

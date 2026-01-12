@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, CloseIcon } from "@/assets/icons/icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -66,13 +66,7 @@ const applicationSchema = yup.object({
     .min(1, "Repayment period must be at least 1 month")
     .integer("Repayment period must be a whole number"),
   message_text: yup.string().optional(),
-  files: yup
-    .mixed<File[]>()
-    .test("fileCount", "Maximum 2 files allowed", (value) => {
-      if (!value || value.length === 0) return true;
-      return value.length <= 2;
-    })
-    .optional(),
+  files: yup.mixed().optional(),
 });
 
 interface ApplicationFormData {
@@ -83,7 +77,7 @@ interface ApplicationFormData {
   requested_amount: number;
   repayment_period_months: number;
   message_text?: string;
-  files?: FileList | null;
+  files?: File[] | null;
 }
 
 // Application Form Modal Component
@@ -94,27 +88,63 @@ const ApplicationModal: React.FC<{
   onSubmit: (data: ApplicationFormData) => void;
   isLoading: boolean;
 }> = ({ product, isOpen, onClose, onSubmit, isLoading }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [fileError, setFileError] = useState<string>("");
+
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
-    watch,
   } = useForm({
     resolver: yupResolver(applicationSchema) as any,
   });
 
-  const selectedFiles = watch("files");
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    setFileError("");
+
+    if (files) {
+      // Validate file count
+      if (files.length > 2) {
+        setFileError("Maximum 2 files allowed");
+        setSelectedFiles(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        return;
+      }
+      setSelectedFiles(files);
+    } else {
+      setSelectedFiles(null);
+    }
+  };
 
   const handleFormSubmit = (data: any) => {
-    onSubmit(data as ApplicationFormData);
+    // Convert FileList to Array BEFORE passing (FileList doesn't serialize through React callbacks)
+    let filesArray: File[] = [];
+    if (selectedFiles && selectedFiles.length > 0) {
+      filesArray = Array.from(selectedFiles);
+    }
+    const formDataWithFiles: ApplicationFormData = {
+      ...data,
+      files: filesArray.length > 0 ? filesArray : null,
+    };
+    onSubmit(formDataWithFiles);
+    // Reset form and file state AFTER submission
     reset();
+    setSelectedFiles(null);
+    setFileError("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <h2 className="text-2xl font-bold dark:text-white">
@@ -276,21 +306,31 @@ const ApplicationModal: React.FC<{
               Supporting Documents (Optional, Max 2 files)
             </label>
             <input
+              ref={fileInputRef}
               type="file"
               multiple
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              {...register("files")}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              accept=".pdf,application/pdf,.doc,.docx,.jpg,.jpeg,.png,image/jpeg,image/png"
+              onChange={handleFileChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-600 dark:file:text-gray-200"
             />
-            {errors.files && (
+            {(fileError || errors.files) && (
               <p className="mt-1 text-sm text-red-600">
-                {String(errors.files.message)}
+                {fileError || String(errors.files?.message || "")}
               </p>
             )}
             {selectedFiles && selectedFiles.length > 0 && (
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                {selectedFiles.length} file(s) selected
-              </p>
+              <div className="mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                  {selectedFiles.length} file(s) selected:
+                </p>
+                <ul className="text-xs text-gray-500 dark:text-gray-400 list-disc list-inside">
+                  {Array.from(selectedFiles).map(
+                    (file: File, index: number) => (
+                      <li key={index}>{file.name}</li>
+                    )
+                  )}
+                </ul>
+              </div>
             )}
           </div>
 
@@ -318,7 +358,7 @@ const ApplicationModal: React.FC<{
 };
 
 export const FinancingApplicationPage: React.FC = () => {
-  const { listingId } = useParams<{ listingId: string }>();
+  const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const userID = useAppSelector(selectUserId);
   const queryClient = useQueryClient();
@@ -371,9 +411,9 @@ export const FinancingApplicationPage: React.FC = () => {
       const data = new FormData();
       data.append("user_id", userID);
       data.append("product_id", selectedProduct._id);
-      // Include listing ID if available
-      if (listingId) {
-        data.append("list_id", listingId);
+      // Include order ID if available
+      if (orderId) {
+        data.append("order_id", orderId);
       }
       data.append("message_text", formData.message_text || "");
       data.append(
@@ -388,9 +428,13 @@ export const FinancingApplicationPage: React.FC = () => {
         })
       );
 
-      // Append files if any
-      if (formData.files && formData.files.length > 0) {
-        Array.from(formData.files).forEach((file) => {
+      // Append files if any (formData.files is now File[] or null)
+      if (
+        formData.files &&
+        Array.isArray(formData.files) &&
+        formData.files.length > 0
+      ) {
+        formData.files.forEach((file: File) => {
           data.append("files", file);
         });
       }
@@ -407,12 +451,8 @@ export const FinancingApplicationPage: React.FC = () => {
         text: "Your financing application has been submitted successfully!",
         type: "success",
       });
-      // Navigate back to vehicle details or dashboard after successful submission
-      if (listingId) {
-        navigate(`/user/vehicle/${listingId}`);
-      } else {
-        navigate("/user/dashboard");
-      }
+      // Navigate back to orders page after successful submission
+      // navigate("/user/dashboard");
     },
     onError: (error: any) => {
       showToast({
@@ -448,11 +488,7 @@ export const FinancingApplicationPage: React.FC = () => {
       <div className="p-6 pb-0">
         <button
           onClick={() => {
-            if (listingId) {
-              navigate(`/user/vehicle/${listingId}`);
-            } else {
-              navigate("/user/dashboard");
-            }
+            navigate("/user/orders");
           }}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
         >
@@ -575,4 +611,3 @@ export const FinancingApplicationPage: React.FC = () => {
 };
 
 export default FinancingApplicationPage;
-
