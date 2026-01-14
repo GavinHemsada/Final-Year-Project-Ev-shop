@@ -173,6 +173,18 @@ import {
   complaintController,
 } from "../modules/complaint/complaint.controller";
 import {
+  IContactMessageRepository,
+  ContactMessageRepository,
+} from "../modules/contactMessage/contactMessage.repository";
+import {
+  IContactMessageService,
+  contactMessageService,
+} from "../modules/contactMessage/contactMessage.service";
+import {
+  IContactMessageController,
+  contactMessageController,
+} from "../modules/contactMessage/contactMessage.controller";
+import {
   IRepairLocationService,
   repairLocationService,
 } from "../modules/repairLocation/repairLocation.service";
@@ -451,6 +463,22 @@ container.register<IComplaintService>("ComplaintService", {
 container.register<IComplaintController>("ComplaintController", {
   useFactory: (c) =>
     complaintController(c.resolve<IComplaintService>("ComplaintService")),
+});
+
+container.register<IContactMessageRepository>("ContactMessageRepository", {
+  useValue: ContactMessageRepository,
+});
+
+container.register<IContactMessageService>("ContactMessageService", {
+  useFactory: (c) =>
+    contactMessageService(
+      c.resolve<IContactMessageRepository>("ContactMessageRepository")
+    ),
+});
+
+container.register<IContactMessageController>("ContactMessageController", {
+  useFactory: (c) =>
+    contactMessageController(c.resolve<IContactMessageService>("ContactMessageService")),
 });
 
 export { container };

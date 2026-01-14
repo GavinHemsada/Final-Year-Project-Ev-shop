@@ -235,6 +235,37 @@ export const adminService = {
     return response.data;
   },
 
+  // Contact Message Management
+  getAllContactMessages: async (isRead?: boolean) => {
+    const params = isRead !== undefined ? { isRead: isRead.toString() } : {};
+    const response = await axiosPrivate.get("/contact-message", { params });
+    // Backend returns the contact messages array directly (not wrapped)
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    // Fallback: check if it's wrapped in { success: true, contactMessages: [...] }
+    if (response.data?.success && Array.isArray(response.data?.contactMessages)) {
+      return response.data.contactMessages;
+    }
+    return [];
+  },
+  getContactMessageStats: async () => {
+    const response = await axiosPrivate.get("/contact-message/stats");
+    return response.data?.stats || response.data;
+  },
+  getContactMessageById: async (id: string) => {
+    const response = await axiosPrivate.get(`/contact-message/${id}`);
+    return response.data;
+  },
+  updateContactMessage: async (id: string, data: { isRead?: boolean; isReplied?: boolean }) => {
+    const response = await axiosPrivate.put(`/contact-message/${id}`, data);
+    return response.data;
+  },
+  deleteContactMessage: async (id: string) => {
+    const response = await axiosPrivate.delete(`/contact-message/${id}`);
+    return response.data;
+  },
+
   // Test Drive Management
   getAllTestDriveBookings: async () => {
     try {

@@ -42,6 +42,7 @@ import { savedVehicleRouter } from "./modules/savedVehicle/savedVehicle.router";
 import { repairLocationRouter } from "./modules/repairLocation/repairLocation.router";
 import { IRepairLocationController } from "./modules/repairLocation/repairLocation.controller";
 import { mlRouter } from "./modules/ml/ml.router";
+import { contactMessageRouter } from "./modules/contactMessage/contactMessage.router";
 
 // Logging utilities
 import morgan from "morgan";
@@ -236,10 +237,17 @@ apiV1Router.get("/ev/listings", (req, res) => evController.getAllListings(req, r
 const repairLocationController = container.resolve<IRepairLocationController>("RepairLocationController");
 apiV1Router.get("/repair-location/active", (req, res) => repairLocationController.getAllActiveLocations(req, res));
 
+// Public contact message endpoint (for contact page - no authentication required)
+import { IContactMessageController } from "./modules/contactMessage/contactMessage.controller";
+const contactMessageController = container.resolve<IContactMessageController>("ContactMessageController");
+apiV1Router.post("/contact-message", (req, res) => contactMessageController.createContactMessage(req, res));
+
 // All other EV routes require authentication
 apiV1Router.use("/ev", protectJWT, evRouter());
 apiV1Router.use("/saved-vehicle", protectJWT, savedVehicleRouter());
 apiV1Router.use("/repair-location", protectJWT, repairLocationRouter());
+// Contact message admin routes (require authentication)
+apiV1Router.use("/contact-message", protectJWT, contactMessageRouter());
 
 // ML Test Router
 apiV1Router.use("/ml-test", protectJWT, mlRouter());

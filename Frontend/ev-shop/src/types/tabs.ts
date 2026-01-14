@@ -109,5 +109,6 @@ export type AdminActiveTab =
   | "payments"
   | "community"
   | "complaints"
+  | "contactMessages"
   | "testDrives"
   | "mlPipeline";

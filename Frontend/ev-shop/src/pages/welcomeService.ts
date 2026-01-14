@@ -59,5 +59,26 @@ export const welcomeService = {
       return [];
     }
   },
+
+  // Submit contact message (public endpoint - no authentication required)
+  submitContactMessage: async (data: {
+    name: string;
+    email: string;
+    phone?: string;
+    subject: string;
+    message: string;
+  }) => {
+    try {
+      const url = `/contact-message`;
+      
+      // Use public axios instance (no auth required)
+      const response = await axiosInstance.post(url, data);
+      // Backend's handleResult unwraps the response, so return data directly
+      return response.data;
+    } catch (error: any) {
+      console.error("Error submitting contact message:", error);
+      throw error;
+    }
+  },
 };
 

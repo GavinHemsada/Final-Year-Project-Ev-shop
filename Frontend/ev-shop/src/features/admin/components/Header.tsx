@@ -1,4 +1,3 @@
-import { NotificationDropdown } from "./NotificationDropdown";
 import type { AdminActiveTab } from "@/types";
 import { ProfileDropdown } from "./ProfileDropdown";
 
@@ -24,13 +23,6 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
       {/* Right Actions */}
       <div className="flex items-center flex-shrink-0 space-x-3 ml-3">
-        <div className="h-6 w-px bg-gray-300 hidden sm:block dark:bg-gray-600" />
-
-        <NotificationDropdown
-          notifications={notifications}
-          setActiveTab={setActiveTab}
-        />
-
         <ProfileDropdown
           admin={admin}
           onLogout={onLogout}

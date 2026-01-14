@@ -249,56 +249,110 @@ const FeaturedModelsSection = () => {
     : [];
 
   return (
-    <section className="py-20 bg-gray-50">
-      <div className="container mx-auto px-6">
-        <motion.h2
-          className="text-4xl font-bold text-center mb-12 text-gray-900"
+    <section className="py-20 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="container mx-auto px-6 relative z-10">
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
+          className="text-center mb-16"
         >
-          Our Signature Collection
-        </motion.h2>
+          <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Our Signature Collection
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Handpicked electric vehicles that represent the pinnacle of innovation and performance
+          </p>
+        </motion.div>
+
         {/* Grid container for the model cards with staggered animations. */}
         {isLoading ? (
-          <div className="flex justify-center items-center min-h-[400px]">
+          <div className="flex flex-col justify-center items-center min-h-[400px]">
             <PageLoader />
+            <p className="mt-4 text-gray-600">Loading featured vehicles...</p>
           </div>
         ) : error ? (
-          <div className="text-center text-gray-600 py-12">
-            <p>Unable to load featured vehicles. Please try again later.</p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-16 bg-white rounded-2xl shadow-lg border border-red-200 max-w-2xl mx-auto"
+          >
+            <div className="text-red-500 text-5xl mb-4">⚠️</div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Vehicles</h3>
+            <p className="text-gray-600 mb-4">Please try again later.</p>
             {process.env.NODE_ENV === "development" && (
-              <p className="text-xs mt-2 text-red-600">
-                Error: {error instanceof Error ? error.message : "Unknown error"}
+              <p className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                {error instanceof Error ? error.message : "Unknown error"}
               </p>
             )}
-          </div>
-        ) : featuredModels.length === 0 ? (
-          <div className="text-center text-gray-600 py-12">
-            <p>No featured vehicles available at the moment.</p>
-          </div>
-        ) : (
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10"
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
-          >
-            {featuredModels.map((model: any, index: number) => (
-              <EvModelCard
-                key={model.name + index}
-                name={model.name}
-                image={model.image}
-                logo={model.logo}
-                price={model.price}
-                specs={model.specs}
-                range={model.range}
-                linkTo={model.linkTo}
-              />
-            ))}
           </motion.div>
+        ) : featuredModels.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-16 bg-white rounded-2xl shadow-lg border border-gray-200 max-w-2xl mx-auto"
+          >
+            <div className="text-gray-400 text-5xl mb-4">🚗</div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">No Featured Vehicles</h3>
+            <p className="text-gray-600">Check back soon for new listings!</p>
+          </motion.div>
+        ) : (
+          <>
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12"
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+            >
+              {featuredModels.map((model: any, index: number) => (
+                <motion.div
+                  key={model.name + index}
+                  variants={itemVariants}
+                  className="transform transition-all duration-300 hover:scale-105"
+                >
+                  <EvModelCard
+                    name={model.name}
+                    image={model.image}
+                    logo={model.logo}
+                    price={model.price}
+                    specs={model.specs}
+                    range={model.range}
+                    linkTo={model.linkTo}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+
+            {/* View All CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+              className="text-center"
+            >
+              <Link
+                to="/models"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 px-8 rounded-full hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+              >
+                View All Vehicles
+                <motion.span
+                  animate={{ x: [0, 5, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  →
+                </motion.span>
+              </Link>
+            </motion.div>
+          </>
         )}
       </div>
     </section>
@@ -310,61 +364,68 @@ const FeaturedModelsSection = () => {
  * This component highlights the key benefits of owning an electric vehicle.
  * It displays a grid of benefit cards with icons, titles, and descriptions.
  */
-const WhyChooseUsSection = () => (
-  <section className="py-20 bg-white relative overflow-hidden">
-    {/* Background decoration */}
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <div className="absolute top-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl"></div>
-    </div>
+const WhyChooseUsSection = () => {
+  const benefitColors = [
+    'from-green-500 to-emerald-600',
+    'from-blue-500 to-cyan-600',
+    'from-yellow-500 to-orange-600',
+    'from-purple-500 to-pink-600',
+  ];
 
-    <div className="container mx-auto px-6 relative z-10">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-        className="text-center mb-16"
-      >
-        <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          The EV Advantage
-        </h2>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Experience the future of transportation with cutting-edge technology and sustainable innovation
-        </p>
-      </motion.div>
+  return (
+    <section className="py-20 bg-gradient-to-b from-white to-gray-50 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"></div>
+      </div>
 
-      {/* Grid container for the benefit cards with staggered animations. */}
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
-        variants={containerVariants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
-      >
-        {/* Map through the `benefits` data to render each benefit card. */}
-        {benefits.map((benefit, index) => (
-          <motion.div
-            key={benefit.title}
-            className="group bg-white p-8 rounded-2xl border border-gray-200 hover:border-blue-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2"
-            variants={itemVariants}
-            whileHover={{ scale: 1.05 }}
-          >
+      <div className="container mx-auto px-6 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            The EV Advantage
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Experience the future of transportation with cutting-edge technology and sustainable innovation
+          </p>
+        </motion.div>
+
+        {/* Grid container for the benefit cards with staggered animations. */}
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+        >
+          {/* Map through the `benefits` data to render each benefit card. */}
+          {benefits.map((benefit, index) => (
             <motion.div
-              className="text-blue-600 text-5xl mb-6 inline-block group-hover:text-purple-600 transition-colors duration-300"
-              whileHover={{ rotate: [0, -10, 10, -10, 0] }}
-              transition={{ duration: 0.5 }}
+              key={benefit.title}
+              className="group bg-white p-8 rounded-2xl border-2 border-gray-200 hover:border-blue-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2"
+              variants={itemVariants}
+              whileHover={{ scale: 1.05 }}
             >
-              {benefit.icon}
+              <div className={`bg-gradient-to-r ${benefitColors[index]} w-16 h-16 rounded-full flex items-center justify-center text-white mb-6 mx-auto group-hover:scale-110 transition-transform duration-300`}>
+                <div className="text-2xl">
+                  {benefit.icon}
+                </div>
+              </div>
+              <h3 className="text-xl font-bold mb-3 text-gray-900 text-center">{benefit.title}</h3>
+              <p className="text-gray-600 leading-relaxed text-center">{benefit.description}</p>
             </motion.div>
-            <h3 className="text-xl font-bold mb-3 text-gray-900">{benefit.title}</h3>
-            <p className="text-gray-600 leading-relaxed">{benefit.description}</p>
-          </motion.div>
-        ))}
-      </motion.div>
-    </div>
-  </section>
-);
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+};
 
 /**
  * ServiceMapSection Component
@@ -411,7 +472,7 @@ const ServiceMapSection = () => {
   };
 
   return (
-    <section className="py-20 bg-gray-50 relative overflow-hidden">
+    <section className="py-20 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
@@ -435,17 +496,30 @@ const ServiceMapSection = () => {
         </motion.div>
 
         {isLoading ? (
-          <div className="flex justify-center items-center min-h-[500px]">
+          <div className="flex flex-col justify-center items-center min-h-[500px]">
             <PageLoader />
+            <p className="mt-4 text-gray-600">Loading service locations...</p>
           </div>
         ) : error ? (
-          <div className="text-center text-gray-600 py-12">
-            <p>Unable to load service locations. Please try again later.</p>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-16 bg-white rounded-2xl shadow-lg border border-red-200 max-w-2xl mx-auto"
+          >
+            <div className="text-red-500 text-5xl mb-4">⚠️</div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Locations</h3>
+            <p className="text-gray-600">Please try again later.</p>
+          </motion.div>
         ) : locations.length === 0 ? (
-          <div className="text-center text-gray-600 py-12">
-            <p>No service locations available at the moment.</p>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-16 bg-white rounded-2xl shadow-lg border border-gray-200 max-w-2xl mx-auto"
+          >
+            <div className="text-gray-400 text-5xl mb-4">📍</div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">No Service Locations</h3>
+            <p className="text-gray-600">Check back soon for new locations!</p>
+          </motion.div>
         ) : (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -560,9 +634,52 @@ const ServiceMapSection = () => {
 };
 
 /**
+ * CTASection Component
+ * Final call-to-action section at the bottom of the homepage
+ */
+const CTASection = () => (
+  <section className="py-20 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 text-white relative overflow-hidden">
+    <div className="absolute inset-0 opacity-10">
+      <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+    </div>
+    <div className="container mx-auto px-6 relative z-10">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="text-center max-w-3xl mx-auto"
+      >
+        <h2 className="text-4xl md:text-5xl font-bold mb-6">
+          Ready to Make the Switch?
+        </h2>
+        <p className="text-xl text-blue-100 mb-8 leading-relaxed">
+          Join thousands of satisfied customers who have already made the transition to electric vehicles. Start your journey today!
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Link
+            to="/models"
+            className="bg-white text-blue-600 font-bold py-4 px-8 rounded-full hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            Browse Vehicles
+          </Link>
+          <Link
+            to="/contact"
+            className="bg-blue-700/50 backdrop-blur-sm text-white font-bold py-4 px-8 rounded-full hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 border border-white/20"
+          >
+            Get in Touch
+          </Link>
+        </div>
+      </motion.div>
+    </div>
+  </section>
+);
+
+/**
  * EVHomePage Component
  * This is the main component for the homepage. It assembles the Hero,
- * Featured Models, Why Choose Us, and Service Map sections into a single page layout.
+ * Featured Models, Why Choose Us, Service Map, and CTA sections into a single page layout.
  */
 const EVHomePage = () => {
   return (
@@ -578,6 +695,9 @@ const EVHomePage = () => {
 
       {/* ===== Service Map Section ===== */}
       <ServiceMapSection />
+
+      {/* ===== CTA Section ===== */}
+      <CTASection />
     </div>
   );
 };

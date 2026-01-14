@@ -13,6 +13,7 @@ import {
   BarChartIcon,
   CommunityIcon,
   BanknoteIcon,
+  EnvelopeIcon,
 } from "@/assets/icons/icons";
 import type { AdminActiveTab } from "@/types";
 import { useTheme } from "@/context/ThemeContext";
@@ -150,6 +151,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon={<ReviewsIcon />} // Using ReviewsIcon as closest match
           active={activeTab === "complaints"}
           onClick={() => setActiveTab("complaints")}
+          isExpanded={isExpanded}
+        />
+        <SidebarLink
+          text="Contact Messages"
+          icon={<EnvelopeIcon className="h-5 w-5" />}
+          active={activeTab === "contactMessages"}
+          onClick={() => setActiveTab("contactMessages")}
           isExpanded={isExpanded}
         />
         <SidebarLink
