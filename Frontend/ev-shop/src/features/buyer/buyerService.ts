@@ -388,4 +388,12 @@ export const buyerService = {
     );
     return response.data;
   },
+  // Complaint operations
+  submitComplaint: async (complaintData: { user_id: string; subject: string; message: string }) => {
+    const response = await axiosPrivate.post(`/complaint`, {
+      ...complaintData,
+      user_type: "buyer",
+    });
+    return response.data;
+  },
 };

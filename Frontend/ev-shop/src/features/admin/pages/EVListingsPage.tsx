@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "../adminService";
-import { Loader } from "@/components/Loader";
+import { PageLoader, Loader } from "@/components/Loader";
 import { TrashIcon } from "@/assets/icons/icons";
 import type { AlertProps } from "@/types";
 import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
@@ -50,11 +50,7 @@ export const EVListingsPage: React.FC<{ setAlert: (alert: AlertProps | null) => 
   }));
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Loader size={40} color="#4f46e5" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -142,10 +138,15 @@ export const EVListingsPage: React.FC<{ setAlert: (alert: AlertProps | null) => 
                             deleteListingMutation.mutate(listing._id);
                           }
                         }}
-                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                        disabled={deleteListingMutation.isPending}
+                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Delete"
                       >
-                        <TrashIcon className="h-5 w-5" />
+                        {deleteListingMutation.isPending ? (
+                          <Loader size={8} color="#dc2626" />
+                        ) : (
+                          <TrashIcon className="h-5 w-5" />
+                        )}
                       </button>
                     </td>
                   </tr>

@@ -188,4 +188,12 @@ export const financialService = {
     const response = await axiosPrivate.patch(`/notification/${id}/read`);
     return response.data;
   },
+  // Complaint operations
+  submitComplaint: async (complaintData: { user_id: string; subject: string; message: string }) => {
+    const response = await axiosPrivate.post(`/complaint`, {
+      ...complaintData,
+      user_type: "financial",
+    });
+    return response.data;
+  },
 };

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "../adminService";
-import { Loader } from "@/components/Loader";
+import { PageLoader, Loader } from "@/components/Loader";
 import type { AlertProps } from "@/types";
 import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 
@@ -57,11 +57,7 @@ export const OrdersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void
   }));
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Loader size={40} color="#4f46e5" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -163,12 +159,18 @@ export const OrdersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void
                             status: e.target.value,
                           })
                         }
-                        className="px-3 py-1 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                        disabled={updateOrderMutation.isPending}
+                        className="px-3 py-1 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value="pending">Pending</option>
                         <option value="confirmed">Confirmed</option>
                         <option value="cancelled">Cancelled</option>
                       </select>
+                      {updateOrderMutation.isPending && (
+                        <span className="ml-2 inline-block">
+                          <Loader size={8} color="#4f46e5" />
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))

@@ -8,6 +8,7 @@ import {
   CloseIcon,
   EditIcon,
   TrashIcon,
+  InfoIcon,
 } from "@/assets/icons/icons";
 import type { AlertProps } from "@/types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -579,6 +580,10 @@ export const FinancingPage: React.FC<{
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [rejectionReasonModal, setRejectionReasonModal] = useState<{
+    isOpen: boolean;
+    application: any | null;
+  }>({ isOpen: false, application: null });
   const [activeTab, setActiveTab] = useState<"products" | "applications">(
     "products"
   );
@@ -1009,6 +1014,24 @@ export const FinancingPage: React.FC<{
                               {statusInfo.label}
                             </span>
                           </div>
+                          {/* View Rejection Reason button - only show for rejected applications */}
+                          {app.status?.toLowerCase() === "rejected" &&
+                            app.rejection_reason && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRejectionReasonModal({
+                                    isOpen: true,
+                                    application: app,
+                                  });
+                                }}
+                                className="p-2 text-red-600 rounded-lg hover:bg-red-50 transition-colors dark:text-red-400 dark:hover:bg-red-900/20"
+                                title="View Rejection Reason"
+                                aria-label="View Rejection Reason"
+                              >
+                                <InfoIcon className="h-5 w-5" />
+                              </button>
+                            )}
                           {/* Edit and Delete buttons - only show for pending applications */}
                           {(app.status?.toLowerCase() === "pending" ||
                             app.status?.toLowerCase() === "under_review") && (
@@ -1066,6 +1089,91 @@ export const FinancingPage: React.FC<{
           isEditMode={isEditMode}
         />
       )}
+
+      {/* Rejection Reason Modal */}
+      {rejectionReasonModal.isOpen &&
+        rejectionReasonModal.application &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-md"
+            style={{
+              position: "fixed",
+              width: "100vw",
+              height: "100vh",
+              margin: 0,
+              padding: 0,
+            }}
+            onClick={() =>
+              setRejectionReasonModal({ isOpen: false, application: null })
+            }
+          >
+            <div
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full mx-4 p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold dark:text-white flex items-center gap-2">
+                  <XCircleIcon className="h-6 w-6 text-red-500" />
+                  Application Rejected
+                </h2>
+                <button
+                  onClick={() =>
+                    setRejectionReasonModal({ isOpen: false, application: null })
+                  }
+                  className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  aria-label="Close"
+                >
+                  <CloseIcon className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  <span className="font-semibold">Product:</span>{" "}
+                  {rejectionReasonModal.application.product_id?.product_name ||
+                    "Unknown Product"}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  <span className="font-semibold">Institution:</span>{" "}
+                  {rejectionReasonModal.application.product_id?.institution_id
+                    ?.name ||
+                    rejectionReasonModal.application.product_id?.institution_id
+                      ?.business_name ||
+                    "Unknown Institution"}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="font-semibold">Submitted:</span>{" "}
+                  {rejectionReasonModal.application.createdAt ||
+                  rejectionReasonModal.application.submitted_date
+                    ? new Date(
+                        rejectionReasonModal.application.createdAt ||
+                          rejectionReasonModal.application.submitted_date
+                      ).toLocaleDateString()
+                    : "N/A"}
+                </p>
+              </div>
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                  Reason for Rejection:
+                </h3>
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                    {rejectionReasonModal.application.rejection_reason ||
+                      "No reason provided."}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() =>
+                  setRejectionReasonModal({ isOpen: false, application: null })
+                }
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600"
+              >
+                Close
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmId &&

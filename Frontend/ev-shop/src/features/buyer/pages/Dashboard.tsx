@@ -42,6 +42,7 @@ const RegisterFinancialInstitutionPage = lazy(
   () => import("./becomeaFinancingPage")
 );
 const CommunityPage = lazy(() => import("./ComunityPage"));
+const HelpCenterPage = lazy(() => import("./HelpCenterPage"));
 
 import { PageLoader } from "@/components/Loader";
 import { buyerService } from "../buyerService";
@@ -472,6 +473,7 @@ const App: React.FC = () => {
         setConfirmAlert={handleSetConfirmAlert}
       />
     ),
+    helpCenter: <HelpCenterPage setAlert={handleSetAlert} />,
   };
 
   // Callbacks

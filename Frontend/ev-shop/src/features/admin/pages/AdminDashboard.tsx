@@ -13,7 +13,6 @@ import { SellersPage } from "./SellersPage";
 import { FinancialPage } from "./FinancialPage";
 import { ReviewsPage } from "./ReviewsPage";
 import { PaymentsPage } from "./PaymentsPage";
-import { SettingsPage } from "./SettingsPage";
 import { CommunityManagementPage } from "./CommunityManagementPage";
 import { ComplaintManagementPage } from "./ComplaintManagementPage";
 import { TestDrivesManagementPage } from "./TestDrivesManagementPage";
@@ -69,12 +68,10 @@ const AdminDashboard: React.FC = () => {
         return <ReviewsPage setAlert={handleSetAlert} />;
       case "payments":
         return <PaymentsPage setAlert={handleSetAlert} />;
-      case "settings":
-        return <SettingsPage setAlert={handleSetAlert} />;
       case "community":
         return <CommunityManagementPage setAlert={handleSetAlert} />;
       case "complaints":
-        return <ComplaintManagementPage setAlert={handleSetAlert} />;
+        return <ComplaintManagementPage />;
       case "testDrives":
         return <TestDrivesManagementPage setAlert={handleSetAlert} />;
       case "mlPipeline":

@@ -20,6 +20,7 @@ import { ApplicationsPage } from "./ApplicationsPage";
 import { ProductsPage } from "./ProductsPage";
 import { ProfilePage } from "./ProfilePage";
 import { CommunityPage } from "./ComunityPage";
+import { HelpCenterPage } from "./HelpCenterPage";
 import { Alert, ConfirmAlert } from "@/components/MessageAlert";
 import {
   DollarSignIcon,
@@ -200,6 +201,8 @@ const FinancialDashboard: React.FC = () => {
             financialId={institution?._id}
           />
         );
+      case "helpCenter":
+        return <HelpCenterPage setAlert={handleSetAlert} />;
       default:
         return (
           <FinancialDashboardPage
@@ -220,11 +223,7 @@ const FinancialDashboard: React.FC = () => {
   };
 
   if (isInstitutionLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (

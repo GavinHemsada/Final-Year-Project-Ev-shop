@@ -10,6 +10,7 @@ export const BuyerActiveTabes = {
   Reviews: "reviews",
   Financing: "financing",
   Community: "community",
+  HelpCenter: "helpCenter",
 } as const;
 
 export type BuyerActiveTabes =
@@ -26,7 +27,8 @@ export type ActiveTab =
   | "testDrives"
   | "reviews"
   | "financing"
-  | "community";
+  | "community"
+  | "helpCenter";
 
 export const SellerActiveTabs = {
   Dashbord: "dashboard",
@@ -39,6 +41,7 @@ export const SellerActiveTabs = {
   TestDrives: "testDrives",
   Notification: "notification",
   RepairLocations: "repairLocations",
+  HelpCenter: "helpCenter",
 } as const;
 
 export type SellerActiveTabs =
@@ -55,7 +58,8 @@ export type SellerActiveTab =
   | "community"
   | "testDrives"
   | "notification"
-  | "repairLocations";
+  | "repairLocations"
+  | "helpCenter";
 
 export const FinancialActiveTabs = {
   Dashboard: "dashboard",
@@ -64,6 +68,7 @@ export const FinancialActiveTabs = {
   Profile: "profile",
   Notification: "notification",
   Community: "community",
+  HelpCenter: "helpCenter",
 } as const;
 
 export type FinancialActiveTabs =
@@ -75,7 +80,8 @@ export type FinancialActiveTab =
   | "products"
   | "profile"
   | "notification"
-  | "community";
+  | "community"
+  | "helpCenter";
 
 export const AdminActiveTabs = {
   Dashboard: "dashboard",
@@ -86,7 +92,6 @@ export const AdminActiveTabs = {
   Financial: "financial",
   Reviews: "reviews",
   Payments: "payments",
-  Settings: "settings",
   Community: "community",
 } as const;
 
@@ -102,7 +107,6 @@ export type AdminActiveTab =
   | "financial"
   | "reviews"
   | "payments"
-  | "settings"
   | "community"
   | "complaints"
   | "testDrives"

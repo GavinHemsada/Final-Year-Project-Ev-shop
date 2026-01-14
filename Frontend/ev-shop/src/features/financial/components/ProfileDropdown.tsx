@@ -39,7 +39,7 @@ export const ProfileDropdown: React.FC<{
         setActiveTab("profile");
         break;
       case "help":
-        console.log("Help clicked");
+        setActiveTab("helpCenter");
         break;
       case "logout":
         onLogout();

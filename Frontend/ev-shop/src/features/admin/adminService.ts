@@ -211,23 +211,27 @@ export const adminService = {
   },
 
   // User Complaint Management
-  getAllComplaints: async () => {
-    // Assuming backend endpoint /admin/complaints exists or using mock for now if 404
-    try {
-      const response = await axiosPrivate.get("/admin/complaints");
+  getAllComplaints: async (userType?: string) => {
+    const params = userType ? { user_type: userType } : {};
+    const response = await axiosPrivate.get("/complaint", { params });
+    // Backend returns the complaints array directly (not wrapped)
+    // Check if response.data is an array
+    if (Array.isArray(response.data)) {
       return response.data;
-    } catch (error) {
-      console.warn("Backend endpoint /admin/complaints not found, returning empty list/mock.");
-      // Return mock data if backend not implemented
-      return []; 
     }
+    // Fallback: check if it's wrapped in { success: true, complaints: [...] }
+    if (response.data?.success && Array.isArray(response.data?.complaints)) {
+      return response.data.complaints;
+    }
+    // Return empty array if no valid data found
+    return [];
   },
   deleteComplaint: async (id: string) => {
-    const response = await axiosPrivate.delete(`/admin/complaint/${id}`);
+    const response = await axiosPrivate.delete(`/complaint/${id}`);
     return response.data;
   },
   resolveComplaint: async (id: string) => {
-    const response = await axiosPrivate.put(`/admin/complaint/${id}/resolve`);
+    const response = await axiosPrivate.put(`/complaint/${id}`, { status: "Resolved" });
     return response.data;
   },
 

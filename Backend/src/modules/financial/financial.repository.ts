@@ -244,7 +244,7 @@ export const FinancialRepository: IFinancialRepository = {
       .populate("user_id", "name email")
       .populate({
         path: "product_id",
-        populate: { path: "institution_id", select: "name" },
+        populate: { path: "institution_id", select: "name business_name" },
       })
   ),
   /** Finds all financing applications for a specific user, sorted by most recent, and populates product/institution details. */

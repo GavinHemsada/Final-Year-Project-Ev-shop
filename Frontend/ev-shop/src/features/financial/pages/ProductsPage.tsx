@@ -3,7 +3,7 @@ import { useAppSelector } from "@/hooks/useAppSelector";
 import { selectActiveRoleId, selectFinanceId } from "@/context/authSlice";
 import { financialService } from "../financialService";
 import type { AlertProps } from "@/types";
-import { Loader } from "@/components/Loader";
+import { PageLoader, Loader } from "@/components/Loader";
 import { PlusCircleIcon, EditIcon, TrashIcon } from "@/assets/icons/icons";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -298,9 +298,7 @@ export const ProductsPage: React.FC<{
       {/* Content */}
       {activeTab === "myProducts" ? (
         isLoading ? (
-          <div className="flex justify-center items-center min-h-[400px]">
-            <Loader size={60} color="#4f46e5" />
-          </div>
+          <PageLoader />
         ) : products.length === 0 ? (
           <div className="text-center p-8 bg-white rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
             <p className="text-gray-600 dark:text-gray-400 mb-4">
@@ -522,11 +520,16 @@ export const ProductsPage: React.FC<{
                 <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="bg-blue-600 dark:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="bg-blue-600 dark:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                    {isSubmitting 
-                      ? (editingProductId ? "Updating..." : "Creating...") 
-                      : (editingProductId ? "Update Product" : "Create Product")}
+                    {isSubmitting ? (
+                      <>
+                        <Loader size={8} color="#ffffff" />
+                        {editingProductId ? "Updating..." : "Creating..."}
+                      </>
+                    ) : (
+                      editingProductId ? "Update Product" : "Create Product"
+                    )}
                 </button>
             </div>
           </form>

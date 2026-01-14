@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { financialService } from "../financialService";
 import type { AlertProps } from "@/types";
-import { Loader } from "@/components/Loader";
+import { PageLoader, Loader } from "@/components/Loader";
 
 export const ProfilePage: React.FC<{
   setAlert?: (alert: AlertProps | null) => void;
@@ -62,11 +62,7 @@ export const ProfilePage: React.FC<{
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Loader size={60} color="#4f46e5" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -159,9 +155,16 @@ export const ProfilePage: React.FC<{
           <button
             type="submit"
             disabled={isSaving}
-            className="bg-blue-600 dark:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-blue-600 dark:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {isSaving ? "Saving..." : "Save Changes"}
+            {isSaving ? (
+              <>
+                <Loader size={8} color="#ffffff" />
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
           </button>
         </form>
       </div>

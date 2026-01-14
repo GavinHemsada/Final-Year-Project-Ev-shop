@@ -11,9 +11,11 @@ import {
 } from "../../shared/enum/enum";
 import { IFinancialRepository } from "./financial.repository";
 import { IUserRepository } from "../user/user.repository";
+import { INotificationService } from "../notification/notification.service";
 import { addFiles, deleteFiles } from "../../shared/utils/fileHandel";
 import CacheService from "../../shared/cache/CacheService";
 import { Notification } from "../../entities/Notification";
+import { sendEmail } from "../../shared/utils/Email.util";
 
 /**
  * Defines the interface for the financial service, outlining methods for managing institutions, products, and applications.
@@ -196,7 +198,8 @@ export interface IFinancialService {
  */
 export function financialService(
   repo: IFinancialRepository,
-  userRepo: IUserRepository
+  userRepo: IUserRepository,
+  notificationService: INotificationService
 ): IFinancialService {
   const folderName = "financial";
   return {
@@ -689,6 +692,12 @@ export function financialService(
           updateData.processed_at = new Date();
         }
 
+        // Get application with populated user before updating
+        const applicationBeforeUpdate = await repo.findApplicationById(id);
+        if (!applicationBeforeUpdate) {
+          return { success: false, error: "Application not found" };
+        }
+
         const application = await repo.updateApplication(id, updateData);
         if (!application) {
           return { success: false, error: "Application not found" };
@@ -701,7 +710,124 @@ export function financialService(
           CacheService.delete(`applications_product_${application.product_id}`),
         ]);
 
-        // A notification could be triggered here to inform the user.
+        // Get populated application for notification and email
+        const populatedApplication = await repo.findApplicationById(id);
+        if (!populatedApplication) {
+          return { success: false, error: "Application not found" };
+        }
+
+        const user = populatedApplication.user_id as any;
+        const product = populatedApplication.product_id as any;
+        const institution = product?.institution_id as any;
+
+        // Create notification and send email if status is APPROVED or REJECTED
+        if (
+          data.status === ApplicationStatus.APPROVED ||
+          data.status === ApplicationStatus.REJECTED
+        ) {
+          const isApproved = data.status === ApplicationStatus.APPROVED;
+          const notificationType = isApproved
+            ? NotificationType.APPLICATION_APPROVED
+            : NotificationType.APPLICATION_REJECTED;
+
+          const notificationTitle = isApproved
+            ? "Loan Application Approved"
+            : "Loan Application Rejected";
+
+          const notificationMessage = isApproved
+            ? `Congratulations! Your loan application for ${product?.product_name || "the financial product"} has been approved.`
+            : `Your loan application for ${product?.product_name || "the financial product"} has been rejected.${data.rejection_reason ? ` Reason: ${data.rejection_reason}` : ""}`;
+
+          // Create notification
+          try {
+            await notificationService.create({
+              user_id: String(user?._id || user),
+              type: notificationType,
+              title: notificationTitle,
+              message: notificationMessage,
+            });
+          } catch (notifError) {
+            console.error("Failed to create notification:", notifError);
+            // Don't fail the whole operation if notification fails
+          }
+
+          // Send email to user
+          if (user?.email) {
+            try {
+              const emailSubject = isApproved
+                ? "Loan Application Approved - EV-Shop"
+                : "Loan Application Rejected - EV-Shop";
+
+              const emailHtml = isApproved
+                ? `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #16a34a;">Congratulations! Your Loan Application Has Been Approved</h2>
+                  <p>Dear ${user?.name || "Valued Customer"},</p>
+                  <p>We are pleased to inform you that your loan application has been <strong>approved</strong>.</p>
+                  
+                  <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
+                    <h3 style="margin-top: 0;">Application Details</h3>
+                    <p><strong>Financial Institution:</strong> ${institution?.name || institution?.business_name || "N/A"}</p>
+                    <p><strong>Product:</strong> ${product?.product_name || "N/A"}</p>
+                    ${application.approval_amount ? `<p><strong>Approved Amount:</strong> LKR ${application.approval_amount.toLocaleString()}</p>` : ""}
+                    <p><strong>Application ID:</strong> ${id}</p>
+                    <p><strong>Status:</strong> Approved</p>
+                    <p><strong>Processed Date:</strong> ${new Date().toLocaleDateString()}</p>
+                  </div>
+                  
+                  <p><strong>Next Steps:</strong></p>
+                  <ul>
+                    <li>Please log in to your account to view the full details of your approved application</li>
+                    <li>You will receive further instructions regarding the loan disbursement process</li>
+                    <li>If you have any questions, please contact the financial institution directly</li>
+                  </ul>
+                  
+                  <p>Thank you for choosing EV-Shop for your financing needs.</p>
+                  <p>Best regards,<br/>EV-Shop Team</p>
+                </div>
+              `
+                : `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #dc2626;">Loan Application Status Update</h2>
+                  <p>Dear ${user?.name || "Valued Customer"},</p>
+                  <p>We regret to inform you that your loan application has been <strong>rejected</strong>.</p>
+                  
+                  <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+                    <h3 style="margin-top: 0;">Application Details</h3>
+                    <p><strong>Financial Institution:</strong> ${institution?.name || institution?.business_name || "N/A"}</p>
+                    <p><strong>Product:</strong> ${product?.product_name || "N/A"}</p>
+                    <p><strong>Application ID:</strong> ${id}</p>
+                    <p><strong>Status:</strong> Rejected</p>
+                    <p><strong>Processed Date:</strong> ${new Date().toLocaleDateString()}</p>
+                    ${data.rejection_reason ? `<p><strong>Rejection Reason:</strong> ${data.rejection_reason}</p>` : ""}
+                  </div>
+                  
+                  <p><strong>What's Next?</strong></p>
+                  <ul>
+                    <li>You can review the rejection reason provided above</li>
+                    <li>You may apply for a different financial product that better suits your needs</li>
+                    <li>If you believe this is an error, please contact the financial institution directly</li>
+                    <li>You can also contact our support team for assistance</li>
+                  </ul>
+                  
+                  <p>We appreciate your interest in EV-Shop financing options.</p>
+                  <p>Best regards,<br/>EV-Shop Team</p>
+                </div>
+              `;
+
+              const emailText = isApproved
+                ? `Congratulations! Your loan application for ${product?.product_name || "the financial product"} has been approved. Application ID: ${id}. Please log in to your account for more details.`
+                : `Your loan application for ${product?.product_name || "the financial product"} has been rejected.${data.rejection_reason ? ` Reason: ${data.rejection_reason}` : ""} Application ID: ${id}. Please log in to your account for more details.`;
+
+              await sendEmail(user.email, emailSubject, emailText, emailHtml);
+              console.log(`Application status email sent to user: ${user.email}`);
+            } catch (emailError) {
+              console.error("Failed to send email:", emailError);
+              // Don't fail the whole operation if email fails
+            }
+          }
+        }
+
         return { success: true, application };
       } catch (err) {
         return { success: false, error: "Failed to update application status" };

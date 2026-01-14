@@ -260,4 +260,17 @@ export const sellerService = {
     const response = await axiosPrivate.get(`/review/reviews`);
     return response.data;
   },
+  // Financial operations - check if user has applied for loan
+  getUserLoanApplications: async (userId: string) => {
+    const response = await axiosPrivate.get(`/financial/applications/user/${userId}`);
+    return response.data;
+  },
+  // Complaint operations
+  submitComplaint: async (complaintData: { user_id: string; subject: string; message: string }) => {
+    const response = await axiosPrivate.post(`/complaint`, {
+      ...complaintData,
+      user_type: "seller",
+    });
+    return response.data;
+  },
 };

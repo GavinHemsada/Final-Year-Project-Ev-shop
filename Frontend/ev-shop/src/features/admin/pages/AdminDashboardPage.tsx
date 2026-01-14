@@ -17,8 +17,7 @@ import {
   CarIcon,
   StarIcon,
 } from "@/assets/icons/icons";
-import { Loader } from "@/components/Loader";
-import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
+import { PageLoader } from "@/components/Loader";
 
 type AdminDashboardPageProps = {
   setAlert: (alert: any) => void;
@@ -268,39 +267,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = () => {
     };
   }, [usersData, ordersData]);
 
-  if (ordersLoading || usersLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader size={50} color="#4f46e5" />
-      </div>
-    );
+  if (ordersLoading || usersLoading || listingsLoading || bookingsLoading || reviewsLoading) {
+    return <PageLoader />;
   }
 
   const statsData = calculatedStats;
 
-  // Prepare Report Data
-  const summaryReportData = [
-     { Category: "Total Users", Value: statsData.totalUsers },
-     { Category: "Total Sellers", Value: statsData.totalSellers },
-     { Category: "Total Finance Staff", Value: statsData.totalFinance },
-     { Category: "Total Orders", Value: statsData.totalOrders },
-     { Category: "Total Revenue", Value: `LKR ${statsData.totalRevenue.toLocaleString("en-US")}` },
-  ];
-
   return (
     <div className="space-y-6">
-      {/* Header and Report Button */}
-      <div className="flex justify-end p-2">
-         <ReportGeneratorButton 
-            data={summaryReportData}
-            title="System Executive Summary"
-            filename="system_executive_summary"
-            columns={[
-               { header: "Category", dataKey: "Category" },
-               { header: "Value", dataKey: "Value" }
-            ]}
-         />
-      </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">

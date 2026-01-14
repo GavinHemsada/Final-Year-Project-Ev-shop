@@ -893,12 +893,7 @@ export default function EvListingEditStepper({ listingId: propListingId }: { lis
 
   // Show loading spinner while fetching data
   if (isLoadingListing) {
-    return (
-      <div className="w-full max-w-4xl mx-auto p-8 flex justify-center items-center">
-        <Loader size={20} color="#4f46e5" />
-        <p className="ml-4">Loading listing details...</p>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   // Show error if listing not found or failed to load

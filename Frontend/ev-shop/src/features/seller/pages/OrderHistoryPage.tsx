@@ -4,7 +4,9 @@ import { selectSellerId } from "@/context/authSlice";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { sellerService } from "../sellerService";
 import { useToast } from "@/context/ToastContext";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { Loader } from "@/components/Loader";
+import { BanknoteIcon } from "@/assets/icons/icons";
 
 const getStatusChip = (status: Order["order_status"]): string => {
   switch (status?.toLowerCase()) {
@@ -22,6 +24,20 @@ const getStatusChip = (status: Order["order_status"]): string => {
   }
 };
 
+const getLoanStatusChip = (status: string): string => {
+  switch (status?.toLowerCase()) {
+    case "approved":
+      return "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300";
+    case "pending":
+    case "under_review":
+      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300";
+    case "rejected":
+      return "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300";
+    default:
+      return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
+  }
+};
+
 type TabType = "orders" | "completed" | "cancelled";
 
 export const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = () => {
@@ -31,12 +47,51 @@ export const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => v
   const [activeTab, setActiveTab] = useState<TabType>("orders");
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 10;
+  const [userLoanApplications, setUserLoanApplications] = useState<Map<string, any[]>>(new Map());
 
   const { data: orders, error, refetch } = useQuery({
     queryKey: ["sellerOrders", sellerId],
     queryFn: () => sellerService.getSellerOrders(sellerId!),
     enabled: !!sellerId,
   });
+
+  // Fetch loan applications for all unique users in orders
+  useEffect(() => {
+    const fetchLoanApplications = async () => {
+      if (!orders || orders.length === 0) return;
+
+      // Get unique user IDs from orders
+      const uniqueUserIds = new Set<string>();
+      orders.forEach((order: Order) => {
+        if (order.user_id?._id) {
+          uniqueUserIds.add(order.user_id._id);
+        }
+      });
+
+      // Fetch loan applications for each user
+      const loanAppsMap = new Map<string, any[]>();
+      const promises = Array.from(uniqueUserIds).map(async (userId) => {
+        try {
+          const response = await sellerService.getUserLoanApplications(userId);
+          const applications = Array.isArray(response)
+            ? response
+            : response?.applications || [];
+          
+          // Store all applications for this user
+          if (applications.length > 0) {
+            loanAppsMap.set(userId, applications);
+          }
+        } catch (error) {
+          console.error(`Failed to fetch loan applications for user ${userId}:`, error);
+        }
+      });
+
+      await Promise.all(promises);
+      setUserLoanApplications(loanAppsMap);
+    };
+
+    fetchLoanApplications();
+  }, [orders]);
 
   const approveOrderMutation = useMutation({
     mutationFn: (orderId: string) => sellerService.updateOrderStatus(orderId, "completed"),
@@ -62,29 +117,38 @@ export const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => v
     },
   });
 
-  // Filter orders based on active tab
+  // Filter orders to only show those with loan applications, then filter by tab
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
     
+    // First, filter to only show orders where user has applied for loan
+    const ordersWithLoans = orders.filter((order: Order) => {
+      const userId = order.user_id?._id;
+      if (!userId) return false;
+      const applications = userLoanApplications.get(userId);
+      return applications && applications.length > 0;
+    });
+    
+    // Then filter by active tab
     switch (activeTab) {
       case "orders":
-        return orders.filter((order: Order) => 
+        return ordersWithLoans.filter((order: Order) => 
           order.order_status?.toLowerCase() === "pending" || 
           order.order_status?.toLowerCase() === "confirmed"
         );
       case "completed":
-        return orders.filter((order: Order) => 
+        return ordersWithLoans.filter((order: Order) => 
           order.order_status?.toLowerCase() === "completed" ||
           order.order_status?.toLowerCase() === "delivered"
         );
       case "cancelled":
-        return orders.filter((order: Order) => 
+        return ordersWithLoans.filter((order: Order) => 
           order.order_status?.toLowerCase() === "cancelled"
         );
       default:
-        return orders;
+        return ordersWithLoans;
     }
-  }, [orders, activeTab]);
+  }, [orders, activeTab, userLoanApplications]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
@@ -116,7 +180,13 @@ export const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => v
 
   return (
     <div className="bg-white p-8 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
-      <h1 className="text-3xl font-bold mb-6 dark:text-white">My Orders</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold dark:text-white">Orders with Loan Applications</h1>
+        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <BanknoteIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <span>Showing only orders where customers have applied for financing</span>
+        </div>
+      </div>
       
       {/* Tabs */}
       <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
@@ -131,7 +201,12 @@ export const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => v
           >
             Orders
             <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">
-              {orders?.filter((o: Order) => o.order_status?.toLowerCase() === "pending" || o.order_status?.toLowerCase() === "confirmed").length || 0}
+              {orders?.filter((o: Order) => {
+                const userId = o.user_id?._id;
+                if (!userId) return false;
+                const hasLoan = userLoanApplications.has(userId) && (userLoanApplications.get(userId)?.length || 0) > 0;
+                return hasLoan && (o.order_status?.toLowerCase() === "pending" || o.order_status?.toLowerCase() === "confirmed");
+              }).length || 0}
             </span>
           </button>
           <button
@@ -144,7 +219,12 @@ export const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => v
           >
             Completed
             <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
-              {orders?.filter((o: Order) => o.order_status?.toLowerCase() === "completed" || o.order_status?.toLowerCase() === "delivered").length || 0}
+              {orders?.filter((o: Order) => {
+                const userId = o.user_id?._id;
+                if (!userId) return false;
+                const hasLoan = userLoanApplications.has(userId) && (userLoanApplications.get(userId)?.length || 0) > 0;
+                return hasLoan && (o.order_status?.toLowerCase() === "completed" || o.order_status?.toLowerCase() === "delivered");
+              }).length || 0}
             </span>
           </button>
           <button
@@ -157,7 +237,12 @@ export const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => v
           >
             Cancelled
             <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">
-              {orders?.filter((o: Order) => o.order_status?.toLowerCase() === "cancelled").length || 0}
+              {orders?.filter((o: Order) => {
+                const userId = o.user_id?._id;
+                if (!userId) return false;
+                const hasLoan = userLoanApplications.has(userId) && (userLoanApplications.get(userId)?.length || 0) > 0;
+                return hasLoan && o.order_status?.toLowerCase() === "cancelled";
+              }).length || 0}
             </span>
           </button>
         </nav>
@@ -180,7 +265,10 @@ export const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => v
                 Buyer
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
-                Status
+                Order Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
+                Loan Status
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
                 Price
@@ -195,8 +283,8 @@ export const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => v
           <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
             {paginatedOrders.length === 0 ? (
               <tr>
-                <td colSpan={activeTab === "orders" ? 7 : 6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                  No orders found.
+                <td colSpan={activeTab === "orders" ? 8 : 7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                  No orders with loan applications found.
                 </td>
               </tr>
             ) : (
@@ -205,6 +293,16 @@ export const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => v
                 const listingPrice = order.listing_id?.price || order.total_amount;
                 const buyerName = order.user_id?.name || "N/A";
                 const canApprove = activeTab === "orders";
+                const userId = order.user_id?._id;
+                const loanApplications = userId ? userLoanApplications.get(userId) || [] : [];
+                // Get the most recent loan application status
+                const latestLoanApp = loanApplications.length > 0 
+                  ? loanApplications.sort((a: any, b: any) => 
+                      new Date(b.createdAt || b.created_at || 0).getTime() - 
+                      new Date(a.createdAt || a.created_at || 0).getTime()
+                    )[0]
+                  : null;
+                const loanStatus = latestLoanApp?.status || "N/A";
 
                 return (
                   <tr
@@ -227,7 +325,10 @@ export const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => v
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">
-                      {buyerName}
+                      <div className="flex items-center gap-2">
+                        <span>{buyerName}</span>
+                        <BanknoteIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" title="User has applied for a loan" />
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span
@@ -238,6 +339,19 @@ export const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => v
                         {order.order_status || "Pending"}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {loanStatus !== "N/A" ? (
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getLoanStatusChip(
+                            loanStatus
+                          )}`}
+                        >
+                          {loanStatus.charAt(0).toUpperCase() + loanStatus.slice(1).replace(/_/g, " ")}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500 text-xs">N/A</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900 dark:text-white">
                       {listingPrice ? `LKR ${listingPrice.toLocaleString()}` : "N/A"}
                     </td>
@@ -246,9 +360,16 @@ export const OrderHistory: React.FC<{ setAlert?: (alert: AlertProps | null) => v
                         <button
                           onClick={() => handleApprove(order._id)}
                           disabled={approveOrderMutation.isPending}
-                          className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors dark:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors dark:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {approveOrderMutation.isPending ? "Approving..." : "Approve"}
+                          {approveOrderMutation.isPending ? (
+                            <>
+                              <Loader size={8} color="#ffffff" />
+                              Approving...
+                            </>
+                          ) : (
+                            "Approve"
+                          )}
                         </button>
                       </td>
                     )}

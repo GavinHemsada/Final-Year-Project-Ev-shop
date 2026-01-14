@@ -4,11 +4,10 @@ import { useAppSelector } from "@/hooks/useAppSelector";
 import { selectActiveRoleId } from "@/context/authSlice";
 import { financialService } from "../financialService";
 import type { AlertProps } from "@/types";
-import { Loader } from "@/components/Loader";
+import { PageLoader, Loader } from "@/components/Loader";
 import { CloseIcon, FileTextIcon } from "@/assets/icons/icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { axiosPrivate } from "@/config/config";
-import { useToast } from "@/context/ToastContext";
 
 // Eye icon for viewing
 const EyeIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -64,7 +63,6 @@ export const ApplicationsPage: React.FC<{
     "all" | "pending" | "approved" | "rejected"
   >("all");
   const queryClient = useQueryClient();
-  const { showToast } = useToast();
 
   useEffect(() => {
     if (institutionId) {
@@ -118,7 +116,9 @@ export const ApplicationsPage: React.FC<{
     // Remove leading slash from filePath if present, then add it back
     const cleanPath = filePath.startsWith("/") ? filePath : `/${filePath}`;
     // Remove trailing slash from serverBaseURL if present
-    const cleanBaseURL = serverBaseURL.endsWith("/") ? serverBaseURL.slice(0, -1) : serverBaseURL;
+    const cleanBaseURL = serverBaseURL.endsWith("/")
+      ? serverBaseURL.slice(0, -1)
+      : serverBaseURL;
     return `${cleanBaseURL}${cleanPath}`;
   };
 
@@ -154,7 +154,7 @@ export const ApplicationsPage: React.FC<{
         rejectionReason
       );
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: ["applicationDetails", selectedApplicationId],
       });
@@ -164,16 +164,21 @@ export const ApplicationsPage: React.FC<{
       fetchApplications(); // Refresh applications list
       setShowRejectModal(false);
       setRejectionReason("");
-      showToast({
-        text: "Application status updated successfully!",
+      setAlert?.({
+        id: Date.now(),
         type: "success",
+        title: variables.status === "approved" ? "Application Approved" : "Application Rejected",
+        message: variables.status === "approved" 
+          ? "The loan application has been approved successfully. The user has been notified via email and notification."
+          : "The loan application has been rejected. The user has been notified via email and notification.",
       });
     },
     onError: (error: any) => {
-      showToast({
-        text:
-          error?.response?.data?.error || "Failed to update application status",
+      setAlert?.({
+        id: Date.now(),
         type: "error",
+        title: "Update Failed",
+        message: error?.response?.data?.error || "Failed to update application status. Please try again.",
       });
     },
   });
@@ -189,9 +194,11 @@ export const ApplicationsPage: React.FC<{
   const handleReject = () => {
     if (!selectedApplicationId) return;
     if (!rejectionReason.trim()) {
-      showToast({
-        text: "Please provide a rejection reason",
+      setAlert?.({
+        id: Date.now(),
         type: "error",
+        title: "Rejection Reason Required",
+        message: "Please provide a reason for rejecting this application.",
       });
       return;
     }
@@ -229,11 +236,7 @@ export const ApplicationsPage: React.FC<{
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Loader size={60} color="#4f46e5" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -377,9 +380,7 @@ export const ApplicationsPage: React.FC<{
               </div>
 
               {isLoadingDetails ? (
-                <div className="flex justify-center items-center min-h-[400px]">
-                  <Loader size={60} color="#4f46e5" />
-                </div>
+                <PageLoader />
               ) : selectedApplication ? (
                 <div className="p-6 space-y-6 overflow-y-auto flex-1">
                   {/* Application Info */}
@@ -691,11 +692,16 @@ export const ApplicationsPage: React.FC<{
                         <button
                           onClick={handleApprove}
                           disabled={updateStatusMutation.isPending}
-                          className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-700 dark:hover:bg-green-600 font-semibold transition-colors"
+                          className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-700 dark:hover:bg-green-600 font-semibold transition-colors flex items-center justify-center gap-2"
                         >
-                          {updateStatusMutation.isPending
-                            ? "Processing..."
-                            : "Approve Application"}
+                          {updateStatusMutation.isPending ? (
+                            <>
+                              <Loader size={8} color="#ffffff" />
+                              Processing...
+                            </>
+                          ) : (
+                            "Approve Application"
+                          )}
                         </button>
                         <button
                           onClick={() => setShowRejectModal(true)}
@@ -763,11 +769,16 @@ export const ApplicationsPage: React.FC<{
                   disabled={
                     updateStatusMutation.isPending || !rejectionReason.trim()
                   }
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-red-700 dark:hover:bg-red-600"
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-red-700 dark:hover:bg-red-600 flex items-center justify-center gap-2"
                 >
-                  {updateStatusMutation.isPending
-                    ? "Rejecting..."
-                    : "Confirm Reject"}
+                  {updateStatusMutation.isPending ? (
+                    <>
+                      <Loader size={8} color="#ffffff" />
+                      Rejecting...
+                    </>
+                  ) : (
+                    "Confirm Reject"
+                  )}
                 </button>
               </div>
             </div>

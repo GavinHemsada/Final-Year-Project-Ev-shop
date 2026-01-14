@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "../adminService";
-import { Loader } from "@/components/Loader";
+import { PageLoader, Loader } from "@/components/Loader";
 import { TrashIcon } from "@/assets/icons/icons";
 import type { AlertProps } from "@/types";
 import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
@@ -112,11 +112,7 @@ export const CommunityManagementPage: React.FC<{
   }));
 
   if (postsLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Loader size={40} color="#4f46e5" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -238,10 +234,15 @@ export const CommunityManagementPage: React.FC<{
                                 deletePostMutation.mutate(post._id);
                               }
                             }}
-                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                            disabled={deletePostMutation.isPending}
+                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Delete Post"
                           >
-                            <TrashIcon className="h-5 w-5" />
+                            {deletePostMutation.isPending ? (
+                              <Loader size={8} color="#dc2626" />
+                            ) : (
+                              <TrashIcon className="h-5 w-5" />
+                            )}
                           </button>
                         </td>
                       </tr>
@@ -314,8 +315,8 @@ export const CommunityManagementPage: React.FC<{
 
             <div className="overflow-y-auto p-4 space-y-4 flex-1">
               {repliesLoading ? (
-                <div className="flex justify-center py-4">
-                  <Loader size={30} color="#4f46e5" />
+                <div className="flex justify-center items-center min-h-[200px]">
+                  <PageLoader />
                 </div>
               ) : replies.length === 0 ? (
                 <p className="text-center text-gray-500 dark:text-gray-400 py-4">
@@ -340,10 +341,15 @@ export const CommunityManagementPage: React.FC<{
                             deleteReplyMutation.mutate(reply._id);
                           }
                         }}
-                        className="text-red-500 hover:text-red-700"
+                        disabled={deleteReplyMutation.isPending}
+                        className="text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Delete Reply"
                       >
-                        <TrashIcon className="h-4 w-4" />
+                        {deleteReplyMutation.isPending ? (
+                          <Loader size={6} color="#dc2626" />
+                        ) : (
+                          <TrashIcon className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-300 break-words">

@@ -4,7 +4,7 @@ import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 // Import reusable UI components.
 import Label from "../../../components/Label";
 import Input from "../../../components/inputFiled";
-import {Loader} from "@/components/Loader";
+import { Loader } from "@/components/Loader";
 
 // Import static assets like background images and logos.
 import bgImage from "@/assets/bg_img2.png";
@@ -23,15 +23,8 @@ import { authService } from "../authService";
 const ForgotPasswordPage = () => {
   // State to manage the current step of the password reset flow.
   const [step, setStep] = useState("enter-email"); // 'enter-email', 'enter-otp', 'reset-password'
-  // State for the user's email, initialized from localStorage if available.
-  const [email, setEmail] = useState(() => {
-    try {
-      const savedState = localStorage.getItem("forgotPasswordState");
-      return savedState ? JSON.parse(savedState).email : "";
-    } catch (error) {
-      return "";
-    }
-  });
+  // State for the user's email - always start empty
+  const [email, setEmail] = useState("");
 
   // State for the 6-digit OTP input.
   const [otp, setOtp] = useState(new Array(6).fill(""));
@@ -65,15 +58,22 @@ const ForgotPasswordPage = () => {
   const otpInputs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
-    // On component mount, try to restore the step and email from localStorage.
+    // On component mount, try to restore the step from localStorage.
     // This allows the user to refresh the page and continue the process.
+    // However, only restore "enter-otp" step to ensure OTP verification is always shown.
+    // Email field should always start empty for security reasons.
     try {
       const savedState = localStorage.getItem("forgotPasswordState");
       if (savedState) {
         const { step: savedStep, email: savedEmail } = JSON.parse(savedState);
-        if (savedStep && savedEmail) {
-          setStep(savedStep);
-          setEmail(savedEmail);
+        // Only restore "enter-otp" step if email exists - if user was on "reset-password", they need to verify OTP again
+        if (savedStep === "enter-otp" && savedEmail) {
+          setStep("enter-otp");
+          setEmail(savedEmail); // Only restore email if we're continuing OTP verification
+        } else {
+          // For any other step (including "reset-password"), start from "enter-email" with empty email
+          setStep("enter-email");
+          setEmail(""); // Always start with empty email field
         }
       }
     } catch (error) {
@@ -418,7 +418,9 @@ const ForgotPasswordPage = () => {
       case "success":
         return (
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-green-400">Password Reset Success!</h1>
+            <h1 className="text-2xl font-bold text-green-400">
+              Password Reset Success!
+            </h1>
             <p className="mt-2 text-sm text-gray-600">{message?.text}</p>
             {/* Link to navigate back to the login page. */}
             <a

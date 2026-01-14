@@ -161,6 +161,18 @@ import {
   savedVehicleController,
 } from "../modules/savedVehicle/savedVehicle.controller";
 import {
+  IComplaintRepository,
+  ComplaintRepository,
+} from "../modules/complaint/complaint.repository";
+import {
+  IComplaintService,
+  complaintService,
+} from "../modules/complaint/complaint.service";
+import {
+  IComplaintController,
+  complaintController,
+} from "../modules/complaint/complaint.controller";
+import {
   IRepairLocationService,
   repairLocationService,
 } from "../modules/repairLocation/repairLocation.service";
@@ -260,7 +272,8 @@ container.register<IFinancialService>("FinancialService", {
   useFactory: (c) =>
     financialService(
       c.resolve<IFinancialRepository>("FinancialRepository"),
-      c.resolve<IUserRepository>("UserRepository")
+      c.resolve<IUserRepository>("UserRepository"),
+      c.resolve<INotificationService>("NotificationService")
     ),
 });
 
@@ -419,6 +432,25 @@ container.register<IRepairLocationController>("RepairLocationController", {
     repairLocationController(
       c.resolve<IRepairLocationService>("RepairLocationService")
     ),
+});
+
+container.register<IComplaintRepository>("ComplaintRepository", {
+  useValue: ComplaintRepository,
+});
+
+container.register<IComplaintService>("ComplaintService", {
+  useFactory: (c) =>
+    complaintService(
+      c.resolve<IComplaintRepository>("ComplaintRepository"),
+      c.resolve<INotificationService>("NotificationService"),
+      c.resolve<ISellerRepository>("SellerRepository"),
+      c.resolve<IFinancialRepository>("FinancialRepository")
+    ),
+});
+
+container.register<IComplaintController>("ComplaintController", {
+  useFactory: (c) =>
+    complaintController(c.resolve<IComplaintService>("ComplaintService")),
 });
 
 export { container };

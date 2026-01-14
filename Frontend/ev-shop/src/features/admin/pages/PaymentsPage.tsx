@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { adminService } from "../adminService";
-import { Loader } from "@/components/Loader";
+import { PageLoader } from "@/components/Loader";
 import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 
 export const PaymentsPage: React.FC<{ setAlert: (alert: any) => void }> = ({
@@ -30,11 +30,7 @@ export const PaymentsPage: React.FC<{ setAlert: (alert: any) => void }> = ({
   }));
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Loader size={40} color="#4f46e5" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (

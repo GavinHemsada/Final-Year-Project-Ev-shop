@@ -6,12 +6,13 @@ import {
   DollarSignIcon,
   ReviewsIcon,
   CreditCardIcon,
-  SettingsIcon,
   ChevronRightIcon,
   ChevronLeftIcon,
   SunIcon,
   MoonIcon,
   BarChartIcon,
+  CommunityIcon,
+  BanknoteIcon,
 } from "@/assets/icons/icons";
 import type { AdminActiveTab } from "@/types";
 import { useTheme } from "@/context/ThemeContext";
@@ -118,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
         <SidebarLink
           text="Financial"
-          icon={<DollarSignIcon className="h-5 w-5" />}
+          icon={<BanknoteIcon className="h-5 w-5" />}
           active={activeTab === "financial"}
           onClick={() => setActiveTab("financial")}
           isExpanded={isExpanded}
@@ -132,21 +133,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
         <SidebarLink
           text="Payments"
-          icon={<CreditCardIcon className="h-5 w-5" />}
+          icon={<DollarSignIcon className="h-5 w-5" />}
           active={activeTab === "payments"}
           onClick={() => setActiveTab("payments")}
           isExpanded={isExpanded}
         />
         <SidebarLink
-          text="Settings"
-          icon={<SettingsIcon className="h-5 w-5" />}
-          active={activeTab === "settings"}
-          onClick={() => setActiveTab("settings")}
-          isExpanded={isExpanded}
-        />
-        <SidebarLink
           text="Community"
-          icon={<UserIcon className="h-5 w-5" />} // Using UserIcon as placeholder/generic based on plan
+          icon={<CommunityIcon className="h-5 w-5" />}
           active={activeTab === "community"}
           onClick={() => setActiveTab("community")}
           isExpanded={isExpanded}

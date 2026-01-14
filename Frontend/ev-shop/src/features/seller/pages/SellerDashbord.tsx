@@ -21,6 +21,7 @@ import RepairLocationsPage from "./RepairLocationsPage";
 import { ListingsTable } from "../components/EvListingTable";
 import { AnalyticsChart } from "../components/AnalyticsChart";
 import { Alert, ConfirmAlert } from "@/components/MessageAlert";
+import { HelpCenterPage } from "./HelpCenterPage";
 import {
   CarIcon,
   UserIcon,
@@ -191,6 +192,8 @@ const SellerDashboard: React.FC = () => {
         return <CommunityPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
       case "repairLocations":
         return <RepairLocationsPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
+      case "helpCenter":
+        return <HelpCenterPage setAlert={handleSetAlert} />;
       case "editEvlist":
         return (
           <EvListingEditStepper

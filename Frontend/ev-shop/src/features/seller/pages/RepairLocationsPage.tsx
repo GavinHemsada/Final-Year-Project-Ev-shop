@@ -3,7 +3,7 @@ import { useAppSelector } from "@/hooks/useAppSelector";
 import { selectActiveRoleId } from "@/context/authSlice";
 import { sellerService } from "../sellerService";
 import type { AlertProps, ConfirmAlertProps } from "@/types";
-import { Loader } from "@/components/Loader";
+import { PageLoader, Loader } from "@/components/Loader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
 import { useForm } from "react-hook-form";
@@ -96,7 +96,7 @@ function MapClickHandler({
  * A page for sellers to manage their repair locations on a map.
  */
 export const RepairLocationsPage: React.FC<{
-  setAlert?: (alert: AlertProps | null) => void; 
+  setAlert?: (alert: AlertProps | null) => void;
   setConfirmAlert?: (alert: ConfirmAlertProps | null) => void;
 }> = ({ setAlert, setConfirmAlert }) => {
   const sellerId = useAppSelector(selectActiveRoleId);
@@ -399,7 +399,7 @@ export const RepairLocationsPage: React.FC<{
       is_active: location.is_active,
     });
     setShowAddForm(true);
-    
+
     // Scroll to top of page to show the edit form
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -431,11 +431,7 @@ export const RepairLocationsPage: React.FC<{
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Loader size={60} color="#4f46e5" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -687,15 +683,20 @@ export const RepairLocationsPage: React.FC<{
                   createMutation.isPending ||
                   updateMutation.isPending
                 }
-                className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isSubmitting ||
                 createMutation.isPending ||
-                updateMutation.isPending
-                  ? "Saving..."
-                  : editingLocation
-                  ? "Update Location"
-                  : "Add Location"}
+                updateMutation.isPending ? (
+                  <>
+                    <Loader size={8} color="#ffffff" />
+                    Saving...
+                  </>
+                ) : editingLocation ? (
+                  "Update Location"
+                ) : (
+                  "Add Location"
+                )}
               </button>
               <button
                 type="button"

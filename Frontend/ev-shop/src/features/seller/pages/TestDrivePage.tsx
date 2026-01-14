@@ -11,7 +11,7 @@ import { useAppSelector } from "@/hooks/useAppSelector";
 import { selectActiveRoleId } from "@/context/authSlice";
 import { sellerService } from "../sellerService";
 import type { AlertProps, TestDriveSlot, EvModel, ConfirmAlertProps } from "@/types";
-import { Loader } from "@/components/Loader";
+import { PageLoader, Loader } from "@/components/Loader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/config/queryKeys";
 import { useToast } from "@/context/ToastContext";
@@ -428,11 +428,7 @@ export const TestDrivesPage: React.FC<{
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Loader size={60} color="#4f46e5" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   const getStatusChip = (status: string) => {
@@ -892,16 +888,30 @@ export const TestDrivesPage: React.FC<{
                           <button
                             onClick={() => handleMarkComplete(booking._id)}
                             disabled={completeBookingMutation.isPending}
-                            className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors dark:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors dark:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {completeBookingMutation.isPending ? "Updating..." : "Mark Complete"}
+                            {completeBookingMutation.isPending ? (
+                              <>
+                                <Loader size={8} color="#ffffff" />
+                                Updating...
+                              </>
+                            ) : (
+                              "Mark Complete"
+                            )}
                           </button>
                           <button
                             onClick={() => handleReject(booking._id)}
                             disabled={rejectBookingMutation.isPending}
-                            className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors dark:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors dark:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {rejectBookingMutation.isPending ? "Rejecting..." : "Reject"}
+                            {rejectBookingMutation.isPending ? (
+                              <>
+                                <Loader size={8} color="#ffffff" />
+                                Rejecting...
+                              </>
+                            ) : (
+                              "Reject"
+                            )}
                           </button>
                         </div>
                       </td>

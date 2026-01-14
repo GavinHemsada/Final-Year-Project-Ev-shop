@@ -1,6 +1,6 @@
 import React from "react";
 import type { Notification, AlertProps } from "@/types";
-import { Loader } from "@/components/Loader";
+import { PageLoader } from "@/components/Loader";
 import { financialService } from "../financialService";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { selectActiveRoleId } from "@/context/authSlice";
@@ -43,11 +43,7 @@ export const NotificationPage: React.FC<{
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Loader size={60} color="#4f46e5" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (

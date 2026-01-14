@@ -23,6 +23,7 @@ import { protectJWT } from "./shared/middlewares/Jwt.middleware";
 // Import all defined API routers
 import { authRouter } from "./modules/auth/auth.router";
 import { userRouter } from "./modules/user/user.router";
+import { complaintRouter } from "./modules/complaint/complaint.router";
 import { notificationRouter } from "./modules/notification/notification.router";
 import { chatbotRouter } from "./modules/chatbot/chatbot.router";
 import { postRouter } from "./modules/post/post.router";
@@ -191,6 +192,7 @@ apiV1Router.use(apiLimiter);
 // Define API routes and apply JWT protection where necessary
 apiV1Router.use("/auth", authRouter());
 apiV1Router.use("/user", protectJWT, userRouter());
+apiV1Router.use("/complaint", protectJWT, complaintRouter());
 apiV1Router.use("/notification", protectJWT, notificationRouter());
 apiV1Router.use("/chatbot", protectJWT, chatbotRouter());
 apiV1Router.use("/post", protectJWT, postRouter());
