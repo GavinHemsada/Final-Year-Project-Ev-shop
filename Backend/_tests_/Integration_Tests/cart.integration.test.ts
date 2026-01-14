@@ -131,6 +131,8 @@ describe("Cart Integration Tests", () => {
       });
       await cartItem.save();
 
+      jest.spyOn(cartRepo, "findCartItemById").mockResolvedValue(cartItem as any);
+      jest.spyOn(cartRepo, "findCartById").mockResolvedValue(cart as any);
       jest.spyOn(cartRepo, "updateCartItem").mockResolvedValue({
         ...cartItem.toObject(),
         quantity: 3,

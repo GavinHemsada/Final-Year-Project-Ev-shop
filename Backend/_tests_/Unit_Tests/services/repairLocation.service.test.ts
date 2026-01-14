@@ -33,6 +33,7 @@ describe("RepairLocationService", () => {
       findById: jest.fn(),
       findBySellerId: jest.fn(),
       findActiveLocations: jest.fn(),
+      findByCoordinates: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
     } as jest.Mocked<IRepairLocationRepository>;
@@ -87,10 +88,7 @@ describe("RepairLocationService", () => {
 
       mockRepairLocationRepo.create.mockResolvedValue(null);
 
-      const result = await service.createRepairLocation(locationData);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe("Failed to create repair location");
+      await expect(service.createRepairLocation(locationData)).rejects.toThrow("Failed to create repair location");
     });
   });
 

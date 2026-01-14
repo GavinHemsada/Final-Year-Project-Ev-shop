@@ -12,6 +12,7 @@ import mongoose, { Types } from "mongoose";
 import { setupTestDB, teardownTestDB, clearDatabase } from "./setup/testSetup";
 import { orderService } from "../../src/modules/order/order.service";
 import { OrderRepository } from "../../src/modules/order/order.repository";
+import { UserRepository } from "../../src/modules/user/user.repository";
 import Order from "../../src/entities/Order";
 import { User } from "../../src/entities/User";
 import { UserRole, OrderStatus, PaymentStatus } from "../../src/shared/enum/enum";
@@ -25,6 +26,7 @@ jest.mock("../../src/shared/cache/CacheService", () => ({
 describe("Order Integration Tests", () => {
   let service: ReturnType<typeof orderService>;
   let orderRepo: typeof OrderRepository;
+  let userRepo: typeof UserRepository;
   let testUserId: string;
   let testListingId: string;
   let testSellerId: string;
@@ -32,7 +34,9 @@ describe("Order Integration Tests", () => {
   beforeAll(async () => {
     await setupTestDB();
     orderRepo = OrderRepository;
-    service = orderService(orderRepo);
+    userRepo = UserRepository;
+    const sellerRepo = {} as any;
+    service = orderService(orderRepo, userRepo, sellerRepo);
   });
 
   beforeEach(async () => {
@@ -105,9 +109,13 @@ describe("Order Integration Tests", () => {
 
       await Order.insertMany(orders);
 
-      jest.spyOn(orderRepo, "findByUserId").mockResolvedValue(orders as any);
+      // The service checks if user exists first, so we need to ensure userRepo.findById returns the user
+      jest.spyOn(userRepo, "findById").mockResolvedValue({
+        _id: new Types.ObjectId(testUserId),
+      } as any);
+      jest.spyOn(orderRepo, "findByUserOrSellerId").mockResolvedValue(orders as any);
 
-      const result = await service.getOrdersByUserId(testUserId);
+      const result = await service.getOrdersBySellerOrUserId(testUserId, "user");
 
       expect(result.success).toBe(true);
       expect(result.orders?.length).toBe(2);

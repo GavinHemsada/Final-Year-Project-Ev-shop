@@ -41,7 +41,8 @@ describe("TestDrive Integration Tests", () => {
     testDriveRepo = TestDriveRepository;
     sellerRepo = SellerRepository;
     evRepo = EvRepository;
-    service = testDriveService(testDriveRepo, sellerRepo, evRepo);
+    const mockNotificationService = {} as any;
+    service = testDriveService(testDriveRepo, sellerRepo, evRepo, mockNotificationService);
   });
 
   beforeEach(async () => {

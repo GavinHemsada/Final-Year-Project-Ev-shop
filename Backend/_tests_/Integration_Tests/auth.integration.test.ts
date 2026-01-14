@@ -14,7 +14,7 @@ import { authService } from "../../src/modules/auth/auth.service";
 import { AuthRepository } from "../../src/modules/auth/auth.repository";
 import { UserRepository } from "../../src/modules/user/user.repository";
 import { createTestUser } from "./setup/testHelpers";
-import { sendOtpEmail } from "../../src/shared/utils/Email.util";
+import { sendEmail } from "../../src/shared/utils/Email.util";
 
 jest.mock("../../src/shared/utils/Email.util");
 jest.mock("../../src/shared/cache/CacheService", () => ({
@@ -37,7 +37,7 @@ describe("Auth Integration Tests", () => {
   beforeEach(async () => {
     await clearDatabase();
     jest.clearAllMocks();
-    (sendOtpEmail as jest.Mock).mockResolvedValue(true);
+    (sendEmail as jest.Mock).mockResolvedValue(true);
   });
 
   afterAll(async () => {

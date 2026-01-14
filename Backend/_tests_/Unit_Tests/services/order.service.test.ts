@@ -36,6 +36,8 @@ const createMockOrder = (overrides: any = {}) => {
 describe("OrderService", () => {
   let service: IOrderService;
   let mockOrderRepo: jest.Mocked<IOrderRepository>;
+  let mockUserRepo: jest.Mocked<any>;
+  let mockSellerRepo: jest.Mocked<any>;
 
   beforeAll(async () => {
     await mongoose.connect(process.env.TEST_MONGO_URI!);
@@ -47,14 +49,19 @@ describe("OrderService", () => {
     mockOrderRepo = {
       create: jest.fn(),
       findById: jest.fn(),
-      findByUserId: jest.fn(),
-      findBySellerId: jest.fn(),
+      findByUserOrSellerId: jest.fn(),
       findAll: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
     } as jest.Mocked<IOrderRepository>;
 
-    service = orderService(mockOrderRepo);
+    mockUserRepo = {
+      findById: jest.fn(),
+    } as jest.Mocked<any>;
+    mockSellerRepo = {
+      findById: jest.fn(),
+    } as jest.Mocked<any>;
+    service = orderService(mockOrderRepo, mockUserRepo, mockSellerRepo);
 
     // Mock CacheService.getOrSet to execute the fetchFunction
     (CacheService.getOrSet as any) = jest.fn(
@@ -136,45 +143,46 @@ describe("OrderService", () => {
     });
   });
 
-  describe("getOrdersByUserId", () => {
+  describe("getOrdersBySellerOrUserId", () => {
     it("should return orders for a user", async () => {
       const userId = new Types.ObjectId().toString();
       const mockOrders = [createMockOrder(), createMockOrder()];
 
-      mockOrderRepo.findByUserId.mockResolvedValue(mockOrders as any);
+      mockUserRepo.findById.mockResolvedValue({ _id: new Types.ObjectId(userId) } as any);
+      mockOrderRepo.findByUserOrSellerId.mockResolvedValue(mockOrders as any);
 
-      const result = await service.getOrdersByUserId(userId);
+      const result = await service.getOrdersBySellerOrUserId(userId, "user");
 
       expect(result.success).toBe(true);
       expect(result.orders).toEqual(mockOrders);
-      expect(mockOrderRepo.findByUserId).toHaveBeenCalledWith(userId);
+      expect(mockOrderRepo.findByUserOrSellerId).toHaveBeenCalledWith(userId);
     });
 
     it("should return empty array if no orders found", async () => {
       const userId = new Types.ObjectId().toString();
 
-      mockOrderRepo.findByUserId.mockResolvedValue(null);
+      mockUserRepo.findById.mockResolvedValue({ _id: new Types.ObjectId(userId) } as any);
+      mockOrderRepo.findByUserOrSellerId.mockResolvedValue(null);
 
-      const result = await service.getOrdersByUserId(userId);
+      const result = await service.getOrdersBySellerOrUserId(userId, "user");
 
       // Service returns empty array with success when no orders found
       expect(result.success).toBe(true);
       expect(result.orders).toEqual([]);
     });
-  });
 
-  describe("getOrdersBySellerId", () => {
     it("should return orders for a seller", async () => {
       const sellerId = new Types.ObjectId().toString();
       const mockOrders = [createMockOrder(), createMockOrder()];
 
-      mockOrderRepo.findBySellerId.mockResolvedValue(mockOrders as any);
+      mockSellerRepo.findById.mockResolvedValue({ _id: new Types.ObjectId(sellerId) } as any);
+      mockOrderRepo.findByUserOrSellerId.mockResolvedValue(mockOrders as any);
 
-      const result = await service.getOrdersBySellerId(sellerId);
+      const result = await service.getOrdersBySellerOrUserId(sellerId, "seller");
 
       expect(result.success).toBe(true);
       expect(result.orders).toEqual(mockOrders);
-      expect(mockOrderRepo.findBySellerId).toHaveBeenCalledWith(sellerId);
+      expect(mockOrderRepo.findByUserOrSellerId).toHaveBeenCalledWith(sellerId);
     });
   });
 

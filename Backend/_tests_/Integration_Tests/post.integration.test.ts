@@ -37,7 +37,10 @@ describe("Post Integration Tests", () => {
     await setupTestDB();
     postRepo = PostRepository;
     userRepo = UserRepository;
-    service = postService(postRepo, userRepo);
+    const sellerRepo = {} as any;
+    const financialRepo = {} as any;
+    const notificationService = {} as any;
+    service = postService(postRepo, userRepo, sellerRepo, financialRepo, notificationService);
   });
 
   beforeEach(async () => {
@@ -82,7 +85,7 @@ describe("Post Integration Tests", () => {
       jest.spyOn(userRepo, "findById").mockResolvedValue(mockUser as any);
       jest.spyOn(postRepo, "createPost").mockResolvedValue(mockPost as any);
 
-      const result = await service.createPost(testUserId, postData);
+      const result = await service.createPost(testUserId, null, null, postData);
 
       expect(result.success).toBe(true);
       expect(result.post).toBeDefined();

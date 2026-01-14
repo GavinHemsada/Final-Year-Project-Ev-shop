@@ -32,6 +32,7 @@ describe("ReviewController", () => {
 
     mockReviewService = {
       getAllReviews: jest.fn(),
+      getReviewbyListingId: jest.fn(),
       getReviewByTargetId: jest.fn(),
       getReviewsByReviewerId: jest.fn(),
       getReviewById: jest.fn(),

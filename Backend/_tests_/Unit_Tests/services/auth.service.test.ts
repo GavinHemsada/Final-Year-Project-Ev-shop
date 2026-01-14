@@ -24,11 +24,11 @@ import { UserRole } from "../../../src/shared/enum/enum";
 
 // Mock external dependencies
 jest.mock("../../../src/shared/utils/Email.util", () => ({
-  sendOtpEmail: jest.fn(() => Promise.resolve(true)),
+  sendEmail: jest.fn(() => Promise.resolve(true)),
 }));
 
 // Import the mocked function
-import { sendOtpEmail } from "../../../src/shared/utils/Email.util";
+import { sendEmail } from "../../../src/shared/utils/Email.util";
 
 // A more type-safe helper for creating mock user documents
 const createMockUserDocument = (
@@ -82,8 +82,8 @@ describe("AuthService", () => {
 
     service = authService(mockAuthRepo);
 
-    // Mock sendOtpEmail to always succeed by default
-    (sendOtpEmail as jest.Mock).mockImplementation(() => Promise.resolve(true));
+    // Mock sendEmail to always succeed by default
+    (sendEmail as jest.Mock).mockImplementation(() => Promise.resolve(true));
   });
 
   afterAll(async () => {
@@ -282,7 +282,7 @@ describe("AuthService", () => {
       const mockUser = createMockUserDocument({ email: forgetData.email });
 
       mockAuthRepo.findByEmail.mockResolvedValue(mockUser);
-      (sendOtpEmail as jest.Mock).mockImplementation(() =>
+      (sendEmail as jest.Mock).mockImplementation(() =>
         Promise.resolve(true)
       ); // Explicitly mock success for this test
 
@@ -295,12 +295,12 @@ describe("AuthService", () => {
       expect(mockUser.resetOtp?.otpHash).toBeDefined();
       expect(mockUser.resetOtp?.expiresAt).toBeInstanceOf(Date);
       expect(mockUser.resetOtp?.attempts).toBe(0);
-      expect(sendOtpEmail).toHaveBeenCalledTimes(1);
-      expect(sendOtpEmail).toHaveBeenCalledWith(
+      expect(sendEmail).toHaveBeenCalledTimes(1);
+      expect(sendEmail).toHaveBeenCalledWith(
         forgetData.email,
         expect.any(String),
-        expect.stringContaining("Your OTP code is"),
-        expect.stringContaining("Your OTP code is")
+        expect.stringMatching(/Your OTP code is \d+/),
+        expect.stringMatching(/<div class="otp-code">\d+<\/div>/)
       );
     });
 
@@ -315,7 +315,7 @@ describe("AuthService", () => {
       expect(result.success).toBe(false);
       expect(result.error).toBe("User with this email does not exist");
       expect(mockAuthRepo.findByEmail).toHaveBeenCalledWith(forgetData.email);
-      expect(sendOtpEmail).not.toHaveBeenCalled();
+      expect(sendEmail).not.toHaveBeenCalled();
     });
 
     it("should return an error if sending OTP email fails", async () => {
@@ -323,7 +323,7 @@ describe("AuthService", () => {
       const mockUser = createMockUserDocument({ email: forgetData.email });
 
       mockAuthRepo.findByEmail.mockResolvedValue(mockUser);
-      (sendOtpEmail as jest.Mock).mockImplementationOnce(() =>
+      (sendEmail as jest.Mock).mockImplementationOnce(() =>
         Promise.reject(new Error("Email failed"))
       ); // Simulate email sending failure
 

@@ -90,7 +90,15 @@ describe("SellerController", () => {
 
   describe("createSeller", () => {
     it("should call service.createSeller and return result with 201 status", async () => {
-      const sellerData = { user_id: "user123", business_name: "Test Business", business_address: "123 St" };
+      const sellerData = { 
+        user_id: "user123", 
+        business_name: "Test Business", 
+        street_address: "123 St",
+        city: "Test City",
+        state: "Test State",
+        postal_code: "12345",
+        country: "Test Country"
+      };
       const mockResult = { success: true, seller: {} };
 
       mockRequest.body = sellerData;

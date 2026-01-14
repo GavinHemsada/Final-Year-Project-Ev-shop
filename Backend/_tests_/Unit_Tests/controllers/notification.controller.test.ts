@@ -79,7 +79,7 @@ describe("NotificationController", () => {
       const userId = "user123";
       const mockResult = { success: true, notifications: [] };
 
-      mockRequest.params = { user_id: userId };
+      mockRequest.params = { userId: userId };
       mockNotificationService.findByUserId.mockResolvedValue(mockResult);
 
       await controller.getNotificationsByUserID(mockRequest as Request, mockResponse as Response);

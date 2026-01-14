@@ -52,6 +52,7 @@ describe("EvController", () => {
       getListingById: jest.fn(),
       getListingsBySeller: jest.fn(),
       updateListing: jest.fn(),
+      quickUpdateListing: jest.fn(),
       deleteListing: jest.fn(),
     } as jest.Mocked<IEvService>;
 

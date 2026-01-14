@@ -34,6 +34,10 @@ describe("PostController", () => {
       findPostById: jest.fn(),
       findAllPosts: jest.fn(),
       findPostsByUserId: jest.fn(),
+      findPostsBySellerId: jest.fn(),
+      findPostsByFinancialId: jest.fn(),
+      findRepliesBySellerId: jest.fn(),
+      findRepliesByFinancialId: jest.fn(),
       createPost: jest.fn(),
       updatePost: jest.fn(),
       updatePostViews: jest.fn(),
@@ -84,7 +88,7 @@ describe("PostController", () => {
 
   describe("createPost", () => {
     it("should call service.createPost and return result with 201 status", async () => {
-      const postData = { title: "New Post", content: "Content", user_id: "user123" };
+      const postData = { title: "New Post", content: "Content", user_id: "user123", seller_id: null, financial_id: null };
       const mockResult = { success: true, post: {} };
 
       mockRequest.body = postData;
@@ -92,14 +96,14 @@ describe("PostController", () => {
 
       await controller.createPost(mockRequest as Request, mockResponse as Response);
 
-      expect(mockPostService.createPost).toHaveBeenCalledWith(postData.user_id, postData);
+      expect(mockPostService.createPost).toHaveBeenCalledWith(postData.user_id, postData.seller_id, postData.financial_id, { title: postData.title, content: postData.content });
       expect(handleResult).toHaveBeenCalledWith(mockResponse as Response, mockResult, 201);
     });
   });
 
   describe("createReply", () => {
     it("should call service.createReply and return result with 201 status", async () => {
-      const replyData = { post_id: "post123", content: "Reply", user_id: "user123" };
+      const replyData = { post_id: "post123", content: "Reply", user_id: "user123", seller_id: null, financial_id: null };
       const mockResult = { success: true, reply: {} };
 
       mockRequest.body = replyData;
@@ -107,7 +111,13 @@ describe("PostController", () => {
 
       await controller.createReply(mockRequest as Request, mockResponse as Response);
 
-      expect(mockPostService.createReply).toHaveBeenCalledWith(replyData.user_id, replyData);
+      const { user_id, seller_id, financial_id, ...replyDataOnly } = replyData;
+      expect(mockPostService.createReply).toHaveBeenCalledWith(
+        replyData.user_id,
+        replyData.seller_id as any,
+        replyData.financial_id as any,
+        replyDataOnly
+      );
       expect(handleResult).toHaveBeenCalledWith(mockResponse as Response, mockResult, 201);
     });
   });

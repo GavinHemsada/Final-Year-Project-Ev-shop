@@ -57,6 +57,7 @@ describe("SellerService", () => {
 
     mockReviewRepo = {
       getReviewByTargetId: jest.fn(),
+      getReviewbyListingId: jest.fn(),
       getReviewsByReviewerId: jest.fn(),
       getReviewById: jest.fn(),
       createReview: jest.fn(),
@@ -143,6 +144,11 @@ describe("SellerService", () => {
       const sellerData: SellerDTO = {
         user_id: userId,
         business_name: "Test Business",
+        street_address: "123 Test St",
+        city: "Test City",
+        state: "Test State",
+        postal_code: "12345",
+        country: "Test Country",
       };
       const mockUser: any = { _id: new Types.ObjectId(userId), role: [] };
       const updatedMockUser = { ...mockUser, role: [UserRole.SELLER] };
@@ -164,6 +170,11 @@ describe("SellerService", () => {
       const sellerData: SellerDTO = {
         user_id: new Types.ObjectId().toString(),
         business_name: "Test Business",
+        street_address: "123 Test St",
+        city: "Test City",
+        state: "Test State",
+        postal_code: "12345",
+        country: "Test Country",
       };
 
       mockUserRepo.findById.mockResolvedValue(null);

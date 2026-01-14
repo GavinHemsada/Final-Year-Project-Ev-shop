@@ -14,7 +14,8 @@ import { reviewService } from "../../src/modules/review/review.service";
 import { ReviewRepository } from "../../src/modules/review/review.repository";
 import { UserRepository } from "../../src/modules/user/user.repository";
 import { User } from "../../src/entities/User";
-import { UserRole } from "../../src/shared/enum/enum";
+import { Seller } from "../../src/entities/Seller";
+import { UserRole, ReviewType } from "../../src/shared/enum/enum";
 
 jest.mock("../../src/shared/cache/CacheService", () => ({
   getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
@@ -47,7 +48,19 @@ describe("Review Integration Tests", () => {
     });
     await user.save();
     testUserId = user._id.toString();
-    testTargetId = new Types.ObjectId().toString();
+    
+    // Create a test seller for the review target
+    const seller = new Seller({
+      user_id: user._id,
+      business_name: "Test Seller Business",
+      street_address: "123 Test St",
+      city: "Test City",
+      state: "Test State",
+      postal_code: "12345",
+      country: "Test Country",
+    });
+    await seller.save();
+    testTargetId = seller._id.toString();
   });
 
   afterAll(async () => {
@@ -59,23 +72,25 @@ describe("Review Integration Tests", () => {
       const reviewData = {
         reviewer_id: testUserId,
         target_id: testTargetId,
-        target_type: "seller",
+        target_type: ReviewType.SERVICE,
         rating: 5,
         title: "Great Service",
         comment: "Excellent experience",
-        order_id: new Types.ObjectId().toString(),
       };
 
-      jest.spyOn(reviewRepo, "createReview").mockResolvedValue({
-        _id: new Types.ObjectId(),
-        ...reviewData,
-      } as any);
-
+      // Don't mock - let it use the real repository to find the user
+      // The user was created in beforeEach, so it should be found
       const result = await service.createReview(reviewData);
 
+      if (!result.success) {
+        console.log("Review creation failed:", result.error);
+      }
+      
       expect(result.success).toBe(true);
       expect(result.review).toBeDefined();
-      expect(result.review?.rating).toBe(reviewData.rating);
+      if (result.review) {
+        expect(result.review.rating).toBe(reviewData.rating);
+      }
     });
 
     it("should get reviews by target ID", async () => {

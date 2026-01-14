@@ -34,6 +34,7 @@ describe("FinancialController", () => {
     mockFinancialService = {
       createInstitution: jest.fn(),
       getInstitutionById: jest.fn(),
+      findInstitutionByUserId: jest.fn(),
       getAllInstitutions: jest.fn(),
       updateInstitution: jest.fn(),
       deleteInstitution: jest.fn(),
@@ -126,7 +127,7 @@ describe("FinancialController", () => {
 
       await controller.createApplication(mockRequest as Request, mockResponse as Response);
 
-      expect(mockFinancialService.createApplication).toHaveBeenCalledWith(applicationData, undefined);
+      expect(mockFinancialService.createApplication).toHaveBeenCalledWith(applicationData, []);
       expect(handleResult).toHaveBeenCalledWith(mockResponse as Response, mockResult, 201);
     });
   });

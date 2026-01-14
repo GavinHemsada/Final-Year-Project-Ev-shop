@@ -34,9 +34,9 @@ describe("OrderController", () => {
 
     mockOrderService = {
       createOrder: jest.fn(),
+      getAllOrders: jest.fn(),
       getOrderById: jest.fn(),
-      getOrdersByUserId: jest.fn(),
-      getOrdersBySellerId: jest.fn(),
+      getOrdersBySellerOrUserId: jest.fn(),
       updateOrder: jest.fn(),
       cancelOrder: jest.fn(),
     } as jest.Mocked<IOrderService>;
@@ -104,32 +104,43 @@ describe("OrderController", () => {
     });
   });
 
-  describe("getOrdersByUserId", () => {
-    it("should call service.getOrdersByUserId and return result", async () => {
-      const userId = "user123";
+  describe("getAllOrders", () => {
+    it("should call service.getAllOrders and return result", async () => {
       const mockResult = { success: true, orders: [] };
 
-      mockRequest.params = { userId };
-      mockOrderService.getOrdersByUserId.mockResolvedValue(mockResult);
+      mockOrderService.getAllOrders.mockResolvedValue(mockResult);
 
-      await controller.getOrdersByUserId(mockRequest as Request, mockResponse as Response);
+      await controller.getAllOrders(mockRequest as Request, mockResponse as Response);
 
-      expect(mockOrderService.getOrdersByUserId).toHaveBeenCalledWith(userId);
+      expect(mockOrderService.getAllOrders).toHaveBeenCalled();
       expect(handleResult).toHaveBeenCalledWith(mockResponse as Response, mockResult);
     });
   });
 
-  describe("getOrdersBySellerId", () => {
-    it("should call service.getOrdersBySellerId and return result", async () => {
+  describe("getOrdersByUserIdOrSellerId", () => {
+    it("should call service.getOrdersBySellerOrUserId with user role and return result", async () => {
+      const userId = "user123";
+      const mockResult = { success: true, orders: [] };
+
+      mockRequest.params = { userId, role: "user" };
+      mockOrderService.getOrdersBySellerOrUserId.mockResolvedValue(mockResult);
+
+      await controller.getOrdersByUserIdOrSellerId(mockRequest as Request, mockResponse as Response);
+
+      expect(mockOrderService.getOrdersBySellerOrUserId).toHaveBeenCalledWith(userId, "user");
+      expect(handleResult).toHaveBeenCalledWith(mockResponse as Response, mockResult);
+    });
+
+    it("should call service.getOrdersBySellerOrUserId with seller role and return result", async () => {
       const sellerId = "seller123";
       const mockResult = { success: true, orders: [] };
 
-      mockRequest.params = { sellerId };
-      mockOrderService.getOrdersBySellerId.mockResolvedValue(mockResult);
+      mockRequest.params = { userId: sellerId, role: "seller" };
+      mockOrderService.getOrdersBySellerOrUserId.mockResolvedValue(mockResult);
 
-      await controller.getOrdersBySellerId(mockRequest as Request, mockResponse as Response);
+      await controller.getOrdersByUserIdOrSellerId(mockRequest as Request, mockResponse as Response);
 
-      expect(mockOrderService.getOrdersBySellerId).toHaveBeenCalledWith(sellerId);
+      expect(mockOrderService.getOrdersBySellerOrUserId).toHaveBeenCalledWith(sellerId, "seller");
       expect(handleResult).toHaveBeenCalledWith(mockResponse as Response, mockResult);
     });
   });

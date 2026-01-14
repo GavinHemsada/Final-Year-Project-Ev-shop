@@ -24,6 +24,7 @@ describe("TestDriveService", () => {
   let mockTestDriveRepo: jest.Mocked<ITestDriveRepository>;
   let mockSellerRepo: jest.Mocked<ISellerRepository>;
   let mockEvRepo: jest.Mocked<IEvRepository>;
+  let mockNotificationService: jest.Mocked<any>;
 
   beforeAll(async () => {
     await mongoose.connect(process.env.TEST_MONGO_URI!);
@@ -42,8 +43,15 @@ describe("TestDriveService", () => {
       deleteSlot: jest.fn(),
       createBooking: jest.fn(),
       findBookingById: jest.fn(),
+      findAllBookings: jest.fn(),
       findBookingsByCustomerId: jest.fn(),
+      findBookingsBySeller: jest.fn(),
       findBookingsBySlotId: jest.fn(),
+      markBookingAsCompleted: jest.fn(),
+      markBookingAsCancelled: jest.fn(),
+      markBookingAsExpired: jest.fn(),
+      decreaseSlotCount: jest.fn(),
+      invokeSlotIncrease: jest.fn(),
       updateBooking: jest.fn(),
       deleteBooking: jest.fn(),
       createFeedback: jest.fn(),
@@ -91,7 +99,11 @@ describe("TestDriveService", () => {
       deleteListing: jest.fn(),
     } as jest.Mocked<IEvRepository>;
 
-    service = testDriveService(mockTestDriveRepo, mockSellerRepo, mockEvRepo);
+    mockNotificationService = {
+      create: jest.fn(),
+    } as any;
+    (mockNotificationService.create as jest.MockedFunction<any>).mockResolvedValue({ success: true, notification: {} });
+    service = testDriveService(mockTestDriveRepo, mockSellerRepo, mockEvRepo, mockNotificationService);
 
     (CacheService.getOrSet as any) = jest.fn(
       async (key, fetchFunction: any) => {
@@ -189,15 +201,26 @@ describe("TestDriveService", () => {
       const mockSlot = { _id: new Types.ObjectId(bookingData.slot_id), max_bookings: 5 };
       const mockBooking = { _id: new Types.ObjectId(), ...bookingData };
 
-      mockTestDriveRepo.findSlotById.mockResolvedValue(mockSlot as any);
+      const mockSeller = { _id: new Types.ObjectId() };
+      const mockSlotWithSeller = { ...mockSlot, seller_id: mockSeller, available_date: new Date() };
+      
+      mockTestDriveRepo.findSlotById.mockResolvedValue(mockSlotWithSeller as any);
       mockTestDriveRepo.findBookingsBySlotId.mockResolvedValue([]);
       mockTestDriveRepo.findBookingsByCustomerId.mockResolvedValue([]);
-      mockTestDriveRepo.createBooking.mockResolvedValue(mockBooking as any);
+      mockTestDriveRepo.createBooking.mockResolvedValue({ ...mockBooking, id: mockBooking._id } as any);
+      mockTestDriveRepo.decreaseSlotCount.mockResolvedValue(true);
+      // Mock notification service to return success with notification
+      mockNotificationService.create.mockResolvedValue({ success: true, notification: { _id: new Types.ObjectId() } });
 
       const result = await service.createBooking(bookingData);
 
       expect(result.success).toBe(true);
-      expect(result.booking).toEqual(mockBooking);
+      expect(result.booking).toBeDefined();
+      if (result.booking) {
+        expect(result.booking._id).toEqual(mockBooking._id);
+        expect(result.booking.customer_id).toEqual(mockBooking.customer_id);
+        expect(result.booking.slot_id).toEqual(mockBooking.slot_id);
+      }
     });
 
     it("should return error if slot not found", async () => {

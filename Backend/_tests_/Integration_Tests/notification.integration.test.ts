@@ -29,7 +29,9 @@ describe("Notification Integration Tests", () => {
   beforeAll(async () => {
     await setupTestDB();
     notificationRepo = NotificationRepository;
-    service = notificationService(notificationRepo, UserRepository);
+    const sellerRepo = {} as any;
+    const financialRepo = {} as any;
+    service = notificationService(notificationRepo, UserRepository, sellerRepo, financialRepo);
   });
 
   beforeEach(async () => {
@@ -54,6 +56,18 @@ describe("Notification Integration Tests", () => {
 
   describe("Notification Operations", () => {
     it("should create a new notification", async () => {
+      // Create a test user first (with unique email to avoid duplicates)
+      const uniqueEmail = `notifuser${Date.now()}@example.com`;
+      const user = new User({
+        email: uniqueEmail,
+        password: "hashedPassword",
+        name: "Notification User",
+        phone: "1234567890",
+        role: [UserRole.USER],
+      });
+      await user.save();
+      const testUserId = user._id.toString();
+
       const notificationData = {
         user_id: testUserId,
         type: NotificationType.ORDER_CONFIRMED,
@@ -61,11 +75,7 @@ describe("Notification Integration Tests", () => {
         message: "Your order has been confirmed",
       };
 
-      jest.spyOn(notificationRepo, "create").mockResolvedValue({
-        _id: new Types.ObjectId(),
-        ...notificationData,
-      } as any);
-
+      // Don't mock - let it use the real repository
       const result = await service.create(notificationData);
 
       expect(result.success).toBe(true);

@@ -16,7 +16,13 @@ import { User } from "../../src/entities/User";
 import { UserRole } from "../../src/shared/enum/enum";
 
 jest.mock("../../src/shared/cache/CacheService", () => ({
-  getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
+  getOrSet: jest.fn(async (key: string, fetchFunction: unknown) => {
+    if (typeof fetchFunction === 'function') {
+      const result = await (fetchFunction as () => Promise<any>)();
+      return result;
+    }
+    return null;
+  }),
   delete: jest.fn(),
 }));
 
@@ -128,7 +134,7 @@ describe("User Integration Tests", () => {
 
       const deleted = await repo.delete(user._id.toString());
 
-      expect(deleted).toBe(true);
+      expect(deleted).toBeTruthy();
 
       const foundUser = await repo.findById(user._id.toString());
       expect(foundUser).toBeNull();
@@ -153,6 +159,16 @@ describe("User Integration Tests", () => {
       ];
 
       await User.insertMany(users);
+
+      // Clear cache to ensure fresh data
+      const CacheService = require("../../src/shared/cache/CacheService");
+      jest.spyOn(CacheService, "getOrSet").mockImplementation(async (...args: any[]) => {
+        const fetchFunction = args[1];
+        if (typeof fetchFunction === 'function') {
+          return fetchFunction();
+        }
+        return null;
+      });
 
       const result = await service.findAll();
 

@@ -43,7 +43,8 @@ describe("Financial Integration Tests", () => {
     await setupTestDB();
     financialRepo = FinancialRepository;
     userRepo = UserRepository;
-    service = financialService(financialRepo, userRepo);
+    const mockNotificationService = {} as any;
+    service = financialService(financialRepo, userRepo, mockNotificationService);
   });
 
   beforeEach(async () => {
@@ -104,7 +105,7 @@ describe("Financial Integration Tests", () => {
       });
       await institution.save();
 
-      jest.spyOn(financialRepo, "findInstitutionById").mockResolvedValue(institution as any);
+      jest.spyOn(financialRepo, "findById").mockResolvedValue(institution as any);
 
       const result = await service.getInstitutionById(institution._id.toString());
 
@@ -160,7 +161,7 @@ describe("Financial Integration Tests", () => {
         institution_id: institution._id,
       };
 
-      jest.spyOn(financialRepo, "findInstitutionById").mockResolvedValue(institution as any);
+      jest.spyOn(financialRepo, "findById").mockResolvedValue(institution as any);
       jest.spyOn(financialRepo, "createProduct").mockResolvedValue(mockProduct as any);
 
       const result = await service.createProduct(productData);

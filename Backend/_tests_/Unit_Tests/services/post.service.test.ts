@@ -23,6 +23,9 @@ describe("PostService", () => {
   let service: IPostService;
   let mockPostRepo: jest.Mocked<IPostRepository>;
   let mockUserRepo: jest.Mocked<IUserRepository>;
+  let mockSellerRepo: jest.Mocked<any>;
+  let mockFinancialRepo: jest.Mocked<any>;
+  let mockNotificationService: jest.Mocked<any>;
 
   beforeAll(async () => {
     await mongoose.connect(process.env.TEST_MONGO_URI!);
@@ -32,9 +35,14 @@ describe("PostService", () => {
     jest.clearAllMocks();
 
     mockPostRepo = {
+      findbyid: jest.fn(),
       findPostById: jest.fn(),
       findAllPosts: jest.fn(),
       findPostsByUserId: jest.fn(),
+      findPostsBySellerId: jest.fn(),
+      findPostsByFinancialId: jest.fn(),
+      hasUserViewedPostToday: jest.fn(),
+      createPostView: jest.fn(),
       createPost: jest.fn(),
       updatePost: jest.fn(),
       updatePostViews: jest.fn(),
@@ -44,6 +52,8 @@ describe("PostService", () => {
       findReplyById: jest.fn(),
       findRepliesByPostId: jest.fn(),
       findRepliesByUserId: jest.fn(),
+      findRepliesBySellerId: jest.fn(),
+      findRepliesByFinancialId: jest.fn(),
       findAllReplies: jest.fn(),
       createReply: jest.fn(),
       updateReply: jest.fn(),
@@ -58,7 +68,13 @@ describe("PostService", () => {
       delete: jest.fn(),
     } as jest.Mocked<IUserRepository>;
 
-    service = postService(mockPostRepo, mockUserRepo);
+    mockSellerRepo = {} as jest.Mocked<any>;
+    mockFinancialRepo = {} as jest.Mocked<any>;
+    mockNotificationService = {
+      create: jest.fn(),
+    } as any;
+    (mockNotificationService.create as jest.MockedFunction<any>).mockResolvedValue({ success: true, notification: {} });
+    service = postService(mockPostRepo, mockUserRepo, mockSellerRepo, mockFinancialRepo, mockNotificationService);
 
     (CacheService.getOrSet as any) = jest.fn(
       async (key, fetchFunction: any) => {
@@ -130,7 +146,7 @@ describe("PostService", () => {
       mockUserRepo.findById.mockResolvedValue(mockUser as any);
       mockPostRepo.createPost.mockResolvedValue(mockPost as any);
 
-      const result = await service.createPost(userId, postData);
+      const result = await service.createPost(userId, null, null, postData);
 
       expect(result.success).toBe(true);
       expect(result.post).toEqual(mockPost);
@@ -142,7 +158,7 @@ describe("PostService", () => {
 
       mockUserRepo.findById.mockResolvedValue(null);
 
-      const result = await service.createPost(userId, postData);
+      const result = await service.createPost(userId, null, null, postData);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("User not found");
@@ -169,7 +185,7 @@ describe("PostService", () => {
       const postId = new Types.ObjectId().toString();
       const mockPost = { _id: new Types.ObjectId(postId), user_id: new Types.ObjectId() };
 
-      mockPostRepo.findPostById.mockResolvedValue(mockPost as any);
+      mockPostRepo.findbyid.mockResolvedValue(mockPost as any);
       mockPostRepo.deletePost.mockResolvedValue(true);
 
       const result = await service.deletePost(postId);
@@ -192,10 +208,13 @@ describe("PostService", () => {
       const mockReply = { _id: new Types.ObjectId(), ...replyData };
 
       mockUserRepo.findById.mockResolvedValue(mockUser as any);
-      mockPostRepo.findPostById.mockResolvedValue(mockPost as any);
+      mockPostRepo.findbyid.mockResolvedValue(mockPost as any);
       mockPostRepo.createReply.mockResolvedValue(mockReply as any);
+      mockPostRepo.updatePostReplyCount.mockResolvedValue(mockPost as any);
+      // Mock notification service
+      mockNotificationService.create.mockResolvedValue({ success: true, notification: {} });
 
-      const result = await service.createReply(userId, replyData);
+      const result = await service.createReply(userId, "", "", replyData);
 
       expect(result.success).toBe(true);
       expect(result.reply).toEqual(mockReply);

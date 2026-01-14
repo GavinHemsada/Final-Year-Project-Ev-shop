@@ -65,6 +65,11 @@ describe("Seller Integration Tests", () => {
         user_id: testUserId,
         business_name: "Test Business",
         license_number: "LIC123",
+        street_address: "123 Test St",
+        city: "Test City",
+        state: "Test State",
+        postal_code: "12345",
+        country: "Test Country",
       };
 
       jest.spyOn(userRepo, "findById").mockResolvedValue({
