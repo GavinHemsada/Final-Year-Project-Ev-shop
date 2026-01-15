@@ -11,6 +11,7 @@ import {
 import { IEvController } from "./ev.controller";
 import { container } from "../../di/container";
 import { upload } from "../../shared/utils/imageHandel";
+import { protectJWT } from "../../shared/middlewares/Jwt.middleware";
 
 /**
  * Factory function that creates and configures the router for EV-related endpoints.
@@ -79,6 +80,7 @@ export const evRouter = (): Router => {
    */
   router.post(
     "/brands",
+    protectJWT,
     upload.single("brand_logo"),
     validateDto(EvBrandDTO),
     (req, res) => controller.createBrand(req, res)
@@ -179,6 +181,7 @@ export const evRouter = (): Router => {
    */
   router.put(
     "/brands/:id",
+    protectJWT,
     upload.single("brand_logo"),
     validateDto(EvBrandDTO),
     (req, res) => controller.updateBrand(req, res)
@@ -210,7 +213,11 @@ export const evRouter = (): Router => {
    *       '500':
    *         description: Internal server error.
    */
-  router.delete("/brands/:id", (req, res) => controller.deleteBrand(req, res));
+  router.delete(
+    "/brands/:id",
+    protectJWT,
+    (req, res) => controller.deleteBrand(req, res)
+  );
 
   // --- Category Routes ---
 
@@ -239,8 +246,11 @@ export const evRouter = (): Router => {
    *       '500':
    *         description: Internal server error.
    */
-  router.post("/categories", validateDto(EvCategoryDTO), (req, res) =>
-    controller.createCategory(req, res)
+  router.post(
+    "/categories",
+    protectJWT,
+    validateDto(EvCategoryDTO),
+    (req, res) => controller.createCategory(req, res)
   );
 
   /**
@@ -328,8 +338,11 @@ export const evRouter = (): Router => {
    *       '500':
    *         description: Internal server error.
    */
-  router.put("/categories/:id", validateDto(EvCategoryDTO), (req, res) =>
-    controller.updateCategory(req, res)
+  router.put(
+    "/categories/:id",
+    protectJWT,
+    validateDto(EvCategoryDTO),
+    (req, res) => controller.updateCategory(req, res)
   );
 
   /**
@@ -358,8 +371,10 @@ export const evRouter = (): Router => {
    *       '500':
    *         description: Internal server error.
    */
-  router.delete("/categories/:id", (req, res) =>
-    controller.deleteCategory(req, res)
+  router.delete(
+    "/categories/:id",
+    protectJWT,
+    (req, res) => controller.deleteCategory(req, res)
   );
 
   // --- Model Routes ---
@@ -389,10 +404,8 @@ export const evRouter = (): Router => {
    *       '500':
    *         description: Internal server error.
    */
-  router.post(
-    "/models",
-    validateDto(EvModelDTO),
-    (req, res) => controller.createModel(req, res)
+  router.post("/models", validateDto(EvModelDTO), (req, res) =>
+    controller.createModel(req, res)
   );
 
   /**
@@ -475,10 +488,8 @@ export const evRouter = (): Router => {
    *       '500':
    *         description: Internal server error.
    */
-  router.put(
-    "/models/:id",
-    validateDto(EvModelDTO),
-    (req, res) => controller.updateModel(req, res)
+  router.put("/models/:id", validateDto(EvModelDTO), (req, res) =>
+    controller.updateModel(req, res)
   );
 
   /**

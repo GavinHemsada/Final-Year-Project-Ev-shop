@@ -298,6 +298,62 @@ export const adminService = {
   // Analytics (Mocked or Client-Side Aggregation mostly)
   // We keep these signatures but they might fail if endpoints don't exist.
   // For now, we will rely on getAllOrders/Users in the components.
+  // EV Brand Management
+  getAllBrands: async () => {
+    const response = await axiosPrivate.get("/ev/brands");
+    // Backend's handleResult unwraps { success: true, brands: [...] } to just the brands array
+    return Array.isArray(response.data) ? response.data : response.data?.brands || [];
+  },
+  getBrandById: async (brandId: string) => {
+    const response = await axiosPrivate.get(`/ev/brands/${brandId}`);
+    // Backend's handleResult unwraps { success: true, brand: {...} } to just the brand object
+    return response.data?.brand || response.data;
+  },
+  createBrand: async (brandData: FormData) => {
+    const response = await axiosPrivate.post("/ev/brands", brandData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
+  updateBrand: async (brandId: string, brandData: FormData) => {
+    const response = await axiosPrivate.put(`/ev/brands/${brandId}`, brandData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
+  deleteBrand: async (brandId: string) => {
+    const response = await axiosPrivate.delete(`/ev/brands/${brandId}`);
+    return response.data;
+  },
+
+  // EV Category Management
+  getAllCategories: async () => {
+    const response = await axiosPrivate.get("/ev/categories");
+    // Backend's handleResult unwraps { success: true, categories: [...] } to just the categories array
+    return Array.isArray(response.data) ? response.data : response.data?.categories || [];
+  },
+  getCategoryById: async (categoryId: string) => {
+    const response = await axiosPrivate.get(`/ev/categories/${categoryId}`);
+    // Backend's handleResult unwraps { success: true, category: {...} } to just the category object
+    return response.data?.category || response.data;
+  },
+  createCategory: async (categoryData: any) => {
+    const response = await axiosPrivate.post("/ev/categories", categoryData);
+    return response.data;
+  },
+  updateCategory: async (categoryId: string, categoryData: any) => {
+    const response = await axiosPrivate.put(`/ev/categories/${categoryId}`, categoryData);
+    return response.data;
+  },
+  deleteCategory: async (categoryId: string) => {
+    const response = await axiosPrivate.delete(`/ev/categories/${categoryId}`);
+    return response.data;
+  },
+
   // ML Testing
   testBatteryHealth: async (data: any) => {
     try {

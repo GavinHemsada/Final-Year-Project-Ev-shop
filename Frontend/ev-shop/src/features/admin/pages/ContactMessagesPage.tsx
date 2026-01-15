@@ -147,14 +147,13 @@ export const ContactMessagesPage: React.FC = () => {
 
   const handleDelete = (id: string) => {
     setConfirmAlert({
-      id: Date.now().toString(),
       title: "Delete Contact Message",
       message: "Are you sure you want to delete this contact message? This action cannot be undone.",
-      onConfirm: () => {
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      onConfirmAction: () => {
         deleteMessageMutation.mutate(id);
-        setConfirmAlert(null);
       },
-      onCancel: () => setConfirmAlert(null),
     });
   };
 
@@ -184,7 +183,18 @@ export const ContactMessagesPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <TopMessageAlerts message={message} setMessage={setMessage} />
-      <ConfirmAlert alert={confirmAlert} />
+      {confirmAlert && (
+        <ConfirmAlert
+          alert={confirmAlert}
+          onConfirm={() => {
+            if (confirmAlert.onConfirmAction) {
+              confirmAlert.onConfirmAction();
+            }
+            setConfirmAlert(null);
+          }}
+          onCancel={() => setConfirmAlert(null)}
+        />
+      )}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

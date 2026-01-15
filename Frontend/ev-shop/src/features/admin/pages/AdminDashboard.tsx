@@ -60,7 +60,7 @@ const AdminDashboard: React.FC = () => {
       case "orders":
         return <OrdersPage setAlert={handleSetAlert} />;
       case "evListings":
-        return <EVListingsPage setAlert={handleSetAlert} />;
+        return <EVListingsPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
       case "sellers":
         return <SellersPage setAlert={handleSetAlert} />;
       case "financial":
@@ -94,7 +94,7 @@ const AdminDashboard: React.FC = () => {
       <Alert alert={alert} onClose={handleCloseAlert} />
       <ConfirmAlert
         alert={confirmAlert}
-        onClose={handleCloseConfirmAlert}
+        onCancel={handleCloseConfirmAlert}
         onConfirm={() => {
           if (confirmAlert?.onConfirmAction) {
             confirmAlert.onConfirmAction();

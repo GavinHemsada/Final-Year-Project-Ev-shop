@@ -114,7 +114,7 @@ export interface IEvService {
    * @returns A promise that resolves to an object containing the created model or an error.
    */
   createModel(
-    data: EvModelDTO,
+    data: EvModelDTO
   ): Promise<{ success: boolean; model?: any; error?: string }>;
   /**
    * Retrieves all EV models.
@@ -138,7 +138,7 @@ export interface IEvService {
    */
   updateModel(
     id: string,
-    data: Partial<EvModelDTO>,
+    data: Partial<EvModelDTO>
   ): Promise<{ success: boolean; model?: any; error?: string }>;
   /**
    * Deletes an EV model by its unique ID.
@@ -325,15 +325,12 @@ export function evService(
         const existing = await repo.findBrandById(id);
         if (!existing) return { success: false, error: "Brand not found" };
         // Handle logo replacement.
-        let url = "";
+        const updateDate: any = { ...data };
         if (file) {
           if (existing.brand_logo) deleteImage(existing.brand_logo);
-          url = addImage(file, bandFolder);
+          updateDate.brand_logo = addImage(file, bandFolder);
         }
-        const updateDate = {
-          ...data,
-          brand_logo: url,
-        };
+        // If no file is provided, preserve the existing logo by not including brand_logo in updateDate
         const brand = await repo.updateBrand(id, updateDate);
         if (!brand) return { success: false, error: "Failed to update brand" };
 
@@ -496,7 +493,7 @@ export function evService(
         const existingCategory = await repo.findCategoryById(data.category_id);
         if (!existingCategory)
           return { success: false, error: "Category not found" };
-        
+
         const model = await repo.createModel(data);
 
         // Invalidate the cache for the list of all models
@@ -790,7 +787,7 @@ export function evService(
       try {
         const existing = await repo.findListingById?.(id);
         if (!existing) return { success: false, error: "Listing not found" };
-        
+
         // Only update the fields provided in data
         const listing = await repo.updateListing(id, data);
         if (!listing)

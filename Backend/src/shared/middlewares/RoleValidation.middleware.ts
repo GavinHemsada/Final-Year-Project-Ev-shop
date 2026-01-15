@@ -19,12 +19,22 @@ export const authorizeRoles = (...allowedRoles: string[]) => {
     // The `protectJWT` middleware should have already attached the user object.
     const userRole = req.user?.role;
 
-    // Check if the user object or role is missing, or if the user's role is not in the allowed list.
-    if (!userRole || !allowedRoles.includes(userRole)) {
+    // Handle both array and string role formats
+    let userRoles: string[] = [];
+    if (Array.isArray(userRole)) {
+      userRoles = userRole;
+    } else if (typeof userRole === "string") {
+      userRoles = [userRole];
+    }
+
+    // Check if the user has at least one role that matches the allowed roles
+    const hasAuthorizedRole = userRoles.some((role) => allowedRoles.includes(role));
+
+    if (!userRole || !hasAuthorizedRole) {
       logger.warn(
         `Access denied for user ${
           req.user?.userId
-        }. Role '${userRole}' is not authorized. Required one of: [${allowedRoles.join(
+        }. Role '${JSON.stringify(userRole)}' is not authorized. Required one of: [${allowedRoles.join(
           ", "
         )}]`
       );
