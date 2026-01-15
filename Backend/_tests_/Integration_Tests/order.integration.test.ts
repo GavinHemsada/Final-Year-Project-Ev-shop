@@ -5,6 +5,7 @@ import {
   it,
   expect,
   beforeAll,
+  jest,
   afterAll,
   beforeEach,
 } from "@jest/globals";
@@ -15,13 +16,30 @@ import { OrderRepository } from "../../src/modules/order/order.repository";
 import { UserRepository } from "../../src/modules/user/user.repository";
 import Order from "../../src/entities/Order";
 import { User } from "../../src/entities/User";
-import { UserRole, OrderStatus, PaymentStatus } from "../../src/shared/enum/enum";
+import {
+  UserRole,
+  OrderStatus,
+  PaymentStatus,
+} from "../../src/shared/enum/enum";
 
-jest.mock("../../src/shared/cache/CacheService", () => ({
-  getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
-  delete: jest.fn(),
-  deletePattern: jest.fn().mockResolvedValue(0),
-}));
+jest.mock("../../src/shared/cache/CacheService", () => {
+  const mockGetOrSet = jest.fn() as jest.MockedFunction<any>;
+  mockGetOrSet.mockImplementation(async (key: string, fetchFunction: any) => {
+    if (typeof fetchFunction === "function") {
+      return fetchFunction();
+    }
+    return null;
+  });
+
+  const mockDeletePattern = jest.fn() as jest.MockedFunction<any>;
+  mockDeletePattern.mockResolvedValue(0);
+
+  return {
+    getOrSet: mockGetOrSet,
+    delete: jest.fn(),
+    deletePattern: mockDeletePattern,
+  };
+});
 
 describe("Order Integration Tests", () => {
   let service: ReturnType<typeof orderService>;
@@ -113,15 +131,23 @@ describe("Order Integration Tests", () => {
       jest.spyOn(userRepo, "findById").mockResolvedValue({
         _id: new Types.ObjectId(testUserId),
       } as any);
-      jest.spyOn(orderRepo, "findByUserOrSellerId").mockResolvedValue(orders as any);
+      jest
+        .spyOn(orderRepo, "findByUserOrSellerId")
+        .mockResolvedValue(orders as any);
 
-      const result = await service.getOrdersBySellerOrUserId(testUserId, "user");
+      const result = await service.getOrdersBySellerOrUserId(
+        testUserId,
+        "user"
+      );
 
       expect(result.success).toBe(true);
       expect(result.orders?.length).toBe(2);
     });
 
     it("should update order status", async () => {
+      const mockSave = jest.fn() as jest.MockedFunction<any>;
+      mockSave.mockResolvedValue(true);
+
       const mockOrder = {
         _id: new Types.ObjectId(),
         user_id: new Types.ObjectId(testUserId),
@@ -132,7 +158,7 @@ describe("Order Integration Tests", () => {
         payment_status: PaymentStatus.CANCELLED,
         order_date: new Date(),
         populate: jest.fn().mockReturnThis(),
-        save: jest.fn().mockResolvedValue(true),
+        save: mockSave,
       };
 
       jest.spyOn(orderRepo, "findById").mockResolvedValue(mockOrder as any);
@@ -170,4 +196,3 @@ describe("Order Integration Tests", () => {
     });
   });
 });
-

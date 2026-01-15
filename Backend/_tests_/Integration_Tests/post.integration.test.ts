@@ -4,6 +4,7 @@ import {
   describe,
   it,
   expect,
+  jest,
   beforeAll,
   afterAll,
   beforeEach,
@@ -16,16 +17,29 @@ import { UserRepository } from "../../src/modules/user/user.repository";
 import { User } from "../../src/entities/User";
 import { UserRole } from "../../src/shared/enum/enum";
 
-jest.mock("../../src/shared/cache/CacheService", () => ({
-  default: {
-    getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
+jest.mock("../../src/shared/cache/CacheService", () => {
+  const mockGetOrSet = jest.fn() as jest.MockedFunction<any>;
+  mockGetOrSet.mockImplementation(async (key: string, fetchFunction: any) => {
+    if (typeof fetchFunction === "function") {
+      return fetchFunction();
+    }
+    return null;
+  });
+
+  const mockDeletePattern = jest.fn() as jest.MockedFunction<any>;
+  mockDeletePattern.mockResolvedValue(0);
+
+  return {
+    default: {
+      getOrSet: mockGetOrSet,
+      delete: jest.fn(),
+      deletePattern: mockDeletePattern,
+    },
+    getOrSet: mockGetOrSet,
     delete: jest.fn(),
-    deletePattern: jest.fn().mockResolvedValue(0),
-  },
-  getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
-  delete: jest.fn(),
-  deletePattern: jest.fn().mockResolvedValue(0),
-}));
+    deletePattern: mockDeletePattern,
+  };
+});
 
 describe("Post Integration Tests", () => {
   let service: ReturnType<typeof postService>;
@@ -40,7 +54,13 @@ describe("Post Integration Tests", () => {
     const sellerRepo = {} as any;
     const financialRepo = {} as any;
     const notificationService = {} as any;
-    service = postService(postRepo, userRepo, sellerRepo, financialRepo, notificationService);
+    service = postService(
+      postRepo,
+      userRepo,
+      sellerRepo,
+      financialRepo,
+      notificationService
+    );
   });
 
   beforeEach(async () => {
@@ -127,4 +147,3 @@ describe("Post Integration Tests", () => {
     });
   });
 });
-

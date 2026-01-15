@@ -5,6 +5,7 @@ import {
   it,
   expect,
   beforeAll,
+  jest,
   afterAll,
   beforeEach,
 } from "@jest/globals";
@@ -17,16 +18,29 @@ import { FinancialInstitution } from "../../src/entities/FinancialInstitution";
 import { User } from "../../src/entities/User";
 import { UserRole, ApplicationStatus } from "../../src/shared/enum/enum";
 
-jest.mock("../../src/shared/cache/CacheService", () => ({
-  default: {
-    getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
+jest.mock("../../src/shared/cache/CacheService", () => {
+  const mockGetOrSet = jest.fn() as jest.MockedFunction<any>;
+  mockGetOrSet.mockImplementation(async (key: string, fetchFunction: any) => {
+    if (typeof fetchFunction === "function") {
+      return fetchFunction();
+    }
+    return null;
+  });
+
+  const mockDeletePattern = jest.fn() as jest.MockedFunction<any>;
+  mockDeletePattern.mockResolvedValue(0);
+
+  return {
+    default: {
+      getOrSet: mockGetOrSet,
+      delete: jest.fn(),
+      deletePattern: mockDeletePattern,
+    },
+    getOrSet: mockGetOrSet,
     delete: jest.fn(),
-    deletePattern: jest.fn().mockResolvedValue(0),
-  },
-  getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
-  delete: jest.fn(),
-  deletePattern: jest.fn().mockResolvedValue(0),
-}));
+    deletePattern: mockDeletePattern,
+  };
+});
 
 jest.mock("../../src/shared/utils/fileHandel", () => ({
   addFiles: jest.fn().mockReturnValue(["path/to/file1.pdf"]),
@@ -44,7 +58,11 @@ describe("Financial Integration Tests", () => {
     financialRepo = FinancialRepository;
     userRepo = UserRepository;
     const mockNotificationService = {} as any;
-    service = financialService(financialRepo, userRepo, mockNotificationService);
+    service = financialService(
+      financialRepo,
+      userRepo,
+      mockNotificationService
+    );
   });
 
   beforeEach(async () => {
@@ -76,15 +94,20 @@ describe("Financial Integration Tests", () => {
         contact_email: "contact@testbank.com",
       };
 
+      const mockSave = jest.fn() as jest.MockedFunction<any>;
+      mockSave.mockResolvedValue({
+        _id: new Types.ObjectId(testUserId),
+        role: [UserRole.USER, UserRole.FINANCE],
+      });
+
       jest.spyOn(userRepo, "findById").mockResolvedValue({
         _id: new Types.ObjectId(testUserId),
         role: [UserRole.USER],
-        save: jest.fn().mockResolvedValue({
-          _id: new Types.ObjectId(testUserId),
-          role: [UserRole.USER, UserRole.FINANCE],
-        }),
+        save: mockSave,
       } as any);
-      jest.spyOn(financialRepo, "findInstitutionByUserId").mockResolvedValue(null);
+      jest
+        .spyOn(financialRepo, "findInstitutionByUserId")
+        .mockResolvedValue(null);
       jest.spyOn(financialRepo, "createInstitution").mockResolvedValue({
         _id: new Types.ObjectId(),
         ...institutionData,
@@ -105,12 +128,18 @@ describe("Financial Integration Tests", () => {
       });
       await institution.save();
 
-      jest.spyOn(financialRepo, "findById").mockResolvedValue(institution as any);
+      jest
+        .spyOn(financialRepo, "findById")
+        .mockResolvedValue(institution as any);
 
-      const result = await service.getInstitutionById(institution._id.toString());
+      const result = await service.getInstitutionById(
+        institution._id.toString()
+      );
 
       expect(result.success).toBe(true);
-      expect(result.institution?._id.toString()).toBe(institution._id.toString());
+      expect(result.institution?._id.toString()).toBe(
+        institution._id.toString()
+      );
     });
 
     it("should get all institutions", async () => {
@@ -129,7 +158,9 @@ describe("Financial Integration Tests", () => {
 
       await FinancialInstitution.insertMany(institutions);
 
-      jest.spyOn(financialRepo, "findAllInstitutions").mockResolvedValue(institutions as any);
+      jest
+        .spyOn(financialRepo, "findAllInstitutions")
+        .mockResolvedValue(institutions as any);
 
       const result = await service.getAllInstitutions();
 
@@ -161,8 +192,12 @@ describe("Financial Integration Tests", () => {
         institution_id: institution._id,
       };
 
-      jest.spyOn(financialRepo, "findById").mockResolvedValue(institution as any);
-      jest.spyOn(financialRepo, "createProduct").mockResolvedValue(mockProduct as any);
+      jest
+        .spyOn(financialRepo, "findById")
+        .mockResolvedValue(institution as any);
+      jest
+        .spyOn(financialRepo, "createProduct")
+        .mockResolvedValue(mockProduct as any);
 
       const result = await service.createProduct(productData);
 
@@ -172,4 +207,3 @@ describe("Financial Integration Tests", () => {
     });
   });
 });
-

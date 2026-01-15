@@ -4,6 +4,7 @@ import {
   describe,
   it,
   expect,
+  jest,
   beforeAll,
   afterAll,
   beforeEach,
@@ -17,16 +18,29 @@ import { EvRepository } from "../../src/modules/ev/ev.repository";
 import { User } from "../../src/entities/User";
 import { UserRole } from "../../src/shared/enum/enum";
 
-jest.mock("../../src/shared/cache/CacheService", () => ({
-  default: {
-    getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
+jest.mock("../../src/shared/cache/CacheService", () => {
+  const mockGetOrSet = jest.fn() as jest.MockedFunction<any>;
+  mockGetOrSet.mockImplementation(async (key: string, fetchFunction: any) => {
+    if (typeof fetchFunction === "function") {
+      return fetchFunction();
+    }
+    return null;
+  });
+
+  const mockDeletePattern = jest.fn() as jest.MockedFunction<any>;
+  mockDeletePattern.mockResolvedValue(0);
+
+  return {
+    default: {
+      getOrSet: mockGetOrSet,
+      delete: jest.fn(),
+      deletePattern: mockDeletePattern,
+    },
+    getOrSet: mockGetOrSet,
     delete: jest.fn(),
-    deletePattern: jest.fn().mockResolvedValue(0),
-  },
-  getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
-  delete: jest.fn(),
-  deletePattern: jest.fn().mockResolvedValue(0),
-}));
+    deletePattern: mockDeletePattern,
+  };
+});
 
 describe("TestDrive Integration Tests", () => {
   let service: ReturnType<typeof testDriveService>;
@@ -42,7 +56,12 @@ describe("TestDrive Integration Tests", () => {
     sellerRepo = SellerRepository;
     evRepo = EvRepository;
     const mockNotificationService = {} as any;
-    service = testDriveService(testDriveRepo, sellerRepo, evRepo, mockNotificationService);
+    service = testDriveService(
+      testDriveRepo,
+      sellerRepo,
+      evRepo,
+      mockNotificationService
+    );
   });
 
   beforeEach(async () => {
@@ -94,4 +113,3 @@ describe("TestDrive Integration Tests", () => {
     });
   });
 });
-

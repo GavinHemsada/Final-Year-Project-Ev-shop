@@ -10,7 +10,10 @@ import {
   afterAll,
 } from "@jest/globals";
 import mongoose, { Types } from "mongoose";
-import { userService, IUserService } from "../../../src/modules/user/user.service";
+import {
+  userService,
+  IUserService,
+} from "../../../src/modules/user/user.service";
 import { IUserRepository } from "../../../src/modules/user/user.repository";
 import CacheService from "../../../src/shared/cache/CacheService";
 import { IUser } from "../../../src/entities/User";
@@ -73,35 +76,6 @@ describe("UserService", () => {
       }
       await mongoose.connection.close();
     }
-  });
-
-  describe("findAll", () => {
-    it("should return all users from the repository", async () => {
-      const mockUsers = [
-        createMockUser({ name: "User 1" }),
-        createMockUser({ name: "User 2" }),
-      ] as IUser[];
-
-      mockUserRepo.findAll.mockResolvedValue(mockUsers);
-
-      const result = await service.findAll();
-
-      expect(result.success).toBe(true);
-      expect(result.users).toEqual(mockUsers);
-      expect(mockUserRepo.findAll).toHaveBeenCalledTimes(1);
-      expect(CacheService.getOrSet).toHaveBeenCalledWith(
-        "users",
-        expect.any(Function),
-        3600
-      );
-    });
-
-    it("should return an error if repository fails", async () => {
-      mockUserRepo.findAll.mockRejectedValue(new Error("DB Error"));
-      const result = await service.findAll();
-      expect(result.success).toBe(false);
-      expect(result.error).toBe("Failed to fetch users");
-    });
   });
 
   describe("findAll", () => {

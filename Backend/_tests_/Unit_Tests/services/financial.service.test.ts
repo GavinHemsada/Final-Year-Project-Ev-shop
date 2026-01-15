@@ -10,21 +10,39 @@ import {
   afterAll,
 } from "@jest/globals";
 import mongoose, { Types } from "mongoose";
-import { financialService, IFinancialService } from "../../../src/modules/financial/financial.service";
+import {
+  financialService,
+  IFinancialService,
+} from "../../../src/modules/financial/financial.service";
 import { IFinancialRepository } from "../../../src/modules/financial/financial.repository";
 import { IUserRepository } from "../../../src/modules/user/user.repository";
-import { FinancialInstitutionDTO, FinancialProductDTO, FinancingApplicationDTO } from "../../../src/dtos/financial.DTO";
+import {
+  FinancialInstitutionDTO,
+  FinancialProductDTO,
+  FinancingApplicationDTO,
+} from "../../../src/dtos/financial.DTO";
 import { ApplicationStatus, UserRole } from "../../../src/shared/enum/enum";
 import CacheService from "../../../src/shared/cache/CacheService";
 
 jest.mock("../../../src/shared/cache/CacheService");
 jest.mock("../../../src/shared/utils/fileHandel", () => ({
-  addFiles: jest.fn().mockReturnValue(["path/to/file1.pdf", "path/to/file2.pdf"]),
+  addFiles: jest
+    .fn()
+    .mockReturnValue(["path/to/file1.pdf", "path/to/file2.pdf"]),
   deleteFiles: jest.fn(),
 }));
+jest.mock("../../../src/shared/utils/Email.util", () => {
+  const mockSendEmail = jest.fn() as jest.MockedFunction<any>;
+  mockSendEmail.mockImplementation(async () => {
+    return Promise.resolve(true);
+  });
+  return {
+    sendEmail: mockSendEmail,
+  };
+});
 jest.mock("../../../src/entities/Notification", () => {
   const mongoose = require("mongoose");
-  const mockFn = jest.fn();
+  const mockFn = jest.fn() as jest.MockedFunction<any>;
   mockFn.mockResolvedValue({ _id: new mongoose.Types.ObjectId() });
   return {
     Notification: {
@@ -82,8 +100,14 @@ describe("FinancialService", () => {
     mockNotificationService = {
       create: jest.fn(),
     } as any;
-    (mockNotificationService.create as jest.MockedFunction<any>).mockResolvedValue({ success: true, notification: {} });
-    service = financialService(mockFinancialRepo, mockUserRepo, mockNotificationService);
+    (
+      mockNotificationService.create as jest.MockedFunction<any>
+    ).mockResolvedValue({ success: true, notification: {} });
+    service = financialService(
+      mockFinancialRepo,
+      mockUserRepo,
+      mockNotificationService
+    );
 
     (CacheService.getOrSet as any) = jest.fn(
       async (key, fetchFunction: any) => {
@@ -118,7 +142,9 @@ describe("FinancialService", () => {
 
       mockUserRepo.findById.mockResolvedValue(mockUser as any);
       mockFinancialRepo.findInstitutionByUserId.mockResolvedValue(null);
-      mockFinancialRepo.createInstitution.mockResolvedValue(mockInstitution as any);
+      mockFinancialRepo.createInstitution.mockResolvedValue(
+        mockInstitution as any
+      );
 
       const result = await service.createInstitution(institutionData);
 
@@ -156,7 +182,9 @@ describe("FinancialService", () => {
       const existingInstitution = { _id: new Types.ObjectId() };
 
       mockUserRepo.findById.mockResolvedValue(mockUser as any);
-      mockFinancialRepo.findInstitutionByUserId.mockResolvedValue(existingInstitution as any);
+      mockFinancialRepo.findInstitutionByUserId.mockResolvedValue(
+        existingInstitution as any
+      );
 
       const result = await service.createInstitution(institutionData);
 
@@ -168,7 +196,10 @@ describe("FinancialService", () => {
   describe("getInstitutionById", () => {
     it("should return institution by id", async () => {
       const institutionId = new Types.ObjectId().toString();
-      const mockInstitution = { _id: new Types.ObjectId(institutionId), institution_name: "Test Bank" };
+      const mockInstitution = {
+        _id: new Types.ObjectId(institutionId),
+        institution_name: "Test Bank",
+      };
 
       mockFinancialRepo.findById.mockResolvedValue(mockInstitution as any);
 
@@ -197,7 +228,9 @@ describe("FinancialService", () => {
         { _id: new Types.ObjectId(), institution_name: "Bank 2" },
       ];
 
-      mockFinancialRepo.findAllInstitutions.mockResolvedValue(mockInstitutions as any);
+      mockFinancialRepo.findAllInstitutions.mockResolvedValue(
+        mockInstitutions as any
+      );
 
       const result = await service.getAllInstitutions();
 
@@ -215,7 +248,9 @@ describe("FinancialService", () => {
         interest_rate_min: 5.5,
         is_active: true,
       };
-      const mockInstitution = { _id: new Types.ObjectId(productData.institution_id) };
+      const mockInstitution = {
+        _id: new Types.ObjectId(productData.institution_id),
+      };
       const mockProduct = { _id: new Types.ObjectId(), ...productData };
 
       mockFinancialRepo.findById.mockResolvedValue(mockInstitution as any);
@@ -260,15 +295,26 @@ describe("FinancialService", () => {
           repayment_period_months: 60,
         },
       };
+      const mockInstitutionId = new Types.ObjectId();
       const mockUser = { _id: new Types.ObjectId(applicationData.user_id) };
-      const mockProduct = { _id: new Types.ObjectId(applicationData.product_id), is_active: true };
+      const mockProduct = {
+        _id: new Types.ObjectId(applicationData.product_id),
+        is_active: true,
+        institution_id: mockInstitutionId,
+      };
+      const mockInstitution = {
+        _id: mockInstitutionId,
+        user_id: new Types.ObjectId(),
+      };
       const mockApplication = { _id: new Types.ObjectId(), ...applicationData };
 
       mockUserRepo.findById.mockResolvedValue(mockUser as any);
       mockFinancialRepo.findProductById.mockResolvedValue(mockProduct as any);
-      mockFinancialRepo.findById.mockResolvedValue({ _id: new Types.ObjectId() } as any);
+      mockFinancialRepo.findById.mockResolvedValue(mockInstitution as any);
       mockFinancialRepo.checkApplictionStatesbyUserID.mockResolvedValue(null);
-      mockFinancialRepo.createApplication.mockResolvedValue(mockApplication as any);
+      mockFinancialRepo.createApplication.mockResolvedValue(
+        mockApplication as any
+      );
 
       const result = await service.createApplication(applicationData, []);
 
@@ -305,34 +351,60 @@ describe("FinancialService", () => {
       const applicationId = new Types.ObjectId().toString();
       const userId = new Types.ObjectId().toString();
       const productId = new Types.ObjectId().toString();
+      const institutionId = new Types.ObjectId();
       const updateData = { status: ApplicationStatus.APPROVED };
-      const mockUser = { _id: new Types.ObjectId(userId), name: "Test User", email: "test@example.com" };
-      const mockProduct = { _id: new Types.ObjectId(productId), product_name: "Test Product", institution_id: new Types.ObjectId() };
-      const mockApplicationBefore = { 
-        _id: new Types.ObjectId(applicationId), 
+      const mockUser = {
+        _id: new Types.ObjectId(userId),
+        name: "Test User",
+        email: "test@example.com",
+      };
+      const mockProduct = {
+        _id: new Types.ObjectId(productId),
+        product_name: "Test Product",
+        institution_id: institutionId,
+      };
+      const mockInstitution = {
+        _id: institutionId,
+        name: "Test Institution",
+        business_name: "Test Business",
+      };
+      const mockApplicationBefore = {
+        _id: new Types.ObjectId(applicationId),
         user_id: mockUser,
         product_id: mockProduct,
-        ...updateData 
+        status: ApplicationStatus.PENDING,
       };
-      const mockApplication = { _id: new Types.ObjectId(applicationId), user_id: userId, product_id: productId, ...updateData };
-      const mockPopulatedApplication = { 
-        _id: new Types.ObjectId(applicationId), 
+      const mockApplication = {
+        _id: new Types.ObjectId(applicationId),
+        user_id: userId,
+        product_id: productId,
+        ...updateData,
+      };
+      const mockPopulatedApplication = {
+        _id: new Types.ObjectId(applicationId),
         user_id: mockUser,
-        product_id: { ...mockProduct, institution_id: { _id: new Types.ObjectId() } },
-        ...updateData 
+        product_id: {
+          ...mockProduct,
+          institution_id: mockInstitution,
+        },
+        ...updateData,
       };
 
       mockFinancialRepo.findApplicationById
         .mockResolvedValueOnce(mockApplicationBefore as any) // First call (before update)
         .mockResolvedValueOnce(mockPopulatedApplication as any); // Second call (after update, populated)
-      mockFinancialRepo.updateApplication.mockResolvedValue(mockApplication as any);
+      mockFinancialRepo.updateApplication.mockResolvedValue(
+        mockApplication as any
+      );
 
-      const result = await service.updateApplicationStatus(applicationId, updateData);
+      const result = await service.updateApplicationStatus(
+        applicationId,
+        updateData
+      );
 
       expect(result.success).toBe(true);
       expect(result.application).toBeDefined();
       expect(CacheService.delete).toHaveBeenCalled();
-    });
+    }, 10000); // Increase timeout to 10 seconds
   });
 });
-

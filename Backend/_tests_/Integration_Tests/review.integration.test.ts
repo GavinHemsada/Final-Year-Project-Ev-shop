@@ -71,6 +71,21 @@ describe("Review Integration Tests", () => {
 
   describe("Review Operations", () => {
     it("should create a new review", async () => {
+      // Verify user exists before creating review - retry if needed
+      let foundUser = await UserRepository.findById(testUserId);
+      if (!foundUser) {
+        // Wait a bit and retry
+        await new Promise(resolve => setTimeout(resolve, 100));
+        foundUser = await UserRepository.findById(testUserId);
+        if (!foundUser) {
+          console.error("User not found:", testUserId);
+          // Try to find directly
+          const directFind = await User.findById(testUserId);
+          console.error("Direct find result:", directFind ? "Found" : "Not found");
+        }
+      }
+      expect(foundUser).toBeDefined();
+
       const reviewData = {
         reviewer_id: testUserId,
         target_id: testTargetId,
@@ -85,7 +100,13 @@ describe("Review Integration Tests", () => {
       const result = await service.createReview(reviewData);
 
       if (!result.success) {
-        console.log("Review creation failed:", result.error);
+        console.error("Review creation failed:", result.error);
+        // Check if reviewer was found
+        const reviewerCheck = await UserRepository.findById(testUserId);
+        console.error("Reviewer check:", reviewerCheck ? "Found" : "Not found");
+        if (reviewerCheck) {
+          console.error("Reviewer ID:", reviewerCheck._id.toString());
+        }
       }
       
       expect(result.success).toBe(true);

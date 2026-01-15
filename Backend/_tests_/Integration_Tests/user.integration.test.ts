@@ -4,6 +4,7 @@ import {
   describe,
   it,
   expect,
+  jest,
   beforeAll,
   afterAll,
   beforeEach,
@@ -15,16 +16,23 @@ import { UserRepository } from "../../src/modules/user/user.repository";
 import { User } from "../../src/entities/User";
 import { UserRole } from "../../src/shared/enum/enum";
 
-jest.mock("../../src/shared/cache/CacheService", () => ({
-  getOrSet: jest.fn(async (key: string, fetchFunction: unknown) => {
-    if (typeof fetchFunction === 'function') {
-      const result = await (fetchFunction as () => Promise<any>)();
-      return result;
+jest.mock("../../src/shared/cache/CacheService", () => {
+  const mockGetOrSet = jest.fn() as jest.MockedFunction<any>;
+  mockGetOrSet.mockImplementation(async (key: string, fetchFunction: any) => {
+    if (typeof fetchFunction === "function") {
+      return await fetchFunction();
     }
     return null;
-  }),
-  delete: jest.fn(),
-}));
+  });
+  return {
+    default: {
+      getOrSet: mockGetOrSet,
+      delete: jest.fn(),
+    },
+    getOrSet: mockGetOrSet,
+    delete: jest.fn(),
+  };
+});
 
 describe("User Integration Tests", () => {
   let service: ReturnType<typeof userService>;
@@ -64,7 +72,7 @@ describe("User Integration Tests", () => {
 
     it("should find user by email", async () => {
       const userData = {
-        email: "findbyemail@example.com",
+        email: `findbyemail${Date.now()}@example.com`,
         password: "hashedPassword",
         name: "Jane Doe",
         phone: "1234567890",
@@ -74,9 +82,29 @@ describe("User Integration Tests", () => {
       const user = new User(userData);
       await user.save();
 
+      // Verify user was saved correctly
+      expect(user.email).toBe(userData.email);
+
       const foundUser = await repo.findByEmail(userData.email);
 
+      if (!foundUser) {
+        console.error("User not found by email:", userData.email);
+        // Try to find directly
+        const directFind = await User.findOne({ email: userData.email });
+        console.error("Direct find result:", directFind ? "Found" : "Not found");
+        if (directFind) {
+          console.error("Direct find email:", directFind.email);
+          console.error("Direct find object keys:", Object.keys(directFind.toObject()));
+        }
+      } else {
+        // Check if email exists on the found user
+        console.log("Found user keys:", Object.keys(foundUser.toObject ? foundUser.toObject() : foundUser));
+        console.log("Found user email property:", (foundUser as any).email);
+        console.log("Found user email getter:", foundUser.email);
+      }
+
       expect(foundUser).toBeDefined();
+      // The email should be directly accessible on the document
       expect(foundUser?.email).toBe(userData.email);
     });
 
@@ -112,11 +140,15 @@ describe("User Integration Tests", () => {
 
       const updateData = { name: "Updated Name" };
       const foundUser = await repo.findById(user._id.toString());
+      expect(foundUser).toBeDefined();
       if (foundUser) {
         foundUser.name = updateData.name;
         const updatedUser = await repo.update(foundUser);
         expect(updatedUser).toBeDefined();
-        expect(updatedUser?.name).toBe("Updated Name");
+        // Reload the document to ensure we have the latest data
+        const reloadedUser = await repo.findById(user._id.toString());
+        expect(reloadedUser).toBeDefined();
+        expect(reloadedUser?.name).toBe("Updated Name");
       }
     });
 
@@ -143,14 +175,14 @@ describe("User Integration Tests", () => {
     it("should get all users", async () => {
       const users = [
         {
-          email: "user1@example.com",
+          email: `user1${Date.now()}@example.com`,
           password: "hashedPassword",
           name: "User One",
           phone: "1234567890",
           role: [UserRole.USER],
         },
         {
-          email: "user2@example.com",
+          email: `user2${Date.now()}@example.com`,
           password: "hashedPassword",
           name: "User Two",
           phone: "1234567890",
@@ -160,21 +192,22 @@ describe("User Integration Tests", () => {
 
       await User.insertMany(users);
 
-      // Clear cache to ensure fresh data
-      const CacheService = require("../../src/shared/cache/CacheService");
-      jest.spyOn(CacheService, "getOrSet").mockImplementation(async (...args: any[]) => {
-        const fetchFunction = args[1];
-        if (typeof fetchFunction === 'function') {
-          return fetchFunction();
-        }
-        return null;
-      });
+      // Verify users were inserted
+      const directFind = await User.find();
+      expect(directFind.length).toBeGreaterThanOrEqual(2);
 
       const result = await service.findAll();
 
+      if (!result.success) {
+        console.error("FindAll failed:", result.error);
+        // Check what the repository returns directly
+        const repoResult = await repo.findAll();
+        console.error("Repository findAll result:", repoResult ? repoResult.length : "null");
+      }
+
       expect(result.success).toBe(true);
+      expect(result.users).toBeDefined();
       expect(result.users?.length).toBeGreaterThanOrEqual(2);
     });
   });
 });
-

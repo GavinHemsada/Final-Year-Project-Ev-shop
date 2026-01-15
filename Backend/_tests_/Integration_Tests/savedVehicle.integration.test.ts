@@ -5,6 +5,7 @@ import {
   it,
   expect,
   beforeAll,
+  jest,
   afterAll,
   beforeEach,
 } from "@jest/globals";
@@ -15,10 +16,20 @@ import { SavedVehicleRepository } from "../../src/modules/savedVehicle/savedVehi
 import { User } from "../../src/entities/User";
 import { UserRole } from "../../src/shared/enum/enum";
 
-jest.mock("../../src/shared/cache/CacheService", () => ({
-  getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
-  delete: jest.fn(),
-}));
+jest.mock("../../src/shared/cache/CacheService", () => {
+  const mockGetOrSet = jest.fn() as jest.MockedFunction<any>;
+  mockGetOrSet.mockImplementation(async (key: string, fetchFunction: any) => {
+    if (typeof fetchFunction === "function") {
+      return fetchFunction();
+    }
+    return null;
+  });
+
+  return {
+    getOrSet: mockGetOrSet,
+    delete: jest.fn(),
+  };
+});
 
 describe("SavedVehicle Integration Tests", () => {
   let service: ReturnType<typeof savedVehicleService>;
@@ -72,12 +83,14 @@ describe("SavedVehicle Integration Tests", () => {
     });
 
     it("should get saved vehicles by user ID", async () => {
-      jest.spyOn(savedVehicleRepo, "findSavedVehiclesByUserId").mockResolvedValue([
-        {
-          _id: new Types.ObjectId(),
-          listing_id: new Types.ObjectId(),
-        },
-      ] as any);
+      jest
+        .spyOn(savedVehicleRepo, "findSavedVehiclesByUserId")
+        .mockResolvedValue([
+          {
+            _id: new Types.ObjectId(),
+            listing_id: new Types.ObjectId(),
+          },
+        ] as any);
 
       const result = await service.getSavedVehicles(testUserId);
 
@@ -86,4 +99,3 @@ describe("SavedVehicle Integration Tests", () => {
     });
   });
 });
-

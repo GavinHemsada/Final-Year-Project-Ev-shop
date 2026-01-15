@@ -4,6 +4,7 @@ import {
   describe,
   it,
   expect,
+  jest,
   beforeAll,
   afterAll,
   beforeEach,
@@ -16,10 +17,20 @@ import { UserRepository } from "../../src/modules/user/user.repository";
 import { User } from "../../src/entities/User";
 import { UserRole, NotificationType } from "../../src/shared/enum/enum";
 
-jest.mock("../../src/shared/cache/CacheService", () => ({
-  getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
-  delete: jest.fn(),
-}));
+jest.mock("../../src/shared/cache/CacheService", () => {
+  const mockGetOrSet = jest.fn() as jest.MockedFunction<any>;
+  mockGetOrSet.mockImplementation(async (key: string, fetchFunction: any) => {
+    if (typeof fetchFunction === "function") {
+      return fetchFunction();
+    }
+    return null;
+  });
+  
+  return {
+    getOrSet: mockGetOrSet,
+    delete: jest.fn(),
+  };
+});
 
 describe("Notification Integration Tests", () => {
   let service: ReturnType<typeof notificationService>;
@@ -37,17 +48,6 @@ describe("Notification Integration Tests", () => {
   beforeEach(async () => {
     await clearDatabase();
     jest.clearAllMocks();
-
-    // Create test user
-    const user = new User({
-      email: "notifuser@example.com",
-      password: "hashedPassword",
-      name: "Notification User",
-      phone: "1234567890",
-      role: [UserRole.USER],
-    });
-    await user.save();
-    testUserId = user._id.toString();
   });
 
   afterAll(async () => {
@@ -68,6 +68,16 @@ describe("Notification Integration Tests", () => {
       await user.save();
       const testUserId = user._id.toString();
 
+      // Verify user exists before creating notification - retry if needed
+      let foundUser = await UserRepository.findById(testUserId);
+      if (!foundUser) {
+        // Wait a bit and retry
+        await new Promise(resolve => setTimeout(resolve, 100));
+        foundUser = await UserRepository.findById(testUserId);
+      }
+      expect(foundUser).toBeDefined();
+      expect(foundUser?._id.toString()).toBe(testUserId);
+
       const notificationData = {
         user_id: testUserId,
         type: NotificationType.ORDER_CONFIRMED,
@@ -78,12 +88,33 @@ describe("Notification Integration Tests", () => {
       // Don't mock - let it use the real repository
       const result = await service.create(notificationData);
 
+      if (!result.success) {
+        console.error("Notification creation failed:", result.error);
+        // Double-check user exists
+        const userCheck = await UserRepository.findById(testUserId);
+        console.error("User check after failure:", userCheck ? "Found" : "Not found");
+        if (userCheck) {
+          console.error("User ID:", userCheck._id.toString());
+        }
+      }
       expect(result.success).toBe(true);
       expect(result.notification).toBeDefined();
       expect(result.notification?.title).toBe(notificationData.title);
     });
 
     it("should get notifications by user ID", async () => {
+      // Create a test user first
+      const uniqueEmail = `notifuser2${Date.now()}@example.com`;
+      const user = new User({
+        email: uniqueEmail,
+        password: "hashedPassword",
+        name: "Notification User 2",
+        phone: "1234567890",
+        role: [UserRole.USER],
+      });
+      await user.save();
+      const testUserId2 = user._id.toString();
+
       jest.spyOn(notificationRepo, "findByUserId").mockResolvedValue([
         {
           _id: new Types.ObjectId(),
@@ -97,7 +128,7 @@ describe("Notification Integration Tests", () => {
         },
       ] as any);
 
-      const result = await service.findByUserId(testUserId);
+      const result = await service.findByUserId(testUserId2);
 
       expect(result.success).toBe(true);
       expect(result.notifications).toBeDefined();

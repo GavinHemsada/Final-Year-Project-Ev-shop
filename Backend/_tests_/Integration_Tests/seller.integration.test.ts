@@ -5,6 +5,7 @@ import {
   it,
   expect,
   beforeAll,
+  jest,
   afterAll,
   beforeEach,
 } from "@jest/globals";
@@ -18,11 +19,24 @@ import { Seller } from "../../src/entities/Seller";
 import { User } from "../../src/entities/User";
 import { UserRole } from "../../src/shared/enum/enum";
 
-jest.mock("../../src/shared/cache/CacheService", () => ({
-  getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
-  delete: jest.fn(),
-  deletePattern: jest.fn().mockResolvedValue(0),
-}));
+jest.mock("../../src/shared/cache/CacheService", () => {
+  const mockGetOrSet = jest.fn() as jest.MockedFunction<any>;
+  mockGetOrSet.mockImplementation(async (key: string, fetchFunction: any) => {
+    if (typeof fetchFunction === "function") {
+      return fetchFunction();
+    }
+    return null;
+  });
+
+  const mockDeletePattern = jest.fn() as jest.MockedFunction<any>;
+  mockDeletePattern.mockResolvedValue(0);
+
+  return {
+    getOrSet: mockGetOrSet,
+    delete: jest.fn(),
+    deletePattern: mockDeletePattern,
+  };
+});
 
 describe("Seller Integration Tests", () => {
   let service: ReturnType<typeof sellerService>;
@@ -72,13 +86,16 @@ describe("Seller Integration Tests", () => {
         country: "Test Country",
       };
 
+      const mockSave = jest.fn() as jest.MockedFunction<any>;
+      mockSave.mockResolvedValue({
+        _id: new Types.ObjectId(testUserId),
+        role: [UserRole.USER, UserRole.SELLER],
+      });
+
       jest.spyOn(userRepo, "findById").mockResolvedValue({
         _id: new Types.ObjectId(testUserId),
         role: [UserRole.USER],
-        save: jest.fn().mockResolvedValue({
-          _id: new Types.ObjectId(testUserId),
-          role: [UserRole.USER, UserRole.SELLER],
-        }),
+        save: mockSave,
       } as any);
       jest.spyOn(sellerRepo, "findByUserId").mockResolvedValue(null);
       jest.spyOn(sellerRepo, "create").mockResolvedValue({
@@ -156,4 +173,3 @@ describe("Seller Integration Tests", () => {
     });
   });
 });
-

@@ -4,6 +4,7 @@ import {
   describe,
   it,
   expect,
+  jest,
   beforeAll,
   afterAll,
   beforeEach,
@@ -18,11 +19,24 @@ import { User } from "../../src/entities/User";
 import { UserRole } from "../../src/shared/enum/enum";
 import { ListingType, VehicleCondition } from "../../src/shared/enum/enum";
 
-jest.mock("../../src/shared/cache/CacheService", () => ({
-  getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
-  delete: jest.fn(),
-  deletePattern: jest.fn().mockResolvedValue(0),
-}));
+jest.mock("../../src/shared/cache/CacheService", () => {
+  const mockGetOrSet = jest.fn() as jest.MockedFunction<any>;
+  mockGetOrSet.mockImplementation(async (key: string, fetchFunction: any) => {
+    if (typeof fetchFunction === "function") {
+      return fetchFunction();
+    }
+    return null;
+  });
+
+  const mockDeletePattern = jest.fn() as jest.MockedFunction<any>;
+  mockDeletePattern.mockResolvedValue(0);
+
+  return {
+    getOrSet: mockGetOrSet,
+    delete: jest.fn(),
+    deletePattern: mockDeletePattern,
+  };
+});
 
 describe("Cart Integration Tests", () => {
   let service: ReturnType<typeof cartService>;
@@ -67,8 +81,13 @@ describe("Cart Integration Tests", () => {
         quantity: 1,
       };
 
-      const mockCart = { _id: new Types.ObjectId(), user_id: new Types.ObjectId(testUserId) };
-      jest.spyOn(cartRepo, "findCartByUserId").mockResolvedValue(mockCart as any);
+      const mockCart = {
+        _id: new Types.ObjectId(),
+        user_id: new Types.ObjectId(testUserId),
+      };
+      jest
+        .spyOn(cartRepo, "findCartByUserId")
+        .mockResolvedValue(mockCart as any);
       jest.spyOn(cartRepo, "findCartItemByListing").mockResolvedValue(null);
       jest.spyOn(cartRepo, "addCartItem").mockResolvedValue({
         _id: new Types.ObjectId(),
@@ -109,7 +128,9 @@ describe("Cart Integration Tests", () => {
         },
       ];
 
-      jest.spyOn(cartRepo, "findCartByUserId").mockResolvedValue(mockCart as any);
+      jest
+        .spyOn(cartRepo, "findCartByUserId")
+        .mockResolvedValue(mockCart as any);
       jest.spyOn(cartRepo, "findCartItems").mockResolvedValue(cartItems as any);
 
       const result = await service.getCart(testUserId);
@@ -131,14 +152,18 @@ describe("Cart Integration Tests", () => {
       });
       await cartItem.save();
 
-      jest.spyOn(cartRepo, "findCartItemById").mockResolvedValue(cartItem as any);
+      jest
+        .spyOn(cartRepo, "findCartItemById")
+        .mockResolvedValue(cartItem as any);
       jest.spyOn(cartRepo, "findCartById").mockResolvedValue(cart as any);
       jest.spyOn(cartRepo, "updateCartItem").mockResolvedValue({
         ...cartItem.toObject(),
         quantity: 3,
       } as any);
 
-      const result = await service.updateItemInCart(cartItem._id.toString(), { quantity: 3 });
+      const result = await service.updateItemInCart(cartItem._id.toString(), {
+        quantity: 3,
+      });
 
       expect(result.success).toBe(true);
       expect(result.item?.quantity).toBe(3);
@@ -157,7 +182,9 @@ describe("Cart Integration Tests", () => {
       });
       await cartItem.save();
 
-      jest.spyOn(cartRepo, "findCartItemById").mockResolvedValue(cartItem as any);
+      jest
+        .spyOn(cartRepo, "findCartItemById")
+        .mockResolvedValue(cartItem as any);
       jest.spyOn(cartRepo, "findCartById").mockResolvedValue(cart as any);
       jest.spyOn(cartRepo, "removeCartItem").mockResolvedValue(true);
 
@@ -187,8 +214,13 @@ describe("Cart Integration Tests", () => {
 
       await CartItem.insertMany(cartItems);
 
-      const mockCart = { _id: new Types.ObjectId(), user_id: new Types.ObjectId(testUserId) };
-      jest.spyOn(cartRepo, "findCartByUserId").mockResolvedValue(mockCart as any);
+      const mockCart = {
+        _id: new Types.ObjectId(),
+        user_id: new Types.ObjectId(testUserId),
+      };
+      jest
+        .spyOn(cartRepo, "findCartByUserId")
+        .mockResolvedValue(mockCart as any);
       jest.spyOn(cartRepo, "clearCart").mockResolvedValue(true);
 
       const result = await service.clearUserCart(testUserId);
@@ -197,4 +229,3 @@ describe("Cart Integration Tests", () => {
     });
   });
 });
-

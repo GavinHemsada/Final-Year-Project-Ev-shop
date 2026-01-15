@@ -4,6 +4,7 @@ import {
   describe,
   it,
   expect,
+  jest,
   beforeAll,
   afterAll,
   beforeEach,
@@ -15,12 +16,23 @@ import { AuthRepository } from "../../src/modules/auth/auth.repository";
 import { UserRepository } from "../../src/modules/user/user.repository";
 import { createTestUser } from "./setup/testHelpers";
 import { sendEmail } from "../../src/shared/utils/Email.util";
+import { User } from "../../src/entities/User";
 
 jest.mock("../../src/shared/utils/Email.util");
-jest.mock("../../src/shared/cache/CacheService", () => ({
-  getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
-  delete: jest.fn(),
-}));
+jest.mock("../../src/shared/cache/CacheService", () => {
+  const mockGetOrSet = jest.fn() as jest.MockedFunction<any>;
+  mockGetOrSet.mockImplementation(async (key: string, fetchFunction: any) => {
+    if (typeof fetchFunction === "function") {
+      return fetchFunction();
+    }
+    return null;
+  });
+
+  return {
+    getOrSet: mockGetOrSet,
+    delete: jest.fn(),
+  };
+});
 
 describe("Auth Integration Tests", () => {
   let service: ReturnType<typeof authService>;
@@ -37,7 +49,8 @@ describe("Auth Integration Tests", () => {
   beforeEach(async () => {
     await clearDatabase();
     jest.clearAllMocks();
-    (sendEmail as jest.Mock).mockResolvedValue(true);
+    const mockSendEmail = sendEmail as jest.MockedFunction<any>;
+    mockSendEmail.mockResolvedValue(true);
   });
 
   afterAll(async () => {
@@ -47,30 +60,76 @@ describe("Auth Integration Tests", () => {
   describe("User Registration", () => {
     it("should register a new user successfully", async () => {
       const userData = {
-        email: "newuser@example.com",
+        email: `newuser${Date.now()}@example.com`,
         password: "Password123!",
         confirmPassword: "Password123!",
       };
 
       const result = await service.register(userData);
 
+      if (!result.success) {
+        console.error("Registration failed:", result.error);
+        // Check if user was actually created despite the error
+        const checkUser = await userRepo.findByEmail(userData.email);
+        console.error("User exists in DB:", checkUser ? "Yes" : "No");
+      }
       expect(result.success).toBe(true);
       expect(result.user).toBeDefined();
       expect(result.user?.email).toBe(userData.email);
     });
 
     it("should fail to register with existing email", async () => {
+      const uniqueEmail = `existing${Date.now()}@example.com`;
       const userData = {
-        email: "existing@example.com",
+        email: uniqueEmail,
         password: "Password123!",
         confirmPassword: "Password123!",
       };
 
       // Register first time
-      await service.register(userData);
+      const firstResult = await service.register(userData);
+      expect(firstResult.success).toBe(true);
+      expect(firstResult.user).toBeDefined();
+      expect(firstResult.user?.email).toBe(uniqueEmail);
+      
+      // Verify user exists in database - retry a few times to handle timing
+      let foundUserAuth = null;
+      for (let i = 0; i < 5; i++) {
+        foundUserAuth = await authRepo.findByEmail(uniqueEmail);
+        if (foundUserAuth) break;
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      
+      if (!foundUserAuth) {
+        console.error("authRepo.findByEmail did not find the user after retries!");
+        // Try direct query
+        const directFind = await User.findOne({ email: uniqueEmail });
+        console.error("Direct User.findOne result:", directFind ? "Found" : "Not found");
+        if (directFind) {
+          console.error("Direct find email:", directFind.email);
+          console.error("Direct find _id:", directFind._id);
+        }
+        // Also try without select
+        const directFindNoSelect = await User.findOne({ email: uniqueEmail });
+        console.error("Direct find (no select) result:", directFindNoSelect ? "Found" : "Not found");
+      }
+      expect(foundUserAuth).toBeDefined();
+      expect(foundUserAuth?.email).toBe(uniqueEmail);
 
       // Try to register again with same email
       const result = await service.register(userData);
+
+      if (result.success) {
+        console.error("Second registration succeeded when it should have failed");
+        console.error("First registration user:", firstResult.user);
+        console.error("Found user via authRepo:", foundUserAuth);
+        // Check directly in database
+        const directFind = await User.findOne({ email: uniqueEmail });
+        console.error("Direct database find:", directFind ? "Found" : "Not found");
+        if (directFind) {
+          console.error("Direct find email:", directFind.email);
+        }
+      }
 
       expect(result.success).toBe(false);
       expect(result.error).toContain("already exists");
@@ -149,4 +208,3 @@ describe("Auth Integration Tests", () => {
     });
   });
 });
-

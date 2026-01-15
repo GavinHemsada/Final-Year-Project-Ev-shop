@@ -4,6 +4,7 @@ import {
   describe,
   it,
   expect,
+  jest,
   beforeAll,
   afterAll,
   beforeEach,
@@ -15,10 +16,20 @@ import { RepairLocationRepository } from "../../src/modules/repairLocation/repai
 import { User } from "../../src/entities/User";
 import { UserRole } from "../../src/shared/enum/enum";
 
-jest.mock("../../src/shared/cache/CacheService", () => ({
-  getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
-  delete: jest.fn(),
-}));
+jest.mock("../../src/shared/cache/CacheService", () => {
+  const mockGetOrSet = jest.fn() as jest.MockedFunction<any>;
+  mockGetOrSet.mockImplementation(async (key: string, fetchFunction: any) => {
+    if (typeof fetchFunction === "function") {
+      return fetchFunction();
+    }
+    return null;
+  });
+
+  return {
+    getOrSet: mockGetOrSet,
+    delete: jest.fn(),
+  };
+});
 
 describe("RepairLocation Integration Tests", () => {
   let service: ReturnType<typeof repairLocationService>;
@@ -59,7 +70,7 @@ describe("RepairLocation Integration Tests", () => {
         address: "123 Test St",
         phone: "1234567890",
         latitude: 40.7128,
-        longitude: -74.0060,
+        longitude: -74.006,
       };
 
       jest.spyOn(repairLocationRepo, "create").mockResolvedValue({
@@ -93,4 +104,3 @@ describe("RepairLocation Integration Tests", () => {
     });
   });
 });
-

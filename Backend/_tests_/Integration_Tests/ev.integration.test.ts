@@ -4,6 +4,7 @@ import {
   describe,
   it,
   expect,
+  jest,
   beforeAll,
   afterAll,
   beforeEach,
@@ -16,11 +17,24 @@ import { SellerRepository } from "../../src/modules/seller/seller.repository";
 import { EvBrand } from "../../src/entities/EvBrand";
 import { ListingType, VehicleCondition } from "../../src/shared/enum/enum";
 
-jest.mock("../../src/shared/cache/CacheService", () => ({
-  getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
-  delete: jest.fn(),
-  deletePattern: jest.fn().mockResolvedValue(0),
-}));
+jest.mock("../../src/shared/cache/CacheService", () => {
+  const mockGetOrSet = jest.fn() as jest.MockedFunction<any>;
+  mockGetOrSet.mockImplementation(async (key: string, fetchFunction: any) => {
+    if (typeof fetchFunction === "function") {
+      return fetchFunction();
+    }
+    return null;
+  });
+
+  const mockDeletePattern = jest.fn() as jest.MockedFunction<any>;
+  mockDeletePattern.mockResolvedValue(0);
+
+  return {
+    getOrSet: mockGetOrSet,
+    delete: jest.fn(),
+    deletePattern: mockDeletePattern,
+  };
+});
 
 jest.mock("../../src/shared/utils/imageHandel", () => ({
   addImage: jest.fn().mockReturnValue("path/to/image.jpg"),
@@ -126,4 +140,3 @@ describe("EV Integration Tests", () => {
     });
   });
 });
-
