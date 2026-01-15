@@ -562,6 +562,8 @@ export function financialService(
         const application = await repo.createApplication(
           applicationData as any
         );
+        
+        if (!application) return { success: false, error: "Failed to create application" };
 
         // Invalidate application caches
         await Promise.all([

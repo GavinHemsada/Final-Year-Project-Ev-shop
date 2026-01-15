@@ -136,6 +136,8 @@ export function notificationService(
         }
 
         const notification = await notificationRepo.create(data);
+        
+        if (!notification) return { success: false, error: "Failed to create notification" };
 
         return { success: true, notification };
       } catch (err) {

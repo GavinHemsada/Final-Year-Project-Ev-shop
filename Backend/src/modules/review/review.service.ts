@@ -118,8 +118,9 @@ export function reviewService(
         const reviews = await CacheService.getOrSet(
           cacheKey,
           async () => {
-            const listingReviews =
-              await reviewRepo.getReviewbyListingId(listingId);
+            const listingReviews = await reviewRepo.getReviewbyListingId(
+              listingId
+            );
             return listingReviews ?? [];
           },
           3600 // Cache for 1 hour
@@ -219,6 +220,9 @@ export function reviewService(
         const reviewer = await userRepo.findById(reviewData.reviewer_id);
         if (!reviewer) return { success: false, error: "Reviewer not found" };
         const review = await reviewRepo.createReview(reviewData);
+
+        if (!review)
+          return { success: false, error: "Failed to create review" };
 
         // Invalidate caches for the general list, the target, and the reviewer.
         await Promise.all([

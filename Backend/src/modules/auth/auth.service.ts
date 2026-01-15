@@ -118,6 +118,9 @@ export function authService(authRepo: IAuthRepository): IAuthService {
           return { success: false, error: "User already exists" };
         }
         const newUser = await authRepo.save(email, password);
+        if (!newUser) {
+          return { success: false, error: "Registration failed" };
+        }
         return { success: true, user: newUser };
       } catch (err) {
         return { success: false, error: "Registration failed" };

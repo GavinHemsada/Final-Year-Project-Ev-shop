@@ -146,7 +146,8 @@ export function userService(userRepo: IUserRepository): IUserService {
         if (!user) return { success: false, error: "User not found" };
 
         if (user.profile_image) deleteImage(user.profile_image);
-        await userRepo.delete(id);
+        const deleted = await userRepo.delete(id);
+        if (!deleted) return { success: false, error: "Failed to delete user" };
 
         // Invalidate caches after a successful deletion.
         await CacheService.delete(`user_${id}`);

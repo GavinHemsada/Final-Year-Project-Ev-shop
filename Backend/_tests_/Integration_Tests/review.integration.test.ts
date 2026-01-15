@@ -7,6 +7,7 @@ import {
   beforeAll,
   afterAll,
   beforeEach,
+  jest,
 } from "@jest/globals";
 import mongoose, { Types } from "mongoose";
 import { setupTestDB, teardownTestDB, clearDatabase } from "./setup/testSetup";
@@ -18,8 +19,9 @@ import { Seller } from "../../src/entities/Seller";
 import { UserRole, ReviewType } from "../../src/shared/enum/enum";
 
 jest.mock("../../src/shared/cache/CacheService", () => ({
-  getOrSet: jest.fn(async (key, fetchFunction) => fetchFunction()),
-  delete: jest.fn(),
+  getOrSet: async (key: any, fetchFunction: any) => fetchFunction(),
+  delete: () => {},
+  deletePattern: () => {},
 }));
 
 describe("Review Integration Tests", () => {
