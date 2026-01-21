@@ -49,23 +49,20 @@ export class FinancialInstitutionDTO {
   /**
    * The URL of the institution's official website. Must be a valid URL format. This field is optional.
    */
-  @IsOptional()
   @IsUrl()
-  website?: string;
+  website!: string;
 
   /**
    * The primary contact email for the institution. Must be a valid email format. This field is optional.
    */
-  @IsOptional()
   @IsEmail()
-  contact_email?: string;
+  contact_email!: string;
 
   /**
    * The primary contact phone number for the institution. Must be a valid phone number format. This field is optional.
    */
-  @IsOptional()
   @IsPhoneNumber()
-  contact_phone?: string;
+  contact_phone!: string;
 }
 
 /**

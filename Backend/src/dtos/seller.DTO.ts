@@ -20,9 +20,8 @@ export class SellerDTO {
   /**
    * The seller's business license or registration number. This field is optional.
    */
-  @IsOptional()
   @IsString()
-  license_number?: string;
+  license_number!: string;
 
   /**
    * A brief description of the seller's business. This field is optional.
@@ -34,9 +33,8 @@ export class SellerDTO {
   /**
    * The URL of the seller's business website. Must be a valid URL format. This field is optional.
    */
-  @IsOptional()
   @IsUrl()
-  website?: string;
+  website!: string;
   /**
    * The physical address of the seller's business.
    */

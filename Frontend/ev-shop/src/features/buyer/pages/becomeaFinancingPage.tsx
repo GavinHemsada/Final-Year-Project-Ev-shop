@@ -57,11 +57,50 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
       ...prevData,
       [name]: value,
     }));
+    validateField(name, value);
   };
 
-  /**
-   * --- NEW: Validation logic ---
-   */
+  const validateField = (name: string, value: string) => {
+    let error = "";
+    switch (name) {
+      case "name":
+        if (!value.trim()) error = "Institution name is required.";
+        break;
+      case "type":
+        if (!value.trim()) error = "Institution type is required.";
+        break;
+      case "contact_email":
+        if (!value.trim()) {
+          error = "Contact email is required.";
+        } else if (!/^\S+@\S+\.\S+$/.test(value)) {
+          error = "Please enter a valid email address.";
+        }
+        break;
+      case "contact_phone":
+        if (!value.trim()) {
+          error = "Contact phone is required.";
+        } else if (!/^\+?[0-9\s()-]{10,15}$/.test(value)) {
+          error = "Please enter a valid phone number.";
+        }
+        break;
+      case "website":
+        if (!value.trim()) {
+          error = "Website is required.";
+        } else {
+          try {
+            new URL(value);
+          } catch (_) {
+            error = "Please enter a valid URL (e.g., https://example.com).";
+          }
+        }
+        break;
+      default:
+        break;
+    }
+    setErrors((prev) => ({ ...prev, [name]: error }));
+    return !error;
+  };
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -72,20 +111,21 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
       newErrors.type = "Institution type is required.";
     }
 
-    // Optional field validations
-    if (
-      formData.contact_email &&
-      !/^\S+@\S+\.\S+$/.test(formData.contact_email)
-    ) {
+    if (!formData.contact_email.trim()) {
+      newErrors.contact_email = "Contact email is required.";
+    } else if (!/^\S+@\S+\.\S+$/.test(formData.contact_email)) {
       newErrors.contact_email = "Please enter a valid email address.";
     }
-    if (
-      formData.contact_phone &&
-      !/^\+?[0-9\s()-]{10,15}$/.test(formData.contact_phone)
-    ) {
+
+    if (!formData.contact_phone.trim()) {
+      newErrors.contact_phone = "Contact phone is required.";
+    } else if (!/^\+?[0-9\s()-]{10,15}$/.test(formData.contact_phone)) {
       newErrors.contact_phone = "Please enter a valid phone number.";
     }
-    if (formData.website.trim()) {
+
+    if (!formData.website.trim()) {
+      newErrors.website = "Website is required.";
+    } else {
       try {
         new URL(formData.website);
       } catch (_) {
@@ -193,8 +233,9 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
                 type="text"
                 value={formData.name}
                 onChange={handleChange}
-                required
-                className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className={`w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border ${
+                  errors.name ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
                 placeholder="e.g., Global Finance Bank"
               />
               {errors.name && (
@@ -215,8 +256,9 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
                 name="type"
                 value={formData.type}
                 onChange={handleChange}
-                required
-                className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className={`w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border ${
+                  errors.type ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
               >
                 <option value="" disabled>
                   Select a type
@@ -238,7 +280,7 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
                 htmlFor="contact_email"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-200"
               >
-                Contact Email (Optional)
+                Contact Email <span className="text-red-500">*</span>
               </label>
               <input
                 id="contact_email"
@@ -246,7 +288,9 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
                 type="email"
                 value={formData.contact_email}
                 onChange={handleChange}
-                className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className={`w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border ${
+                  errors.contact_email ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
                 placeholder="e.g., contact@institution.com"
               />
               {errors.contact_email && (
@@ -262,7 +306,7 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
                 htmlFor="contact_phone"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-200"
               >
-                Contact Phone (Optional)
+                Contact Phone <span className="text-red-500">*</span>
               </label>
               <input
                 id="contact_phone"
@@ -270,7 +314,9 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
                 type="tel"
                 value={formData.contact_phone}
                 onChange={handleChange}
-                className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className={`w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border ${
+                  errors.contact_phone ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
                 placeholder="e.g., +1 (555) 123-4567"
               />
               {errors.contact_phone && (
@@ -286,7 +332,7 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
                 htmlFor="website"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-200"
               >
-                Website (Optional)
+                Website <span className="text-red-500">*</span>
               </label>
               <input
                 id="website"
@@ -294,7 +340,9 @@ const RegisterFinancialInstitutionPage: React.FC<{ onClose: () => void; setAlert
                 type="url"
                 value={formData.website}
                 onChange={handleChange}
-                className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className={`w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border ${
+                  errors.website ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
                 placeholder="https://www.institution.com"
               />
               {errors.website && (

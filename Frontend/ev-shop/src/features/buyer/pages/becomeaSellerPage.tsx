@@ -55,11 +55,58 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
       ...prevData,
       [name]: value,
     }));
+    validateField(name, value);
   };
 
   /**
    * --- NEW: Validation logic ---
    */
+  const validateField = (name: string, value: string) => {
+    let error = "";
+    switch (name) {
+      case "business_name":
+        if (!value.trim()) error = "Business name is required.";
+        break;
+      case "street_address":
+        if (!value.trim()) error = "Street address is required.";
+        break;
+      case "city":
+        if (!value.trim()) error = "City is required.";
+        break;
+      case "state":
+        if (!value.trim()) error = "State is required.";
+        break;
+      case "country":
+        if (!value.trim()) error = "Country is required.";
+        break;
+      case "postal_code":
+        if (!value.trim()) {
+          error = "Postal code is required.";
+        } else if (!/^\d+$/.test(value.trim())) {
+          error = "Postal code must be numeric.";
+        }
+        break;
+      case "license_number":
+        if (!value.trim()) error = "Business license number is required.";
+        break;
+      case "website":
+        if (!value.trim()) {
+          error = "Website is required.";
+        } else {
+          try {
+            new URL(value);
+          } catch (_) {
+            error = "Please enter a valid URL (e.g., https://example.com).";
+          }
+        }
+        break;
+      default:
+        break;
+    }
+    setErrors((prev) => ({ ...prev, [name]: error }));
+    return !error;
+  };
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -86,12 +133,16 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
     if (!formData.postal_code.trim()) {
       newErrors.postal_code = "Postal code is required.";
     } else if (!/^\d+$/.test(formData.postal_code.trim())) {
-        // Simple numeric check for postal code, can be adjusted based on requirements
       newErrors.postal_code = "Postal code must be numeric.";
     }
 
-    // Validate website URL if provided
-    if (formData.website.trim()) {
+    if (!formData.license_number.trim()) {
+      newErrors.license_number = "Business license number is required.";
+    }
+
+    if (!formData.website.trim()) {
+      newErrors.website = "Website is required.";
+    } else {
       try {
         new URL(formData.website);
       } catch (_) {
@@ -204,8 +255,9 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
                 type="text"
                 value={formData.business_name}
                 onChange={handleChange}
-                required
-                className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                className={`w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border ${
+                  errors.business_name ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200`}
                 placeholder="e.g., Acme Auto Parts"
               />
               {errors.business_name && (
@@ -231,8 +283,9 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
                   type="text"
                   value={formData.street_address}
                   onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                  className={`w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border ${
+                    errors.street_address ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+                  } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200`}
                   placeholder="e.g., 123 Main St"
                 />
                 {errors.street_address && (
@@ -256,8 +309,9 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
                     type="text"
                     value={formData.city}
                     onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                    className={`w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border ${
+                      errors.city ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+                    } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200`}
                     placeholder="e.g., New York"
                   />
                   {errors.city && (
@@ -281,8 +335,9 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
                     type="text"
                     value={formData.state}
                     onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                    className={`w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border ${
+                      errors.state ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+                    } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200`}
                     placeholder="e.g., NY"
                   />
                   {errors.state && (
@@ -306,8 +361,9 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
                     type="text"
                     value={formData.postal_code}
                     onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                    className={`w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border ${
+                      errors.postal_code ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+                    } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200`}
                     placeholder="e.g., 10001"
                   />
                   {errors.postal_code && (
@@ -331,8 +387,9 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
                     type="text"
                     value={formData.country}
                     onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                    className={`w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border ${
+                      errors.country ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+                    } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200`}
                     placeholder="e.g., USA"
                   />
                   {errors.country && (
@@ -349,7 +406,7 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
                 htmlFor="license_number"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-200"
               >
-                Business License Number
+                Business License Number <span className="text-red-500">*</span>
               </label>
               <input
                 id="license_number"
@@ -357,9 +414,14 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
                 type="text"
                 value={formData.license_number}
                 onChange={handleChange}
-                className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                className={`w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border ${
+                  errors.license_number ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200`}
                 placeholder="e.g., 12345-ABC"
               />
+              {errors.license_number && (
+                <p className="mt-1 text-xs text-red-500">{errors.license_number}</p>
+              )}
             </div>
 
             {/* Website */}
@@ -368,7 +430,7 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
                 htmlFor="website"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-200"
               >
-                Website
+                Website <span className="text-red-500">*</span>
               </label>
               <input
                 id="website"
@@ -376,7 +438,9 @@ const BecomeSellerPage: React.FC<{ onClose: () => void; setAlert?: (alert: Alert
                 type="url"
                 value={formData.website}
                 onChange={handleChange}
-                className="w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                className={`w-full px-4 py-3 mt-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border ${
+                  errors.website ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200`}
                 placeholder="https://www.yourbusiness.com"
               />
               {errors.website && (
