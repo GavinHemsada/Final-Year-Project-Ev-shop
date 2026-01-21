@@ -8,6 +8,7 @@ import {
 } from "./auth.dto";
 import { sendEmail } from "../../shared/utils/Email.util";
 import crypto from "crypto";
+import CacheService from "../../shared/cache/CacheService";
 
 /**
  * Defines the interface for the authentication service, outlining the methods for handling all authentication-related business logic.
@@ -460,6 +461,8 @@ export function authService(authRepo: IAuthRepository): IAuthService {
         user.password = password;
         user.resetOtp = undefined;
         await user.save();
+        await CacheService.delete(`user_${user.id}`);
+        await CacheService.deletePattern(`user_*`);
         return { success: true };
       } catch (err) {
         return { success: false, error: "Reset password process failed" };
