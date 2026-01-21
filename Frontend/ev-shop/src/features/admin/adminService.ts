@@ -161,7 +161,7 @@ export const adminService = {
   // Reviews Management
   getAllReviews: async () => {
     const response = await axiosPrivate.get("/review/reviews"); // Corrected endpoint
-    return response.data;
+    return response.data?.reviews || response.data || [];
   },
   getReviewById: async (reviewId: string) => {
     const response = await axiosPrivate.get(`/review/review/${reviewId}`);

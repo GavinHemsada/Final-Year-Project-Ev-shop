@@ -67,7 +67,7 @@ const AdminDashboard: React.FC = () => {
       case "financial":
         return <FinancialPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
       case "reviews":
-        return <ReviewsPage setAlert={handleSetAlert} />;
+        return <ReviewsPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
       case "payments":
         return <PaymentsPage setAlert={handleSetAlert} />;
       case "community":
