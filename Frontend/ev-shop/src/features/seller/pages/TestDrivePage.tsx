@@ -111,7 +111,7 @@ export const TestDrivesPage: React.FC<{
     },
     enabled: !!sellerId,
   });
-
+  console.log("bookingsData", bookingsData);
   const slots = slotsData || [];
   const bookings = bookingsData || [];
   const confirmedBookings = bookings.filter(

@@ -66,6 +66,11 @@ const SellerDashboard: React.FC = () => {
   useEffect(() => {
     if (seller && seller._id) {
       dispatch(setSellerId(seller._id));
+      // Trigger update of seller ratings
+      console.log("Updating seller ratings for ID:", seller._id);
+      sellerService.updateSellerRatings(seller._id).catch((err) => {
+        console.error("Failed to update seller ratings:", err);
+      });
     }
   }, [seller]);
 

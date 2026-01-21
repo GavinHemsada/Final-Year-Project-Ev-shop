@@ -36,10 +36,11 @@ const StarRating: React.FC<{ rating: number }> = ({ rating }) => {
  */
 export const MyReviewsPage: React.FC<{ setAlert?: (alert: AlertProps | null) => void }> = () => {
   const sellerId = useAppSelector(selectSellerId);
+  const [activeTab, setActiveTab] = React.useState<"order" | "test_drive">("order");
+  
   const {
     data: reviews,
     isLoading,
-    error,
   } = useQuery({
     queryKey: ["sellerReviews", sellerId],
     queryFn: () => sellerService.getAllReviews(),
@@ -68,13 +69,54 @@ export const MyReviewsPage: React.FC<{ setAlert?: (alert: AlertProps | null) => 
     return targetId === sellerId;
   });
 
+  const orderReviews = sellerReviews.filter((review) => review.order_id);
+  const testDriveReviews = sellerReviews.filter((review) => review.testDrive_id);
+
+  const displayedReviews = activeTab === "order" ? orderReviews : testDriveReviews;
+
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold dark:text-white">Customer Reviews</h1>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 dark:border-gray-700">
+        <button
+          className={`pb-4 px-4 font-medium text-sm transition-colors relative ${
+            activeTab === "order"
+              ? "text-blue-600 dark:text-blue-400"
+              : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          }`}
+          onClick={() => setActiveTab("order")}
+        >
+          Order Reviews
+          <span className="ml-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 py-0.5 px-2 rounded-full text-xs">
+            {orderReviews.length}
+          </span>
+          {activeTab === "order" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400" />
+          )}
+        </button>
+        <button
+          className={`pb-4 px-4 font-medium text-sm transition-colors relative ${
+            activeTab === "test_drive"
+              ? "text-blue-600 dark:text-blue-400"
+              : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          }`}
+          onClick={() => setActiveTab("test_drive")}
+        >
+          Test Drive Reviews
+          <span className="ml-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 py-0.5 px-2 rounded-full text-xs">
+            {testDriveReviews.length}
+          </span>
+          {activeTab === "test_drive" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400" />
+          )}
+        </button>
+      </div>
       
-      {sellerReviews && sellerReviews.length > 0 ? (
+      {displayedReviews && displayedReviews.length > 0 ? (
         <div className="space-y-6">
-          {sellerReviews.map((review: Review) => (
+          {displayedReviews.map((review: Review) => (
             <div
               key={review._id}
               className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700"
@@ -91,6 +133,17 @@ export const MyReviewsPage: React.FC<{ setAlert?: (alert: AlertProps | null) => 
                       {new Date(review.createdAt).toLocaleDateString()}
                     </span>
                   </div>
+                  {/* Context Info */}
+                  {review.order_id && (
+                     <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        Verified Purchase • {review.order_id.listing_id?.model_id?.model_name || "Vehicle"}
+                     </p>
+                  )}
+                  {review.testDrive_id && (
+                     <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                        Test Drive Experience • {review.testDrive_id.model_id?.model_name || "Vehicle"}
+                     </p>
+                  )}
                 </div>
                 {review.rating && (
                   <StarRating rating={review.rating} />
@@ -111,10 +164,10 @@ export const MyReviewsPage: React.FC<{ setAlert?: (alert: AlertProps | null) => 
             <ReviewsIcon className="h-6 w-6 text-blue-600" />
           </div>
           <h2 className="mt-4 text-xl font-semibold text-gray-800 dark:text-white">
-            No Reviews Yet
+            No {activeTab === 'order' ? 'Order' : 'Test Drive'} Reviews Yet
           </h2>
           <p className="mt-2 text-gray-500 dark:text-gray-400">
-            You haven't received any reviews yet.
+            You haven't received any reviews for {activeTab === 'order' ? 'orders' : 'test drives'} yet.
           </p>
         </div>
       )}
