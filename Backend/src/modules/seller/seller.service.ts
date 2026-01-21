@@ -5,6 +5,7 @@ import { IReviewRepository } from "../review/review.repository";
 import CacheService from "../../shared/cache/CacheService";
 import { UserRole } from "../../shared/enum/enum";
 import { addImage, deleteImage } from "../../shared/utils/imageHandel";
+import { User } from "../../entities/User";
 
 /**
  * Defines the interface for the seller service, outlining the methods for managing seller profiles.
@@ -169,7 +170,11 @@ export function sellerService(
           return { success: false, error: "User already has a seller profile" };
         }
         const sellers = await repo.findAll();
-        if (sellers && sellers.length > 0 && sellers.some(s => s.business_name === data.business_name)) {
+        if (
+          sellers &&
+          sellers.length > 0 &&
+          sellers.some((s) => s.business_name === data.business_name)
+        ) {
           return { success: false, error: "name already exists" };
         }
         const seller = await repo.create(data);
@@ -206,24 +211,26 @@ export function sellerService(
         }
         const reviews = await reviwRepo.getAllReviews();
         if (!reviews) {
-             console.error("Service: Failed to retrieve reviews");
-             return { success: false, error: "Failed to retrieve reviews" };
+          console.error("Service: Failed to retrieve reviews");
+          return { success: false, error: "Failed to retrieve reviews" };
         }
-           
+
         console.log(`Service: Found ${reviews.length} reviews`);
         let rating = 0;
         let reviewCount = 0;
         // Aggregate rating and count from reviews associated with the seller.
         reviews.forEach((element) => {
           const order: any = element.order_id;
-           // Check if order exists and has a seller_id before accessing toString()
+          // Check if order exists and has a seller_id before accessing toString()
           if (order && order.seller_id && order.seller_id.toString() === id) {
             reviewCount++;
             rating += element.rating;
           }
         });
 
-        console.log(`Service: Calculated rating: ${rating}, reviewCount: ${reviewCount}`);
+        console.log(
+          `Service: Calculated rating: ${rating}, reviewCount: ${reviewCount}`
+        );
 
         const avgRating = reviewCount > 0 ? rating / reviewCount : 0;
 
@@ -308,6 +315,11 @@ export function sellerService(
             CacheService.deletePattern(`seller_*`),
           ]);
         }
+        const userid = existingSeller?.user_id;
+        await User.updateOne(
+          { _id: userid },
+          { $pull: { role: "seller" } }
+        );
         const success = await repo.delete(id);
         if (!success) return { success: false, error: "Seller not found" };
         return { success: true };
