@@ -71,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       className={`w-16 ${
         isExpanded ? "md:w-64" : "md:w-16"
       } flex-shrink-0 bg-white border-r border-gray-200 flex flex-col
-         transition-all duration-300 relative overflow-x-hidden
+         transition-all duration-300 relative z-50
          dark:bg-gray-800 dark:border-gray-700`}
     >
       {/* Logo */}
@@ -110,7 +110,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </button>
 
       {/* Main navigation links */}
-      <nav className="flex-1 px-2 md:px-4 py-6 space-y-2 overflow-y-auto overflow-x-hidden scrollbar-hide">
+      <nav className={`flex-1 px-2 md:px-4 py-6 space-y-2 scrollbar-hide ${
+        isExpanded ? "overflow-y-auto" : "overflow-visible"
+      }`}>
         <SidebarLink
           text="Dashboard"
           icon={<CarIcon className="h-5 w-5" />}
@@ -292,16 +294,16 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({
       <span
         className="
           hidden md:block 
-          absolute left-full top-1/2 -translate-y-1/2 ml-4 px-2 py-1 
+          absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 
           bg-gray-800 text-white text-xs font-medium rounded-md 
           opacity-0 invisible group-hover:opacity-100 group-hover:visible
           transition-all duration-200 
-          z-50 whitespace-nowrap
+          z-50 whitespace-nowrap shadow-lg
         "
       >
         {text}
          {alertCount !== undefined && alertCount > 0 && ` (${alertCount})`}
-        <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-0 h-0 border-t-4 border-t-transparent border-b-4 border-b-transparent border-r-4 border-r-gray-800"></span>
+        <span className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-4 border-t-transparent border-b-4 border-b-transparent border-r-4 border-r-gray-800"></span>
       </span>
     )}
   </a>
