@@ -2,12 +2,12 @@ import {
   CarIcon,
   ShoppingCartIcon,
   ReviewsIcon,
-  CommunityIcon,
   KeyIcon,
   ChevronRightIcon,
   ChevronLeftIcon,
   ServiceIcon,
 } from "@/assets/icons/icons";
+import { FaUsers } from "react-icons/fa";
 import type { SellerActiveTab } from "@/types";
 import { useTheme } from "@/context/ThemeContext";
 import { SunIcon, MoonIcon } from "@/assets/icons/icons";
@@ -109,7 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
         <SidebarLink
           text="Community"
-          icon={<CommunityIcon className="h-5 w-5" />} // Use the new CommunityIcon
+          icon={<FaUsers className="h-5 w-5" />} // Use the new CommunityIcon
           active={activeTab === "community"}
           onClick={() => setActiveTab("community")}
           isExpanded={isExpanded}

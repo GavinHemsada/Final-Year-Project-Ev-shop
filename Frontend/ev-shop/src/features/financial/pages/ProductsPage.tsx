@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAppSelector } from "@/hooks/useAppSelector";
-import { selectActiveRoleId, selectFinanceId } from "@/context/authSlice";
+import { selectFinanceId } from "@/context/authSlice";
 import { financialService } from "../financialService";
 import type { AlertProps } from "@/types";
 import { PageLoader, Loader } from "@/components/Loader";
@@ -31,6 +31,7 @@ export const ProductsPage: React.FC<{
     term_months_min: "",
     term_months_max: "",
     down_payment_min: "",
+    is_active: true,
   });
 
   useEffect(() => {
@@ -81,8 +82,10 @@ export const ProductsPage: React.FC<{
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    // Handle checkbox separately
+    const newValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+    setFormData((prev) => ({ ...prev, [name]: newValue }));
   };
 
   const handleEdit = (product: any) => {
@@ -96,6 +99,7 @@ export const ProductsPage: React.FC<{
       term_months_min: product.term_months_min?.toString() || "",
       term_months_max: product.term_months_max?.toString() || "",
       down_payment_min: product.down_payment_min?.toString() || "",
+      is_active: product.is_active !== undefined ? product.is_active : true,
     });
     setActiveTab("createProduct");
   };
@@ -111,6 +115,7 @@ export const ProductsPage: React.FC<{
       term_months_min: "",
       term_months_max: "",
       down_payment_min: "",
+      is_active: true,
     });
     setActiveTab("myProducts");
   };
@@ -177,7 +182,7 @@ export const ProductsPage: React.FC<{
         term_months_min: Number(formData.term_months_min),
         term_months_max: Number(formData.term_months_max),
         down_payment_min: Number(formData.down_payment_min),
-        is_active: true
+        is_active: formData.is_active
       };
 
       let updatedProduct;
@@ -234,6 +239,7 @@ export const ProductsPage: React.FC<{
         term_months_min: "",
         term_months_max: "",
         down_payment_min: "",
+        is_active: true,
       });
       setActiveTab("myProducts");
     } catch (error: any) {
@@ -280,6 +286,7 @@ export const ProductsPage: React.FC<{
                 term_months_min: "",
                 term_months_max: "",
                 down_payment_min: "",
+                is_active: true,
               });
               setActiveTab("createProduct");
             }}
@@ -507,6 +514,20 @@ export const ProductsPage: React.FC<{
                     min="0"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
+            </div>
+
+            <div className="flex items-center">
+                <input
+                    type="checkbox"
+                    id="is_active"
+                    name="is_active"
+                    checked={formData.is_active}
+                    onChange={handleInputChange}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <label htmlFor="is_active" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                    Product is Active (Visible to buyers)
+                </label>
             </div>
 
             <div className="pt-4 flex justify-end gap-3">

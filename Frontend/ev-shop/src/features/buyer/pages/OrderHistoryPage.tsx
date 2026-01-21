@@ -320,7 +320,7 @@ const OrderHistory: React.FC<{
                               );
                             }
 
-                            if(financingApp?.status?.toLowerCase() === "approved"){
+                            if(financingApp?.status?.toLowerCase() === "approved" && !canRate){
                               return (
                               <button
                               disabled

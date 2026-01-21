@@ -15,7 +15,7 @@ export type Review = {
     shop_logo?: string;
   };
 
-  order_id: {
+  order_id?: {
     _id: string;
     listing_id: {
       _id: string;
@@ -24,6 +24,19 @@ export type Review = {
         model_name: string;
       };
     };
+  };
+
+  testDrive_id?: {
+    _id: string;
+    model_id: {
+      _id: string;
+      model_name: string;
+      brand_id?: {
+        brand_name: string;
+      };
+    };
+    booking_date: string;
+    booking_time: string;
   };
 
   rating: number;

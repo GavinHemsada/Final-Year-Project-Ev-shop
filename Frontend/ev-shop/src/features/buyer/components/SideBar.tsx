@@ -4,10 +4,10 @@ import {
   HeartIcon,
   ServiceIcon,
   ReviewsIcon,
-  CommunityIcon, // Import the new UsersIcon
   KeyIcon,
   BanknoteIcon,
 } from "@/assets/icons/icons";
+import { FaUsers } from "react-icons/fa";
 import { BuyerActiveTabes, type ActiveTab } from "@/types";
 import { useTheme } from "@/context/ThemeContext";
 import { SunIcon, MoonIcon } from "@/assets/icons/icons";
@@ -21,7 +21,7 @@ const links = [
   { text: "Financing", icon: <BanknoteIcon />, tab: BuyerActiveTabes.Financing },
   { text: "Test Drives", icon: <KeyIcon />, tab: BuyerActiveTabes.TestDrives },
   { text: "My Reviews", icon: <ReviewsIcon />, tab: BuyerActiveTabes.Reviews },
-  { text: "Community", icon: <CommunityIcon />, tab: BuyerActiveTabes.Community },
+  { text: "Community", icon: <FaUsers />, tab: BuyerActiveTabes.Community },
 ];
 
 type SidebarProps = {

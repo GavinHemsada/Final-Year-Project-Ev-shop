@@ -595,6 +595,9 @@ export function testDriveService(
           CacheService.delete(`booking_${booking.id}`),
           CacheService.delete("slots_active"),
           CacheService.deletePattern("slots_*"),
+          CacheService.deletePattern("booking_*"),
+          CacheService.deletePattern("bookings_*"),
+          CacheService.deletePattern("bookings_customer_*"),
         ]);
         const decreaseResult = await testDriveRepo.decreaseSlotCount(
           data.slot_id
