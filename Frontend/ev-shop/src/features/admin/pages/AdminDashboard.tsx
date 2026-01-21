@@ -63,21 +63,21 @@ const AdminDashboard: React.FC = () => {
       case "evListings":
         return <EVListingsPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
       case "sellers":
-        return <SellersPage setAlert={handleSetAlert} />;
+        return <SellersPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
       case "financial":
-        return <FinancialPage setAlert={handleSetAlert} />;
+        return <FinancialPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
       case "reviews":
         return <ReviewsPage setAlert={handleSetAlert} />;
       case "payments":
         return <PaymentsPage setAlert={handleSetAlert} />;
       case "community":
-        return <CommunityManagementPage setAlert={handleSetAlert} />;
+        return <CommunityManagementPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
       case "complaints":
         return <ComplaintManagementPage />;
       case "contactMessages":
         return <ContactMessagesPage />;
       case "testDrives":
-        return <TestDrivesManagementPage setAlert={handleSetAlert} />;
+        return <TestDrivesManagementPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
       case "mlPipeline":
         return <MLPipelinePage setAlert={handleSetAlert} />;
       case "notifications":

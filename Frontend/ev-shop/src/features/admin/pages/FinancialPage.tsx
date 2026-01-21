@@ -3,12 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "../adminService";
 import { PageLoader, Loader } from "@/components/Loader";
 import { TrashIcon } from "@/assets/icons/icons";
-import type { AlertProps } from "@/types";
+import type { AlertProps, ConfirmAlertProps } from "@/types";
 import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 
 export const FinancialPage: React.FC<{
   setAlert: (alert: AlertProps | null) => void;
-}> = ({ setAlert }) => {
+  setConfirmAlert: (alert: ConfirmAlertProps | null) => void;
+}> = ({ setAlert, setConfirmAlert }) => {
   const [activeTab, setActiveTab] = useState<
     "institutions" | "products" | "applications"
   >("institutions");
@@ -386,13 +387,13 @@ export const FinancialPage: React.FC<{
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <button
                               onClick={() => {
-                                if (
-                                  window.confirm(
-                                    "Are you sure you want to delete this financial institution?"
-                                  )
-                                ) {
-                                  deleteFinancialMutation.mutate(financial._id);
-                                }
+                                setConfirmAlert({
+                                  title: "Delete Institution",
+                                  message: "Are you sure you want to delete this financial institution? This will also affect its products.",
+                                  confirmText: "Delete",
+                                  cancelText: "Cancel",
+                                  onConfirmAction: () => deleteFinancialMutation.mutate(financial._id),
+                                });
                               }}
                               disabled={deleteFinancialMutation.isPending}
                               className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -479,13 +480,13 @@ export const FinancialPage: React.FC<{
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <button
                               onClick={() => {
-                                if (
-                                  window.confirm(
-                                    "Are you sure you want to delete this product?"
-                                  )
-                                ) {
-                                  deleteProductMutation.mutate(product._id);
-                                }
+                                setConfirmAlert({
+                                  title: "Delete Product",
+                                  message: "Are you sure you want to delete this financial product?",
+                                  confirmText: "Delete",
+                                  cancelText: "Cancel",
+                                  onConfirmAction: () => deleteProductMutation.mutate(product._id),
+                                });
                               }}
                               disabled={deleteProductMutation.isPending}
                               className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"

@@ -3,12 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "../adminService";
 import { PageLoader, Loader } from "@/components/Loader";
 import { TrashIcon } from "@/assets/icons/icons";
-import type { AlertProps } from "@/types";
+import type { AlertProps, ConfirmAlertProps } from "@/types";
 import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 
 export const CommunityManagementPage: React.FC<{
   setAlert: (alert: AlertProps | null) => void;
-}> = ({ setAlert }) => {
+  setConfirmAlert: (alert: ConfirmAlertProps | null) => void;
+}> = ({ setAlert, setConfirmAlert }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [viewingPost, setViewingPost] = useState<any | null>(null);
@@ -226,13 +227,13 @@ export const CommunityManagementPage: React.FC<{
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (
-                                window.confirm(
-                                  "Are you sure you want to delete this post?"
-                                )
-                              ) {
-                                deletePostMutation.mutate(post._id);
-                              }
+                              setConfirmAlert({
+                                title: "Delete Post",
+                                message: "Are you sure you want to delete this community post? All replies will also be removed.",
+                                confirmText: "Delete",
+                                cancelText: "Cancel",
+                                onConfirmAction: () => deletePostMutation.mutate(post._id),
+                              });
                             }}
                             disabled={deletePostMutation.isPending}
                             className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -337,9 +338,13 @@ export const CommunityManagementPage: React.FC<{
                       </span>
                       <button
                         onClick={() => {
-                          if (window.confirm("Delete this reply?")) {
-                            deleteReplyMutation.mutate(reply._id);
-                          }
+                          setConfirmAlert({
+                            title: "Delete Reply",
+                            message: "Are you sure you want to delete this reply?",
+                            confirmText: "Delete",
+                            cancelText: "Cancel",
+                            onConfirmAction: () => deleteReplyMutation.mutate(reply._id),
+                          });
                         }}
                         disabled={deleteReplyMutation.isPending}
                         className="text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"

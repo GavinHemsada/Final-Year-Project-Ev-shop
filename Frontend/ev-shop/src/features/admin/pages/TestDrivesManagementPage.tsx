@@ -3,12 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "../adminService";
 import { PageLoader, Loader } from "@/components/Loader";
 import { CloseIcon, TrashIcon } from "@/assets/icons/icons";
-import type { AlertProps } from "@/types";
+import type { AlertProps, ConfirmAlertProps } from "@/types";
 import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 
 export const TestDrivesManagementPage: React.FC<{
   setAlert: (alert: AlertProps | null) => void;
-}> = ({ setAlert }) => {
+  setConfirmAlert: (alert: ConfirmAlertProps | null) => void;
+}> = ({ setAlert, setConfirmAlert }) => {
   const [activeTab, setActiveTab] = useState<"bookings" | "slots">("bookings");
   const [searchTerm, setSearchTerm] = useState("");
   const queryClient = useQueryClient();
@@ -318,13 +319,13 @@ export const TestDrivesManagementPage: React.FC<{
                           {booking.status !== "cancelled" && (
                             <button
                               onClick={() => {
-                                if (
-                                  window.confirm(
-                                    "Are you sure you want to cancel this booking?"
-                                  )
-                                ) {
-                                  cancelBookingMutation.mutate(booking._id);
-                                }
+                                setConfirmAlert({
+                                  title: "Cancel Booking",
+                                  message: "Are you sure you want to cancel this test drive booking?",
+                                  confirmText: "Cancel Booking",
+                                  cancelText: "Keep Booking",
+                                  onConfirmAction: () => cancelBookingMutation.mutate(booking._id),
+                                });
                               }}
                               disabled={cancelBookingMutation.isPending}
                               className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -376,13 +377,13 @@ export const TestDrivesManagementPage: React.FC<{
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           onClick={() => {
-                            if (
-                              window.confirm(
-                                "Are you sure you want to delete this slot?"
-                              )
-                            ) {
-                              deleteSlotMutation.mutate(slot._id);
-                            }
+                            setConfirmAlert({
+                              title: "Delete Slot",
+                              message: "Are you sure you want to delete this test drive slot? This will affect any existing bookings for this slot.",
+                              confirmText: "Delete",
+                              cancelText: "Cancel",
+                              onConfirmAction: () => deleteSlotMutation.mutate(slot._id),
+                            });
                           }}
                           disabled={deleteSlotMutation.isPending}
                           className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"

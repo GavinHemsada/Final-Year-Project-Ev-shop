@@ -3,12 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "../adminService";
 import { PageLoader, Loader } from "@/components/Loader";
 import { TrashIcon } from "@/assets/icons/icons";
-import type { AlertProps } from "@/types";
+import type { AlertProps, ConfirmAlertProps } from "@/types";
 import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 
-export const SellersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void }> = ({
-  setAlert,
-}) => {
+export const SellersPage: React.FC<{
+  setAlert: (alert: AlertProps | null) => void;
+  setConfirmAlert: (alert: ConfirmAlertProps | null) => void;
+}> = ({ setAlert, setConfirmAlert }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const queryClient = useQueryClient();
 
@@ -22,12 +23,14 @@ export const SellersPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminAllSellers"] });
       setAlert({
+        id: Date.now(),
         type: "success",
         message: "Seller deleted successfully",
       });
     },
     onError: (error: any) => {
       setAlert({
+        id: Date.now(),
         type: "error",
         message: error.response?.data?.error || "Failed to delete seller",
       });
@@ -123,9 +126,13 @@ export const SellersPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
                         onClick={() => {
-                          if (window.confirm("Are you sure you want to delete this seller?")) {
-                            deleteSellerMutation.mutate(seller._id);
-                          }
+                          setConfirmAlert({
+                            title: "Delete Seller",
+                            message: "Are you sure you want to delete this seller? This action cannot be undone.",
+                            confirmText: "Delete",
+                            cancelText: "Cancel",
+                            onConfirmAction: () => deleteSellerMutation.mutate(seller._id),
+                          });
                         }}
                         disabled={deleteSellerMutation.isPending}
                         className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
