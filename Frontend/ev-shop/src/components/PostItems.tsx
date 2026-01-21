@@ -139,6 +139,18 @@ export const PostItem: React.FC<{
         <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed line-clamp-3">
           {post.content}
         </p>
+        
+        {post.content?.length > 200 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onView(post);
+            }}
+            className="mt-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline focus:outline-none"
+          >
+            Read more
+          </button>
+        )}
 
         {/* Post Stats */}
         <div className="flex justify-between items-center text-sm mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">

@@ -845,7 +845,7 @@ export const CommunityPage: React.FC<{
                 {/* Original Post Preview */}
                 <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
                   <h3 className="font-bold text-lg mb-2 dark:text-gray-200">{selectedPost.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-3">{selectedPost.content}</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm whitespace-pre-wrap">{selectedPost?.content}</p>
                 </div>
 
                 {/* Reply Form */}

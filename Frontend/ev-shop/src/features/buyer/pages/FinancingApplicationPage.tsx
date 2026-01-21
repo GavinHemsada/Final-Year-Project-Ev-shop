@@ -488,7 +488,7 @@ export const FinancingApplicationPage: React.FC = () => {
       <div className="p-6 pb-0">
         <button
           onClick={() => {
-            navigate("/user/orders");
+            navigate("/user/dashboard");
           }}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
         >

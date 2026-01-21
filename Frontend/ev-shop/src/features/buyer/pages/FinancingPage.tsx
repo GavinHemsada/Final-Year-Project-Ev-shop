@@ -587,6 +587,8 @@ export const FinancingPage: React.FC<{
   const [activeTab, setActiveTab] = useState<"products" | "applications">(
     "products"
   );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
 
   // Fetch active financing products
   const {
@@ -669,6 +671,16 @@ export const FinancingPage: React.FC<{
   console.log(applicationsData);
   const products = productsData || [];
   const applications = applicationsData || [];
+
+  const filteredProducts = products.filter((product: any) => {
+    const matchesSearch = product.product_name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "" ||
+      product.product_type?.toLowerCase() === selectedCategory.toLowerCase();
+    return matchesSearch && matchesCategory;
+  });
 
   // Mutation for submitting application
   const submitApplicationMutation = useMutation({
@@ -891,21 +903,65 @@ export const FinancingPage: React.FC<{
         {/* Section for Available Financing Options */}
         {activeTab === "products" && (
           <div className="mt-6">
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              {/* Search Bar */}
+              <div className="flex-1">
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                    <svg
+                      className="w-5 h-5 text-gray-400"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <input
+                    type="text"
+                    className="w-full py-2 pl-10 pr-4 text-gray-700 bg-white border rounded-lg dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-500 focus:outline-none focus:ring"
+                    placeholder="Search by Item Name"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Category Filter */}
+              <div className="md:w-1/4">
+                <select
+                  className="w-full px-4 py-2 text-gray-700 bg-white border rounded-lg dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-500 focus:outline-none focus:ring"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  <option value="">All Categories</option>
+                  <option value="Auto Loan">Auto Loan</option>
+                  <option value="Personal Loan">Personal Loan</option>
+                  <option value="Lease">Lease</option>
+                </select>
+              </div>
+            </div>
+
             {productsError ? (
               <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
                 <p className="text-red-500 text-center py-8">
                   Failed to load financing products. Please try again later.
                 </p>
               </div>
-            ) : products.length === 0 ? (
+            ) : filteredProducts.length === 0 ? (
               <div className="bg-white p-6 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
                 <p className="text-gray-500 text-center py-8 dark:text-gray-400">
-                  No active financing products available at the moment.
+                  No products found matching your search.
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {products.map((product: any) => {
+                {filteredProducts.map((product: any) => {
                   const institution = product.institution_id;
                   const institutionName =
                     institution?.name || "Unknown Institution";
@@ -941,6 +997,12 @@ export const FinancingPage: React.FC<{
                             </p>
                           </div>
                         </div>
+                        {/* Product Type Badge */}
+                        <div className="mb-3">
+                           <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full dark:bg-blue-900/30 dark:text-blue-300 font-semibold border border-blue-200 dark:border-blue-800">
+                            {product.product_type || "Generic Loan"}
+                          </span>
+                        </div>
                         <p className="text-gray-600 my-3 dark:text-gray-300">
                           {product.description || "No description available."}
                         </p>
@@ -969,6 +1031,15 @@ export const FinancingPage: React.FC<{
                           </p>
                         </div>
                       </div>
+                      <button
+                        onClick={() => {
+                          setSelectedProduct(product);
+                          setIsModalOpen(true);
+                        }}
+                        className="w-full mt-6 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition dark:bg-blue-500 dark:hover:bg-blue-600 font-semibold shadow-sm"
+                      >
+                        Apply Now
+                      </button>
                     </div>
                   );
                 })}
