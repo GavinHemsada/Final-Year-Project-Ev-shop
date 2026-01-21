@@ -374,5 +374,12 @@ export const adminService = {
       throw error;
     }
   },
+
+  // Notification Management
+  getAllNotifications: async () => {
+    const response = await axiosPrivate.get("/notification");
+    // Backend returns wrapped result { success: true, notifications: [...] }
+    return response.data?.notifications || response.data || [];
+  },
 };
 

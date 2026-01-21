@@ -18,6 +18,7 @@ import { ComplaintManagementPage } from "./ComplaintManagementPage";
 import { ContactMessagesPage } from "./ContactMessagesPage";
 import { TestDrivesManagementPage } from "./TestDrivesManagementPage";
 import { MLPipelinePage } from "./MLPipelinePage";
+import { NotificationsPage } from "./NotificationsPage";
 import { Alert, ConfirmAlert } from "@/components/MessageAlert";
 
 const notifications: any[] = [];
@@ -79,10 +80,12 @@ const AdminDashboard: React.FC = () => {
         return <TestDrivesManagementPage setAlert={handleSetAlert} />;
       case "mlPipeline":
         return <MLPipelinePage setAlert={handleSetAlert} />;
+      case "notifications":
+        return <NotificationsPage />;
       default:
         return <AdminDashboardPage setAlert={handleSetAlert} />;
     }
-  }; 
+  };  
 
   const handleLogout = () => {
     if (logout) dispatch(logout());

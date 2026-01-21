@@ -282,7 +282,7 @@ interface ConfirmAlertProps {
     confirmText?: string;
     cancelText?: string;
     onConfirmAction?: () => void;
-  };
+  } | null;
   onConfirm: () => void;
   onCancel: () => void;
 }

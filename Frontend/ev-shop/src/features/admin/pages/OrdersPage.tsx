@@ -22,12 +22,14 @@ export const OrdersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminAllOrders"] });
       setAlert({
+        id: Date.now(),
         type: "success",
         message: "Order status updated successfully",
       });
     },
     onError: (error: any) => {
       setAlert({
+        id: Date.now(),
         type: "error",
         message: error.response?.data?.error || "Failed to update order",
       });

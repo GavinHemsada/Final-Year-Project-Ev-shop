@@ -111,4 +111,5 @@ export type AdminActiveTab =
   | "complaints"
   | "contactMessages"
   | "testDrives"
-  | "mlPipeline";
+  | "mlPipeline"
+  | "notifications";

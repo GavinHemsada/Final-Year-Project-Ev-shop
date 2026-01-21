@@ -1,11 +1,13 @@
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { adminService } from "../adminService";
 import {
+  BellIcon,
   CarIcon,
   UserIcon,
   ShoppingCartIcon,
   DollarSignIcon,
   ReviewsIcon,
-  CreditCardIcon,
   ChevronRightIcon,
   ChevronLeftIcon,
   SunIcon,
@@ -38,12 +40,38 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setTheme(theme === "light" ? "dark" : "light");
   };
 
+  // Fetch unread contact messages count
+  const { data: unreadContactMessages = [] } = useQuery({
+    queryKey: ["adminContactMessages"],
+    queryFn: () => adminService.getAllContactMessages(false), // Fetch unread only (implied by service or we filter)
+    refetchInterval: 20000,
+  });
+
+  // Fetch pending complaints count
+  const { data: allComplaints = [] } = useQuery({
+    queryKey: ["adminComplaints"],
+    queryFn: () => adminService.getAllComplaints(),
+    refetchInterval: 20000,
+  });
+
+  // Calculate counts
+  // Note: getAllContactMessages(false) might return all or just unread depending on backend implementation.
+  // Based on service it takes isRead param.
+  const unreadMessagesCount = Array.isArray(unreadContactMessages) 
+    ? unreadContactMessages.filter((msg: any) => !msg.isRead).length 
+    : 0;
+
+  const pendingComplaintsCount = Array.isArray(allComplaints)
+    ? allComplaints.filter((c: any) => c.status === "Pending").length
+    : 0;
+
+
   return (
     <aside
       className={`w-16 ${
         isExpanded ? "md:w-64" : "md:w-16"
       } flex-shrink-0 bg-white border-r border-gray-200 flex flex-col
-         transition-all duration-300 relative
+         transition-all duration-300 relative overflow-x-hidden
          dark:bg-gray-800 dark:border-gray-700`}
     >
       {/* Logo */}
@@ -71,7 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         className="absolute top-1/9 -right-3 transform -translate-y-1/2
                w-8 h-8 rounded-full flex items-center justify-center
                bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600
-               shadow-md transition-all duration-300"
+               shadow-md transition-all duration-300 z-50"
         title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
       >
         {isExpanded ? (
@@ -82,7 +110,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </button>
 
       {/* Main navigation links */}
-      <nav className="flex-1 px-2 md:px-4 py-6 space-y-2">
+      <nav className="flex-1 px-2 md:px-4 py-6 space-y-2 overflow-y-auto overflow-x-hidden scrollbar-hide">
         <SidebarLink
           text="Dashboard"
           icon={<CarIcon className="h-5 w-5" />}
@@ -109,6 +137,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon={<CarIcon className="h-5 w-5" />}
           active={activeTab === "evListings"}
           onClick={() => setActiveTab("evListings")}
+          isExpanded={isExpanded}
+        />
+        <SidebarLink
+          text="Notifications"
+          icon={<BellIcon className="h-5 w-5" />}
+          active={activeTab === "notifications"}
+          onClick={() => setActiveTab("notifications")}
           isExpanded={isExpanded}
         />
         <SidebarLink
@@ -152,6 +187,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           active={activeTab === "complaints"}
           onClick={() => setActiveTab("complaints")}
           isExpanded={isExpanded}
+          alertCount={pendingComplaintsCount}
         />
         <SidebarLink
           text="Contact Messages"
@@ -159,6 +195,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           active={activeTab === "contactMessages"}
           onClick={() => setActiveTab("contactMessages")}
           isExpanded={isExpanded}
+          alertCount={unreadMessagesCount}
         />
         <SidebarLink
           text="Test Drives"
@@ -204,6 +241,7 @@ type SidebarLinkProps = {
   active?: boolean;
   onClick: () => void;
   isExpanded: boolean;
+  alertCount?: number;
 };
 
 const SidebarLink: React.FC<SidebarLinkProps> = ({
@@ -212,6 +250,7 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({
   active,
   onClick,
   isExpanded,
+  alertCount,
 }) => (
   <a
     href="#"
@@ -228,17 +267,26 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({
         : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100"
     }`}
   >
-    <div className="flex-shrink-0" aria-hidden="true">
+    <div className="flex-shrink-0 relative" aria-hidden="true">
       {icon}
+      {!isExpanded && alertCount !== undefined && alertCount > 0 && (
+         <span className="absolute -top-1 -right-1 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
+      )}
     </div>
 
     <span
       className={`hidden ${
         isExpanded ? "md:inline" : "hidden"
-      } ml-3 whitespace-nowrap`}
+      } ml-3 whitespace-nowrap flex-1`}
     >
       {text}
     </span>
+    
+    {isExpanded && alertCount !== undefined && alertCount > 0 && (
+        <span className="hidden md:inline-flex items-center justify-center px-2 py-0.5 ml-auto text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
+            {alertCount > 99 ? '99+' : alertCount}
+        </span>
+    )}
 
     {!isExpanded && (
       <span
@@ -252,6 +300,7 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({
         "
       >
         {text}
+         {alertCount !== undefined && alertCount > 0 && ` (${alertCount})`}
         <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-0 h-0 border-t-4 border-t-transparent border-b-4 border-b-transparent border-r-4 border-r-gray-800"></span>
       </span>
     )}
