@@ -122,6 +122,8 @@ export function authService(authRepo: IAuthRepository): IAuthService {
         if (!newUser) {
           return { success: false, error: "Registration failed" };
         }
+        await CacheService.deletePattern(`user_*`);
+        await CacheService.delete("users");
         return { success: true, user: newUser };
       } catch (err) {
         return { success: false, error: "Registration failed" };
