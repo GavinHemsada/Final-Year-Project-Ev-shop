@@ -57,7 +57,7 @@ const AdminDashboard: React.FC = () => {
       case "dashboard":
         return <AdminDashboardPage setAlert={handleSetAlert} />;
       case "users":
-        return <UsersPage setAlert={handleSetAlert} />;
+        return <UsersPage setAlert={handleSetAlert} setConfirmAlert={handleSetConfirmAlert} />;
       case "orders":
         return <OrdersPage setAlert={handleSetAlert} />;
       case "evListings":

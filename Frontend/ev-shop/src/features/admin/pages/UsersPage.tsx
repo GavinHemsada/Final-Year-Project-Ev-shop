@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "../adminService";
 import { PageLoader, Loader } from "@/components/Loader";
-import { EditIcon, TrashIcon } from "@/assets/icons/icons";
-import { Alert } from "@/components/MessageAlert";
-import type { AlertProps } from "@/types";
+import { TrashIcon } from "@/assets/icons/icons";
+import type { AlertProps, ConfirmAlertProps } from "@/types";
 import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 
-export const UsersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void }> = ({
-  setAlert,
-}) => {
+export const UsersPage: React.FC<{
+  setAlert: (alert: AlertProps | null) => void;
+  setConfirmAlert: (alert: ConfirmAlertProps | null) => void;
+}> = ({ setAlert, setConfirmAlert }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const queryClient = useQueryClient();
 
@@ -23,17 +23,23 @@ export const UsersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminAllUsers"] });
       setAlert({
+        id: Date.now(),
         type: "success",
+        title: "Success",
         message: "User deleted successfully",
       });
     },
     onError: (error: any) => {
       setAlert({
+        id: Date.now(),
         type: "error",
+        title: "Error",
         message: error.response?.data?.error || "Failed to delete user",
       });
     },
   });
+
+
 
   const filteredUsers = Array.isArray(users)
     ? users.filter((user: any) =>
@@ -142,16 +148,14 @@ export const UsersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void 
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex gap-2">
                         <button
-                          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                          title="Edit"
-                        >
-                          <EditIcon className="h-5 w-5" />
-                        </button>
-                        <button
                           onClick={() => {
-                            if (window.confirm("Are you sure you want to delete this user?")) {
-                              deleteUserMutation.mutate(user._id);
-                            }
+                            setConfirmAlert({
+                                title: "Delete User",
+                                message: "Are you sure you want to delete this user? This action cannot be undone.",
+                                confirmText: "Delete",
+                                cancelText: "Cancel",
+                                onConfirmAction: () => deleteUserMutation.mutate(user._id),
+                            });
                           }}
                           disabled={deleteUserMutation.isPending}
                           className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -212,6 +216,8 @@ export const UsersPage: React.FC<{ setAlert: (alert: AlertProps | null) => void 
           </div>
         )}
       </div>
+
+
     </div>
   );
 };
