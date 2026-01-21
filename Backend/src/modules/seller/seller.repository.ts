@@ -89,6 +89,12 @@ export const SellerRepository: ISellerRepository = {
   updateRatingAndReviewCount: withErrorHandling(
     async (id: string, rating: number, reviewCount: number) => {
       return await Seller.findByIdAndUpdate(
+        id,
+        {
+          rating: rating,
+          total_reviews: reviewCount,
+        },
+        { new: true }
       );
     }
   ),

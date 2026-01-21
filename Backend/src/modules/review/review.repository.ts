@@ -65,20 +65,34 @@ export interface IReviewRepository {
  * consistent error management across the repository.
  */
 export const ReviewRepository: IReviewRepository = {
-  /** Retrieves all reviews, populating associated order and reviewer details. */
+  /**
+   * Retrieves all reviews, populating associated order, test drive, and reviewer details.
+   */
   getAllReviews: withErrorHandling(async () => {
     return await Review.find()
       .populate("reviewer_id", "name profile_image")
       .populate("target_id", "business_name shop_logo")
       .populate({
         path: "order_id",
-        select: "listing_id",
+        select: "listing_id seller_id",
         populate: {
           path: "listing_id",
           select: "_id model_id",
           populate: {
             path: "model_id",
             select: "model_name",
+          },
+        },
+      })
+      .populate({
+        path: "testDrive_id",
+        select: "model_id booking_date booking_time status",
+        populate: {
+          path: "model_id",
+          select: "model_name brand_id",
+          populate: {
+            path: "brand_id",
+            select: "brand_name",
           },
         },
       });

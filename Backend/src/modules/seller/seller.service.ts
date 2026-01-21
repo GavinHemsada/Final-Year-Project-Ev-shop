@@ -198,23 +198,32 @@ export function sellerService(
      */
     updateRatingAndReviewCount: async (id) => {
       try {
+        console.log(`Service: Updating rating for seller ${id}`);
         const existingSeller = await repo.findById(id);
         if (!existingSeller) {
+          console.error(`Service: Seller ${id} not found`);
           return { success: false, error: "Seller not found" };
         }
         const reviews = await reviwRepo.getAllReviews();
-        if (!reviews)
-          return { success: false, error: "Failed to retrieve reviews" };
+        if (!reviews) {
+             console.error("Service: Failed to retrieve reviews");
+             return { success: false, error: "Failed to retrieve reviews" };
+        }
+           
+        console.log(`Service: Found ${reviews.length} reviews`);
         let rating = 0;
         let reviewCount = 0;
         // Aggregate rating and count from reviews associated with the seller.
         reviews.forEach((element) => {
           const order: any = element.order_id;
-          if (order?.seller_id?.toString() === id) {
+           // Check if order exists and has a seller_id before accessing toString()
+          if (order && order.seller_id && order.seller_id.toString() === id) {
             reviewCount++;
             rating += element.rating;
           }
         });
+
+        console.log(`Service: Calculated rating: ${rating}, reviewCount: ${reviewCount}`);
 
         const avgRating = reviewCount > 0 ? rating / reviewCount : 0;
 
@@ -239,6 +248,7 @@ export function sellerService(
 
         return { success: true, seller };
       } catch (err) {
+        console.error("Service: Error updating ratings:", err);
         return { success: false, error: "Failed to retrieve sellers" };
       }
     },

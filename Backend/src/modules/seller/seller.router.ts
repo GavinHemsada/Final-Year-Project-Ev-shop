@@ -129,6 +129,37 @@ export const sellerRouter = (): Router => {
     controller.getSellerByUserId(req, res)
   );
 
+
+  /**
+   * @swagger
+   * /seller/rating/{id}:
+   *   put:
+   *     summary: Update seller rating and review count
+   *     description: Triggers a recalculation of the seller's average rating and review count. This is typically called internally by the review service after a new review is created or deleted.
+   *     tags: [Sellers]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the seller profile to update.
+   *     responses:
+   *       '200':
+   *         description: Seller rating updated successfully.
+   *       '401':
+   *         description: Unauthorized.
+   *       '404':
+   *         description: Seller not found.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.put("/rating/:id", (req, res) =>
+    controller.updateRatingAndReviewCount(req, res)
+  );
+
   /**
    * @swagger
    * /seller/{id}:
@@ -170,36 +201,6 @@ export const sellerRouter = (): Router => {
     upload.single("shop_logo"),
     validateDto(UpdateSellerDTO),
     (req, res) => controller.updateSeller(req, res)
-  );
-
-  /**
-   * @swagger
-   * /seller/rating/{id}:
-   *   put:
-   *     summary: Update seller rating and review count
-   *     description: Triggers a recalculation of the seller's average rating and review count. This is typically called internally by the review service after a new review is created or deleted.
-   *     tags: [Sellers]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the seller profile to update.
-   *     responses:
-   *       '200':
-   *         description: Seller rating updated successfully.
-   *       '401':
-   *         description: Unauthorized.
-   *       '404':
-   *         description: Seller not found.
-   *       '500':
-   *         description: Internal server error.
-   */
-  router.put("/rating/:id", (req, res) =>
-    controller.updateRatingAndReviewCount(req, res)
   );
 
   /**

@@ -129,9 +129,12 @@ export function sellerController(service: ISellerService): ISellerController {
      */
     updateRatingAndReviewCount: async (req, res) => {
       try {
+        console.log("Updating rating for seller:", req.params.id);
         const result = await service.updateRatingAndReviewCount(req.params.id);
+         console.log("Update result:", result);
         return handleResult(res, result);
       } catch (err) {
+        console.error("Error in updateRatingAndReviewCount controller:", err);
         return handleError(res, err, "updateRatingAndReviewCount");
       }
     },

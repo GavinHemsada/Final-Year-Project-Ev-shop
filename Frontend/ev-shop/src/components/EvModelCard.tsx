@@ -444,13 +444,13 @@ export const VehicleCard: React.FC<{
             </p>
             <div className="flex items-center gap-2">
               <p 
-                className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors max-w-[140px]"
                 onClick={handleSellerClick}
               >
                 {sellerShopName}
               </p>
               {/* Available EV Count */}
-              <span className="text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded">
+              <span className="text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded whitespace-nowrap flex-shrink-0">
                 {vehicle.number_of_ev} available
               </span>
               <div className="flex items-center gap-1 text-xs">

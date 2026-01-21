@@ -116,6 +116,31 @@ export const SellerDetailsModal: React.FC<SellerDetailsModalProps> = ({
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                         <span className="text-gray-400 mx-1">•</span>
+                        <div className="flex items-center gap-0.5">
+                             {[...Array(5)].map((_, index) => (
+                                <svg
+                                    key={index}
+                                    className={`w-4 h-4 ${
+                                        index < Math.round(seller.rating || 0)
+                                        ? "text-yellow-400 fill-current"
+                                        : "text-gray-300"
+                                    }`}
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                </svg>
+                            ))}
+                        </div>
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                             ({seller.rating?.toFixed(1) || "0.0"})
+                        </span>
+                        <span className="text-gray-400 mx-1">•</span>
                         <span className="text-gray-600 dark:text-gray-400 text-sm">
                             {seller.total_reviews || 0} Reviews
                         </span>

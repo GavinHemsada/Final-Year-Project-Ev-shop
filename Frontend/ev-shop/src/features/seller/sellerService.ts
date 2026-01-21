@@ -273,4 +273,9 @@ export const sellerService = {
     });
     return response.data;
   },
+  // Update seller ratings operations
+  updateSellerRatings: async (sellerId: string) => {
+    const response = await axiosPrivate.put(`/seller/rating/${sellerId}`);
+    return response.data;
+  },
 };
