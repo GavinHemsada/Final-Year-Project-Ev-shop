@@ -10,7 +10,7 @@ type HeaderProps = {
 
 export const Header: React.FC<HeaderProps> = ({
   admin,
-  notifications,
+  // notifications,
   setActiveTab,
   onLogout,
 }) => {

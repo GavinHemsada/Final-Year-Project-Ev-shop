@@ -16,6 +16,7 @@ import {
   CommunityIcon,
   BanknoteIcon,
   EnvelopeIcon,
+  ComplaintListIcon
 } from "@/assets/icons/icons";
 import type { AdminActiveTab } from "@/types";
 import { useTheme } from "@/context/ThemeContext";
@@ -26,6 +27,14 @@ type SidebarProps = {
   isExpanded: boolean;
   onExpand: () => void;
   onCollapse: () => void;
+};
+
+type ContactMessage = {
+  isRead: boolean;
+};
+
+type Complaint = {
+  status: string;
 };
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -58,11 +67,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Note: getAllContactMessages(false) might return all or just unread depending on backend implementation.
   // Based on service it takes isRead param.
   const unreadMessagesCount = Array.isArray(unreadContactMessages) 
-    ? unreadContactMessages.filter((msg: any) => !msg.isRead).length 
+    ? unreadContactMessages.filter((msg: ContactMessage) => !msg.isRead).length 
     : 0;
 
   const pendingComplaintsCount = Array.isArray(allComplaints)
-    ? allComplaints.filter((c: any) => c.status === "Pending").length
+    ? allComplaints.filter((c: Complaint) => c.status === "Pending").length
     : 0;
 
 
@@ -183,7 +192,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
         <SidebarLink
           text="Complaints"
-          icon={<ReviewsIcon />} // Using ReviewsIcon as closest match
+          icon={<ComplaintListIcon />} // Using ReviewsIcon as closest match
           active={activeTab === "complaints"}
           onClick={() => setActiveTab("complaints")}
           isExpanded={isExpanded}

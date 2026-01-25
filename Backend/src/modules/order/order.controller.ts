@@ -43,6 +43,12 @@ export interface IOrderController {
    * @param res - The Express response object.
    */
   cancelOrder(req: Request, res: Response): Promise<Response>;
+  /**
+   * Handles the HTTP request to delete an order.
+   * @param req - The Express request object.
+   * @param res - The Express response object.
+   */
+  deleteOrder(req: Request, res: Response): Promise<Response>;
 }
 
 /**
@@ -130,6 +136,17 @@ export function orderController(service: IOrderService): IOrderController {
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "cancelOrder");
+      }
+    },
+    /**
+     * Deletes an order by its ID.
+     */
+    deleteOrder: async (req, res) => {
+      try {
+        const result = await service.deleteOrder(req.params.id);
+        return handleResult(res, result);
+      } catch (err) {
+        return handleError(res, err, "deleteOrder");
       }
     },
   };

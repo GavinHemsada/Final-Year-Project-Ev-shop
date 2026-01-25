@@ -940,3 +940,21 @@ export const PhotographIcon: React.FC<{ className?: string }> = ({
   </svg>
 );
 
+export const ComplaintListIcon: React.FC<IconProps> = ({ className }) => (
+  <svg
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+  >
+    <rect x="3" y="2" width="18" height="20" rx="2" />
+    <rect x="7" y="6" width="10" height="2" />
+    <rect x="7" y="10" width="10" height="2" />
+    <rect x="7" y="14" width="10" height="2" />
+    <circle cx="6" cy="7" r="1" />
+    <circle cx="6" cy="11" r="1" />
+    <circle cx="6" cy="15" r="1" />
+  </svg>
+);

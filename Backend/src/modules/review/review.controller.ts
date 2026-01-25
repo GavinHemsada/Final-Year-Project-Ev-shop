@@ -70,9 +70,14 @@ export function reviewController(
     /**
      * Retrieves a list of all reviews.
      */
-    getAllReviews: async (_req, res) => {
+    /**
+     * Retrieves a list of all reviews.
+     * Can optionally filter by review type via query parameter 'type'.
+     */
+    getAllReviews: async (req, res) => {
       try {
-        const result = await reviewService.getAllReviews();
+        const { type } = req.query;
+        const result = await reviewService.getAllReviews(type as string);
         return handleResult(res, result);
       } catch (err) {
         return handleError(res, err, "getting all reviews");

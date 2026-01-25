@@ -97,7 +97,9 @@ describe("SellerController", () => {
         city: "Test City",
         state: "Test State",
         postal_code: "12345",
-        country: "Test Country"
+        country: "Test Country",
+        license_number: "LIC123",
+        website: "https://example.com",
       };
       const mockResult = { success: true, seller: {} };
 

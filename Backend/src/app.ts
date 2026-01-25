@@ -43,6 +43,7 @@ import { repairLocationRouter } from "./modules/repairLocation/repairLocation.ro
 import { IRepairLocationController } from "./modules/repairLocation/repairLocation.controller";
 import { mlRouter } from "./modules/ml/ml.router";
 import { contactMessageRouter } from "./modules/contactMessage/contactMessage.router";
+import { financialProductTypeRouter } from "./modules/financialProductType/financialProductType.router";
 
 // Logging utilities
 import morgan from "morgan";
@@ -203,6 +204,7 @@ apiV1Router.use("/cart", protectJWT, cartRouter());
 apiV1Router.use("/financial", protectJWT, financialRouter());
 apiV1Router.use("/seller", protectJWT, sellerRouter());
 apiV1Router.use("/order", protectJWT, orderRouter());
+apiV1Router.use("/financial-product-types", protectJWT, financialProductTypeRouter());
 // Payment webhook and return/cancel endpoints must be public (no JWT protection)
 // PayHere will call these endpoints directly
 const paymentController = container.resolve<IPaymentController>("PaymentController");

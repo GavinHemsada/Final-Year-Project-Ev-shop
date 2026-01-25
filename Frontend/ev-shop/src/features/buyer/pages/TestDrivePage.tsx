@@ -822,22 +822,26 @@ export const TestDrivesPage: React.FC<{
                   </div>
                   
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEditBooking(booking)}
-                      disabled={updateMutation.isPending}
-                      className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors disabled:text-gray-400 disabled:cursor-not-allowed dark:text-blue-500 dark:hover:text-blue-400 dark:hover:bg-gray-700"
-                      title="Edit booking"
-                    >
-                      <EditIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleCancelBooking(booking._id)}
-                      disabled={cancelMutation.isPending}
-                      className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:text-gray-400 disabled:cursor-not-allowed dark:text-red-500 dark:hover:text-red-400 dark:hover:bg-gray-700"
-                      title="Cancel booking"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
+                    {booking.status?.toLowerCase() !== 'confirmed' && (
+                      <>
+                        <button
+                          onClick={() => handleEditBooking(booking)}
+                          disabled={updateMutation.isPending}
+                          className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors disabled:text-gray-400 disabled:cursor-not-allowed dark:text-blue-500 dark:hover:text-blue-400 dark:hover:bg-gray-700"
+                          title="Edit booking"
+                        >
+                          <EditIcon className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleCancelBooking(booking._id)}
+                          disabled={cancelMutation.isPending}
+                          className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:text-gray-400 disabled:cursor-not-allowed dark:text-red-500 dark:hover:text-red-400 dark:hover:bg-gray-700"
+                          title="Cancel booking"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </li>

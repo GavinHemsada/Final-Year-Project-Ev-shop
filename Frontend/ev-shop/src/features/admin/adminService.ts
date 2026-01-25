@@ -32,9 +32,13 @@ export const adminService = {
     return response.data;
   },
   updateOrderStatus: async (orderId: string, status: string) => {
-    const response = await axiosPrivate.put(`/order/${orderId}`, {
+    const response = await axiosPrivate.patch(`/order/${orderId}`, {
       order_status: status,
     });
+    return response.data;
+  },
+  deleteOrder: async (orderId: string) => {
+    const response = await axiosPrivate.delete(`/order/${orderId}`);
     return response.data;
   },
 
@@ -158,9 +162,28 @@ export const adminService = {
     return response.data;
   },
 
+  // Financial Product Types Management
+  getAllFinancialProductTypes: async () => {
+    const response = await axiosPrivate.get("/financial-product-types");
+    return response.data;
+  },
+  createFinancialProductType: async (typeData: any) => {
+    const response = await axiosPrivate.post("/financial-product-types", typeData);
+    return response.data;
+  },
+  updateFinancialProductType: async (typeId: string, typeData: any) => {
+    const response = await axiosPrivate.put(`/financial-product-types/${typeId}`, typeData);
+    return response.data;
+  },
+  deleteFinancialProductType: async (typeId: string) => {
+    const response = await axiosPrivate.delete(`/financial-product-types/${typeId}`);
+    return response.data;
+  },
+
   // Reviews Management
-  getAllReviews: async () => {
-    const response = await axiosPrivate.get("/review/reviews"); // Corrected endpoint
+  getAllReviews: async (type?: string) => {
+    const params = type ? { type } : {};
+    const response = await axiosPrivate.get("/review/reviews", { params }); // Corrected endpoint
     return response.data?.reviews || response.data || [];
   },
   getReviewById: async (reviewId: string) => {
@@ -373,6 +396,11 @@ export const adminService = {
       console.error("Error testing repair cost:", error);
       throw error;
     }
+  },
+
+  getAllPredictions: async () => {
+    const response = await axiosPrivate.get("/chatbot/predictions");
+    return response.data?.predictions || response.data || [];
   },
 
   // Notification Management

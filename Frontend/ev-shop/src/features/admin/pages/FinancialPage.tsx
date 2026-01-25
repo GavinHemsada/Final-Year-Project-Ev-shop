@@ -2,19 +2,24 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "../adminService";
 import { PageLoader, Loader } from "@/components/Loader";
-import { TrashIcon } from "@/assets/icons/icons";
+import { TrashIcon, EditIcon, PlusCircleIcon } from "@/assets/icons/icons";
 import type { AlertProps, ConfirmAlertProps } from "@/types";
-import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
+import { FinancialProductTypeModal } from "../components/FinancialProductTypeModal";
+import { ReportGeneratorButton } from "../components/ReportGeneratorButton";
 
 export const FinancialPage: React.FC<{
   setAlert: (alert: AlertProps | null) => void;
   setConfirmAlert: (alert: ConfirmAlertProps | null) => void;
 }> = ({ setAlert, setConfirmAlert }) => {
   const [activeTab, setActiveTab] = useState<
-    "institutions" | "products" | "applications"
+    "institutions" | "products" | "applications" | "productTypes"
   >("institutions");
   const [searchTerm, setSearchTerm] = useState("");
   const queryClient = useQueryClient();
+  
+  // Product Type Modal State
+  const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+  const [editingType, setEditingType] = useState<any>(null);
 
   // Institutions Data
   const { data: financials, isLoading: isLoadingInstitutions } = useQuery({
@@ -34,6 +39,44 @@ export const FinancialPage: React.FC<{
     queryKey: ["adminAllFinancialApplications"],
     queryFn: () => adminService.getAllFinancialApplications(),
     enabled: activeTab === "applications",
+  });
+
+  // Product Types Data
+  const { data: productTypes, isLoading: isLoadingProductTypes } = useQuery({
+    queryKey: ["financialProductTypes"],
+    queryFn: () => adminService.getAllFinancialProductTypes(),
+    enabled: activeTab === "productTypes",
+  });
+
+  // Product Type Mutations
+  const createTypeMutation = useMutation({
+    mutationFn: (data: any) => adminService.createFinancialProductType(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financialProductTypes"] });
+      setIsTypeModalOpen(false);
+      setAlert({ id: Date.now(), type: "success", message: "Product Type created successfully" });
+    },
+    onError: (err: any) => setAlert({ id: Date.now(), type: "error", message: err.response?.data?.error || "Failed to create type" }),
+  });
+
+  const updateTypeMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => adminService.updateFinancialProductType(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financialProductTypes"] });
+      setIsTypeModalOpen(false);
+      setEditingType(null);
+      setAlert({ id: Date.now(), type: "success", message: "Product Type updated successfully" });
+    },
+    onError: (err: any) => setAlert({ id: Date.now(), type: "error", message: err.response?.data?.error || "Failed to update type" }),
+  });
+
+  const deleteTypeMutation = useMutation({
+    mutationFn: (id: string) => adminService.deleteFinancialProductType(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financialProductTypes"] });
+      setAlert({ id: Date.now(), type: "success", message: "Product Type deleted successfully" });
+    },
+    onError: (err: any) => setAlert({ id: Date.now(), type: "error", message: err.response?.data?.error || "Failed to delete type" }),
   });
 
   // Mutations
@@ -178,6 +221,12 @@ export const FinancialPage: React.FC<{
           status.toLowerCase().includes(searchTerm.toLowerCase())
         );
       })
+    : [];
+
+  const filteredProductTypes = Array.isArray(productTypes)
+    ? productTypes.filter((type: any) =>
+        type.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
     : [];
 
   // Report Data
@@ -325,6 +374,16 @@ export const FinancialPage: React.FC<{
           }`}
         >
           Applications
+        </button>
+        <button
+          onClick={() => setActiveTab("productTypes")}
+          className={`py-2 px-4 border-b-2 font-medium text-sm transition-colors ${
+            activeTab === "productTypes"
+              ? "border-blue-500 text-blue-600 dark:text-blue-400"
+              : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400"
+          }`}
+        >
+          Product Types
         </button>
       </div>
 
@@ -647,8 +706,88 @@ export const FinancialPage: React.FC<{
               </table>
             </div>
           )}
+          
+          {/* Product Types Tab */}
+          {activeTab === "productTypes" && (
+            <>
+              <div className="p-4 flex justify-end bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                <button
+                  onClick={() => {
+                    setEditingType(null);
+                    setIsTypeModalOpen(true);
+                  }}
+                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  <PlusCircleIcon className="h-4 w-4" />
+                  Add New Type
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Description</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                     {filteredProductTypes.length === 0 ? (
+                       <tr><td colSpan={3} className="px-6 py-4 text-center text-gray-500">No product types found</td></tr>
+                     ) : (
+                       filteredProductTypes.map((type: any) => (
+                         <tr key={type._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{type.name}</td>
+                           <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{type.description || "-"}</td>
+                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
+                             <button
+                                onClick={() => {
+                                  setEditingType(type);
+                                  setIsTypeModalOpen(true);
+                                }}
+                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                             >
+                               <EditIcon className="h-5 w-5" />
+                             </button>
+                             <button
+                                onClick={() => {
+                                  setConfirmAlert({
+                                    title: "Delete Product Type",
+                                    message: "Are you sure? This might affect existing products.",
+                                    confirmText: "Delete",
+                                    cancelText: "Cancel",
+                                    onConfirmAction: () => deleteTypeMutation.mutate(type._id),
+                                  });
+                                }}
+                                className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                             >
+                                <TrashIcon className="h-5 w-5" />
+                             </button>
+                           </td>
+                         </tr>
+                       ))
+                     )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       )}
+      
+      <FinancialProductTypeModal
+        isOpen={isTypeModalOpen}
+        onClose={() => setIsTypeModalOpen(false)}
+        onSubmit={(data) => {
+          if (editingType) {
+            updateTypeMutation.mutate({ id: editingType._id, data });
+          } else {
+            createTypeMutation.mutate(data);
+          }
+        }}
+        initialData={editingType}
+        isLoading={createTypeMutation.isPending || updateTypeMutation.isPending}
+      />
     </div>
   );
 };

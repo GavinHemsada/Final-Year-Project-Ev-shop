@@ -11,7 +11,7 @@ export interface IReviewService {
    * Retrieves all reviews from the system.
    * @returns A promise that resolves to an object containing an array of all reviews or an error.
    */
-  getAllReviews(): Promise<{
+  getAllReviews(type?: string): Promise<{
     success: boolean;
     reviews?: any[];
     error?: string;
@@ -94,14 +94,18 @@ export function reviewService(
      * Retrieves all reviews, utilizing a cache-aside pattern.
      * Caches the list of all reviews for one hour.
      */
-    getAllReviews: async () => {
+    /**
+     * Retrieves all reviews, utilizing a cache-aside pattern.
+     * Caches the list of all reviews for one hour.
+     */
+    getAllReviews: async (type?: string) => {
       try {
-        const cacheKey = "reviews";
+        const cacheKey = type ? `reviews_type_${type}` : "reviews";
         // Attempt to get from cache, otherwise fetch from repository and set cache.
         const reviews = await CacheService.getOrSet(
           cacheKey,
           async () => {
-            const allReviews = await reviewRepo.getAllReviews();
+            const allReviews = await reviewRepo.getAllReviews(type);
             return allReviews ?? [];
           },
           3600 // Cache for 1 hour

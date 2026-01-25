@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { selectFinanceId } from "@/context/authSlice";
 import { financialService } from "../financialService";
 import type { AlertProps } from "@/types";
 import { PageLoader, Loader } from "@/components/Loader";
 import { PlusCircleIcon, EditIcon, TrashIcon } from "@/assets/icons/icons";
-import { useQueryClient } from "@tanstack/react-query";
 
 export const ProductsPage: React.FC<{
   setAlert?: (alert: AlertProps | null) => void;
@@ -56,6 +56,12 @@ export const ProductsPage: React.FC<{
       }
     }
   }, [institutionId, queryClient, activeTab]);
+
+  // Fetch Product Types
+  const { data: productTypesList } = useQuery({
+    queryKey: ["financialProductTypes"],
+    queryFn: () => financialService.getAllFinancialProductTypes(),
+  });
 
   const fetchProducts = async () => {
     if (!institutionId) return;
@@ -415,9 +421,19 @@ export const ProductsPage: React.FC<{
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     >
                         <option value="">Select Type</option>
-                        <option value="Auto Loan">Auto Loan</option>
-                        <option value="Personal Loan">Personal Loan</option>
-                        <option value="Lease">Lease</option>
+                        {productTypesList && Array.isArray(productTypesList) ? (
+                          productTypesList.map((type: any) => (
+                            <option key={type._id} value={type.name}>
+                              {type.name}
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="Lease">Lease</option>
+                            <option value="Loan">Loan</option>
+                            <option value="Insurance">Insurance</option>
+                          </>
+                        )}
                     </select>
                 </div>
             </div>

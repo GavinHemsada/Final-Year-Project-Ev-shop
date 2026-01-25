@@ -32,9 +32,10 @@ export interface IReviewRepository {
   createReview(reviewData: ReviewDTO): Promise<IReview | null>;
   /**
    * Retrieves all reviews from the database.
+   * @param type - Optional review type to filter by.
    * @returns A promise that resolves to an array of all review documents or null.
    */
-  getAllReviews(): Promise<IReview[] | null>;
+  getAllReviews(type?: string): Promise<IReview[] | null>;
   /**
    * Retrieves all reviews for a specific listing.
    * @param listingId - The ID of the listing.
@@ -68,8 +69,13 @@ export const ReviewRepository: IReviewRepository = {
   /**
    * Retrieves all reviews, populating associated order, test drive, and reviewer details.
    */
-  getAllReviews: withErrorHandling(async () => {
-    return await Review.find()
+  /**
+   * Retrieves all reviews, populating associated order, test drive, and reviewer details.
+   * Can optionally filter by review type.
+   */
+  getAllReviews: withErrorHandling(async (type?: string) => {
+    const query = type ? { target_type: type } : {};
+    return await Review.find(query)
       .populate("reviewer_id", "name profile_image")
       .populate("target_id", "business_name shop_logo")
       .populate({
@@ -86,13 +92,17 @@ export const ReviewRepository: IReviewRepository = {
       })
       .populate({
         path: "testDrive_id",
-        select: "model_id booking_date booking_time status",
+        select: "slot_id booking_date booking_time status",
         populate: {
-          path: "model_id",
-          select: "model_name brand_id",
+          path: "slot_id",
+          select: "model_id",
           populate: {
-            path: "brand_id",
-            select: "brand_name",
+            path: "model_id",
+            select: "model_name brand_id",
+            populate: {
+              path: "brand_id",
+              select: "brand_name",
+            },
           },
         },
       });
@@ -113,7 +123,30 @@ export const ReviewRepository: IReviewRepository = {
             select: "model_name",
           },
         },
-      }).then(reviews => reviews.filter(review => review.order_id && (review.order_id as any).listing_id._id.toString() === listingId));
+      })
+      .populate({
+        path: "testDrive_id",
+        select: "slot_id booking_date booking_time status",
+        populate: {
+          path: "slot_id",
+          select: "model_id",
+          populate: {
+            path: "model_id",
+            select: "model_name brand_id",
+            populate: {
+              path: "brand_id",
+              select: "brand_name",
+            },
+          },
+        },
+      })
+      .then((reviews) =>
+        reviews.filter(
+          (review) =>
+            review.order_id &&
+            (review.order_id as any).listing_id._id.toString() === listingId
+        )
+      );
   }),
   /** Retrieves all reviews for a specific target, populating reviewer details. */
   getReviewByTargetId: withErrorHandling(async (targetId) => {
@@ -129,6 +162,22 @@ export const ReviewRepository: IReviewRepository = {
           populate: {
             path: "model_id",
             select: "model_name",
+          },
+        },
+      })
+      .populate({
+        path: "testDrive_id",
+        select: "slot_id booking_date booking_time status",
+        populate: {
+          path: "slot_id",
+          select: "model_id",
+          populate: {
+            path: "model_id",
+            select: "model_name brand_id",
+            populate: {
+              path: "brand_id",
+              select: "brand_name",
+            },
           },
         },
       });
@@ -149,6 +198,22 @@ export const ReviewRepository: IReviewRepository = {
             select: "model_name",
           },
         },
+      })
+      .populate({
+        path: "testDrive_id",
+        select: "slot_id booking_date booking_time status",
+        populate: {
+          path: "slot_id",
+          select: "model_id",
+          populate: {
+            path: "model_id",
+            select: "model_name brand_id",
+            populate: {
+              path: "brand_id",
+              select: "brand_name",
+            },
+          },
+        },
       });
   }),
   /** Finds a single review by its document ID. */
@@ -165,6 +230,22 @@ export const ReviewRepository: IReviewRepository = {
           populate: {
             path: "model_id",
             select: "model_name",
+          },
+        },
+      })
+      .populate({
+        path: "testDrive_id",
+        select: "slot_id booking_date booking_time status",
+        populate: {
+          path: "slot_id",
+          select: "model_id",
+          populate: {
+            path: "model_id",
+            select: "model_name brand_id",
+            populate: {
+              path: "brand_id",
+              select: "brand_name",
+            },
           },
         },
       });

@@ -92,6 +92,8 @@ describe("Financial Integration Tests", () => {
         name: "Test Bank",
         type: "Bank",
         contact_email: "contact@testbank.com",
+        website: "https://testbank.com",
+        contact_phone: "1234567890",
       };
 
       const mockSave = jest.fn() as jest.MockedFunction<any>;

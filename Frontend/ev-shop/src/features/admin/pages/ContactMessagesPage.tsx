@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "../adminService";
-import { PageLoader, Loader } from "@/components/Loader";
+import { PageLoader } from "@/components/Loader";
 import { TrashIcon, CheckCircleIcon, EnvelopeIcon, SearchIcon } from "@/assets/icons/icons";
 import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 import { TopMessageAlerts, ConfirmAlert } from "@/components/MessageAlert";
 import type { ConfirmAlertProps } from "@/types";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 type ContactTab = "all" | "unread" | "read";
 
@@ -24,12 +24,7 @@ export const ContactMessagesPage: React.FC = () => {
   );
   const queryClient = useQueryClient();
 
-  // Fetch stats
-  const { data: stats } = useQuery({
-    queryKey: ["contactMessageStats"],
-    queryFn: () => adminService.getContactMessageStats(),
-    staleTime: 30000,
-  });
+
 
   // Fetch all contact messages for counts
   const { data: allMessages } = useQuery({
@@ -182,7 +177,7 @@ export const ContactMessagesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <TopMessageAlerts message={message} setMessage={setMessage} />
+      <TopMessageAlerts message={message} onClose={() => setMessage(null)} />
       {confirmAlert && (
         <ConfirmAlert
           alert={confirmAlert}
@@ -208,7 +203,17 @@ export const ContactMessagesPage: React.FC = () => {
           <ReportGeneratorButton
             data={reportData}
             filename="contact-messages-report"
-            buttonText="Generate Report"
+            columns={[
+              { header: "Name", dataKey: "Name" },
+              { header: "Email", dataKey: "Email" },
+              { header: "Phone", dataKey: "Phone" },
+              { header: "Subject", dataKey: "Subject" },
+              { header: "Message", dataKey: "Message" },
+              { header: "Status", dataKey: "Status" },
+              { header: "Replied", dataKey: "Replied" },
+              { header: "Date", dataKey: "Date" }
+            ]}
+            title="Contact Messages Report"
           />
         )}
       </div>

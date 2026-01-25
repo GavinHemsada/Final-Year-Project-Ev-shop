@@ -39,6 +39,7 @@ describe("OrderController", () => {
       getOrdersBySellerOrUserId: jest.fn(),
       updateOrder: jest.fn(),
       cancelOrder: jest.fn(),
+      deleteOrder: jest.fn(),
     } as jest.Mocked<IOrderService>;
 
     controller = orderController(mockOrderService);

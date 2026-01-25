@@ -3,18 +3,20 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "../adminService";
 import { PageLoader, Loader } from "@/components/Loader";
 import { TrashIcon } from "@/assets/icons/icons";
-import type { AlertProps } from "@/types";
+import type { AlertProps, ConfirmAlertProps } from "@/types";
 import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 
-export const ReviewsPage: React.FC<{ setAlert: (alert: AlertProps | null) => void }> = ({
-  setAlert,
-}) => {
+export const ReviewsPage: React.FC<{
+  setAlert: (alert: AlertProps | null) => void;
+  setConfirmAlert: (alert: ConfirmAlertProps | null) => void;
+}> = ({ setAlert, setConfirmAlert }) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState<"product" | "service">("product");
   const queryClient = useQueryClient();
 
   const { data: reviews, isLoading } = useQuery({
-    queryKey: ["adminAllReviews"],
-    queryFn: () => adminService.getAllReviews(),
+    queryKey: ["adminAllReviews", activeTab],
+    queryFn: () => adminService.getAllReviews(activeTab),
   });
 
   const deleteReviewMutation = useMutation({
@@ -22,36 +24,45 @@ export const ReviewsPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminAllReviews"] });
       setAlert({
+        id: Date.now(),
         type: "success",
         message: "Review deleted successfully",
       });
     },
     onError: (error: any) => {
       setAlert({
+        id: Date.now(),
         type: "error",
         message: error.response?.data?.error || "Failed to delete review",
       });
     },
   });
 
-  const filteredReviews = Array.isArray(reviews)
-    ? reviews.filter((review: any) => {
-        const reviewerName = review.reviewer_id?.name || review.user_id?.name || "";
-        const comment = review.comment || "";
-        const productName = review.order_id?.listing_id?.model_id?.model_name || "";
-        return (
-          reviewerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          productName.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      })
-    : [];
+  const reviewsList = Array.isArray(reviews) ? reviews : [];
 
-  const reportData = filteredReviews.map(review => ({
+  const filteredReviews = reviewsList.filter((review: any) => {
+    const reviewerName = review.reviewer_id?.name || review.user_id?.name || "";
+    const comment = review.comment || "";
+    const targetName =
+      activeTab === "product"
+        ? review.order_id?.listing_id?.model_id?.model_name || ""
+        : review.target_id?.business_name || "";
+        
+    return (
+      reviewerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      targetName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
+
+  const reportData = filteredReviews.map((review) => ({
     reviewer: review.reviewer_id?.name || review.user_id?.name || "Anonymous",
-    product: review.order_id?.listing_id?.model_id?.model_name || "N/A",
+    target:
+      activeTab === "product"
+        ? review.order_id?.listing_id?.model_id?.model_name || "N/A"
+        : review.target_id?.business_name || "N/A",
     rating: review.rating || "N/A",
-    comment: review.comment || "N/A"
+    comment: review.comment || "N/A",
   }));
 
   if (isLoading) {
@@ -61,18 +72,25 @@ export const ReviewsPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center sm:flex-row flex-col gap-4">
-        <h2 className="text-2xl font-bold dark:text-white">Reviews Management</h2>
+        <h2 className="text-2xl font-bold dark:text-white">
+          Reviews Management
+        </h2>
         <div className="flex gap-3 w-full sm:w-auto">
           <ReportGeneratorButton
             data={reportData}
             columns={[
               { header: "Reviewer", dataKey: "reviewer" },
-              { header: "Product", dataKey: "product" },
+              {
+                header: activeTab === "product" ? "Product" : "Service",
+                dataKey: "target",
+              },
               { header: "Rating", dataKey: "rating" },
               { header: "Comment", dataKey: "comment" },
             ]}
-            title="Reviews Management Report"
-            filename="reviews_report"
+            title={`${
+              activeTab === "product" ? "Product" : "Service"
+            } Reviews Report`}
+            filename={`${activeTab}_reviews_report`}
           />
           <input
             type="text"
@@ -84,6 +102,30 @@ export const ReviewsPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex space-x-4 border-b border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => setActiveTab("product")}
+          className={`py-2 px-4 -mb-px font-medium text-sm focus:outline-none transition-colors ${
+            activeTab === "product"
+              ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
+              : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          }`}
+        >
+          Product Reviews
+        </button>
+        <button
+          onClick={() => setActiveTab("service")}
+          className={`py-2 px-4 -mb-px font-medium text-sm focus:outline-none transition-colors ${
+            activeTab === "service"
+              ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
+              : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          }`}
+        >
+          Service Reviews
+        </button>
+      </div>
+
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:border dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -93,7 +135,7 @@ export const ReviewsPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
                   Reviewer
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Product
+                  {activeTab === "product" ? "Product" : "Service"}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Rating
@@ -109,18 +151,29 @@ export const ReviewsPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredReviews.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td
+                    colSpan={5}
+                    className="px-6 py-4 text-center text-gray-500 dark:text-gray-400"
+                  >
                     No reviews found
                   </td>
                 </tr>
               ) : (
                 filteredReviews.map((review: any) => (
-                  <tr key={review._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <tr
+                    key={review._id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {review.reviewer_id?.name || review.user_id?.name || "Anonymous"}
+                      {review.reviewer_id?.name ||
+                        review.user_id?.name ||
+                        "Anonymous"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {review.order_id?.listing_id?.model_id?.model_name || "N/A"}
+                      {activeTab === "product"
+                        ? review.order_id?.listing_id?.model_id?.model_name ||
+                          "N/A"
+                        : review.target_id?.business_name || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {Array.from({ length: review.rating || 0 })
@@ -133,9 +186,14 @@ export const ReviewsPage: React.FC<{ setAlert: (alert: AlertProps | null) => voi
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
                         onClick={() => {
-                          if (window.confirm("Are you sure you want to delete this review?")) {
-                            deleteReviewMutation.mutate(review._id);
-                          }
+                          setConfirmAlert({
+                            title: "Delete Review",
+                            message:
+                              "Are you sure you want to delete this review? This action cannot be undone.",
+                            confirmText: "Delete",
+                            onConfirmAction: () =>
+                              deleteReviewMutation.mutate(review._id),
+                          });
                         }}
                         disabled={deleteReviewMutation.isPending}
                         className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"

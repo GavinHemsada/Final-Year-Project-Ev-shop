@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import {
   BarChart,
   Bar,
@@ -31,6 +31,7 @@ interface UserChartData {
 interface OrderStatusData {
   name: string;
   value: number;
+  [key: string]: any;
 }
 
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"];
@@ -188,13 +189,13 @@ export const OrderStatusPieChart: React.FC<{
             cy="50%"
             labelLine={false}
             label={({ name, percent }) =>
-              `${name} ${(percent * 100).toFixed(0)}%`
+              `${name} ${(percent ? percent * 100 : 0).toFixed(0)}%`
             }
             outerRadius={80}
             fill="#8884d8"
             dataKey="value"
           >
-            {data.map((entry, index) => (
+            {data.map((_entry, index) => (
               <Cell
                 key={`cell-${index}`}
                 fill={COLORS[index % COLORS.length]}
@@ -233,13 +234,13 @@ export const ListingsChart: React.FC<{
             cy="50%"
             labelLine={false}
             label={({ name, percent }) =>
-              `${name} ${(percent * 100).toFixed(0)}%`
+              `${name} ${(percent ? percent * 100 : 0).toFixed(0)}%`
             }
             outerRadius={80}
             fill="#8884d8"
             dataKey="value"
           >
-            {data.map((entry, index) => (
+            {data.map((_entry, index) => (
               <Cell
                 key={`cell-${index}`}
                 fill={COLORS[index % COLORS.length]}

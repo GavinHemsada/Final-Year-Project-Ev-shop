@@ -58,7 +58,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                   key={notification.id}
                   className="p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                   onClick={() => {
-                    setActiveTab("notification");
+                    // setActiveTab("notification");
                     setIsOpen(false);
                   }}
                 >

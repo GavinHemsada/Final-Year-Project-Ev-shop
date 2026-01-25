@@ -16,6 +16,7 @@ import { addFiles, deleteFiles } from "../../shared/utils/fileHandel";
 import CacheService from "../../shared/cache/CacheService";
 import { Notification } from "../../entities/Notification";
 import { sendEmail } from "../../shared/utils/Email.util";
+import { User } from "../../entities/User";
 
 /**
  * Defines the interface for the financial service, outlining methods for managing institutions, products, and applications.
@@ -337,17 +338,37 @@ export function financialService(
      */
     deleteInstitution: async (id) => {
       try {
-        const success = await repo.deleteInstitution(id);
-        if (!success) return { success: false, error: "Institution not found" };
+        const institution = await repo.findById(id);
+        if (!institution)
+          return { success: false, error: "Institution not found" };
+
+        const userid = institution.user_id; // Ensure we access it correctly
+        console.log(`Deleting institution ${id} for user ${userid}`);
+
+        if (userid) {
+          // Remove 'FINANCE' role from associated user
+          const updateResult = await User.updateOne(
+            { _id: userid },
+            { $pull: { role: UserRole.FINANCE } }
+          );
+          console.log(
+            `Role removal result for user ${userid}:`,
+            updateResult
+          );
+        } else {
+          console.warn(`Institution ${id} has no associated user_id`);
+        }
 
         // Invalidate relevant caches
         await Promise.all([
           CacheService.delete(`institution_${id}`),
           CacheService.delete("institutions"),
         ]);
-
+        
+        await repo.deleteInstitution(id);
         return { success: true };
       } catch (err) {
+        console.error("Error deleting institution:", err);
         return { success: false, error: "Failed to delete institution" };
       }
     },
@@ -562,8 +583,9 @@ export function financialService(
         const application = await repo.createApplication(
           applicationData as any
         );
-        
-        if (!application) return { success: false, error: "Failed to create application" };
+
+        if (!application)
+          return { success: false, error: "Failed to create application" };
 
         // Invalidate application caches
         await Promise.all([
@@ -737,8 +759,14 @@ export function financialService(
             : "Loan Application Rejected";
 
           const notificationMessage = isApproved
-            ? `Congratulations! Your loan application for ${product?.product_name || "the financial product"} has been approved.`
-            : `Your loan application for ${product?.product_name || "the financial product"} has been rejected.${data.rejection_reason ? ` Reason: ${data.rejection_reason}` : ""}`;
+            ? `Congratulations! Your loan application for ${
+                product?.product_name || "the financial product"
+              } has been approved.`
+            : `Your loan application for ${
+                product?.product_name || "the financial product"
+              } has been rejected.${
+                data.rejection_reason ? ` Reason: ${data.rejection_reason}` : ""
+              }`;
 
           // Create notification
           try {
@@ -769,9 +797,17 @@ export function financialService(
                   
                   <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
                     <h3 style="margin-top: 0;">Application Details</h3>
-                    <p><strong>Financial Institution:</strong> ${institution?.name || institution?.business_name || "N/A"}</p>
-                    <p><strong>Product:</strong> ${product?.product_name || "N/A"}</p>
-                    ${application.approval_amount ? `<p><strong>Approved Amount:</strong> LKR ${application.approval_amount.toLocaleString()}</p>` : ""}
+                    <p><strong>Financial Institution:</strong> ${
+                      institution?.name || institution?.business_name || "N/A"
+                    }</p>
+                    <p><strong>Product:</strong> ${
+                      product?.product_name || "N/A"
+                    }</p>
+                    ${
+                      application.approval_amount
+                        ? `<p><strong>Approved Amount:</strong> LKR ${application.approval_amount.toLocaleString()}</p>`
+                        : ""
+                    }
                     <p><strong>Application ID:</strong> ${id}</p>
                     <p><strong>Status:</strong> Approved</p>
                     <p><strong>Processed Date:</strong> ${new Date().toLocaleDateString()}</p>
@@ -796,12 +832,20 @@ export function financialService(
                   
                   <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
                     <h3 style="margin-top: 0;">Application Details</h3>
-                    <p><strong>Financial Institution:</strong> ${institution?.name || institution?.business_name || "N/A"}</p>
-                    <p><strong>Product:</strong> ${product?.product_name || "N/A"}</p>
+                    <p><strong>Financial Institution:</strong> ${
+                      institution?.name || institution?.business_name || "N/A"
+                    }</p>
+                    <p><strong>Product:</strong> ${
+                      product?.product_name || "N/A"
+                    }</p>
                     <p><strong>Application ID:</strong> ${id}</p>
                     <p><strong>Status:</strong> Rejected</p>
                     <p><strong>Processed Date:</strong> ${new Date().toLocaleDateString()}</p>
-                    ${data.rejection_reason ? `<p><strong>Rejection Reason:</strong> ${data.rejection_reason}</p>` : ""}
+                    ${
+                      data.rejection_reason
+                        ? `<p><strong>Rejection Reason:</strong> ${data.rejection_reason}</p>`
+                        : ""
+                    }
                   </div>
                   
                   <p><strong>What's Next?</strong></p>
@@ -818,11 +862,21 @@ export function financialService(
               `;
 
               const emailText = isApproved
-                ? `Congratulations! Your loan application for ${product?.product_name || "the financial product"} has been approved. Application ID: ${id}. Please log in to your account for more details.`
-                : `Your loan application for ${product?.product_name || "the financial product"} has been rejected.${data.rejection_reason ? ` Reason: ${data.rejection_reason}` : ""} Application ID: ${id}. Please log in to your account for more details.`;
+                ? `Congratulations! Your loan application for ${
+                    product?.product_name || "the financial product"
+                  } has been approved. Application ID: ${id}. Please log in to your account for more details.`
+                : `Your loan application for ${
+                    product?.product_name || "the financial product"
+                  } has been rejected.${
+                    data.rejection_reason
+                      ? ` Reason: ${data.rejection_reason}`
+                      : ""
+                  } Application ID: ${id}. Please log in to your account for more details.`;
 
               await sendEmail(user.email, emailSubject, emailText, emailHtml);
-              console.log(`Application status email sent to user: ${user.email}`);
+              console.log(
+                `Application status email sent to user: ${user.email}`
+              );
             } catch (emailError) {
               console.error("Failed to send email:", emailError);
               // Don't fail the whole operation if email fails

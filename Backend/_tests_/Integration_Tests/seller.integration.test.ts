@@ -84,6 +84,7 @@ describe("Seller Integration Tests", () => {
         state: "Test State",
         postal_code: "12345",
         country: "Test Country",
+        website: "https://example.com",
       };
 
       const mockSave = jest.fn() as jest.MockedFunction<any>;

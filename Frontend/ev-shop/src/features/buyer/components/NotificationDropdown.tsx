@@ -94,7 +94,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = React.m
    * Marks notification as read if it's unread.
    */
   const handleView = async (notification: Notification) => {
-    const notificationId = notification._id || notification.id;
+    const notificationId = notification._id;
     const isRead = notification.is_read || false;
     
     // Only mark as read if it's currently unread
@@ -135,7 +135,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = React.m
           <div className="flex flex-col max-h-96 overflow-y-auto">
             {/* Map over the notifications array to render each item. */}
             {notifications.slice(0, 5).map((notif) => {
-              const notificationId = notif._id || notif.id;
+              const notificationId = notif._id;
               const isRead = notif.is_read || false;
 
               return (

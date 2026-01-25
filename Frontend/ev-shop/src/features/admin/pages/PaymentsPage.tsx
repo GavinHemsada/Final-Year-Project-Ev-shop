@@ -5,7 +5,7 @@ import { PageLoader } from "@/components/Loader";
 import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 
 export const PaymentsPage: React.FC<{ setAlert: (alert: any) => void }> = ({
-  setAlert,
+  // setAlert,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
 

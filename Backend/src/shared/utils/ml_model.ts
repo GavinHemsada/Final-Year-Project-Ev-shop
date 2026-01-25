@@ -16,33 +16,14 @@ export type BatteryHealthInputType = {
   model_encoded: number;
 };
 
-// Repair Cost Model Input (25 features)
+// Repair Cost Model Input (6 features)
 export type RepairCostInputType = {
   age_years: number;
-  age_months: number;
   mileage_km: number;
-  mileage_miles: number;
-  battery_capacity_kwh: number;
-  current_capacity_kwh: number;
   battery_health_percent: number;
-  battery_cycles: number;
-  base_price_lkr: number;
-  fast_charge_ratio: number;
-  avg_temperature_c: number;
-  previous_repairs: number;
-  labor_hours: number;
-  labor_rate_lkr_per_hour: number;
-  labor_cost_lkr: number;
-  parts_cost_lkr: number;
-  diagnostic_fee_lkr: number;
+  battery_capacity_kwh: number;
   model_encoded: number;
   repair_type_encoded: number;
-  service_provider_encoded: number;
-  region_encoded: number;
-  charging_freq_encoded: number;
-  home_charging_encoded: number;
-  under_warranty_encoded: number;
-  region_cost_multiplier: number;
 };
 
 /**
@@ -72,30 +53,11 @@ const batteryHealthToFloat32Array = (
 const repairCostToFloat32Array = (input: RepairCostInputType): Float32Array =>
   new Float32Array([
     input.age_years,
-    input.age_months,
     input.mileage_km,
-    input.mileage_miles,
-    input.battery_capacity_kwh,
-    input.current_capacity_kwh,
     input.battery_health_percent,
-    input.battery_cycles,
-    input.base_price_lkr,
-    input.fast_charge_ratio,
-    input.avg_temperature_c,
-    input.previous_repairs,
-    input.labor_hours,
-    input.labor_rate_lkr_per_hour,
-    input.labor_cost_lkr,
-    input.parts_cost_lkr,
-    input.diagnostic_fee_lkr,
+    input.battery_capacity_kwh,
     input.model_encoded,
     input.repair_type_encoded,
-    input.service_provider_encoded,
-    input.region_encoded,
-    input.charging_freq_encoded,
-    input.home_charging_encoded,
-    input.under_warranty_encoded,
-    input.region_cost_multiplier,
   ]);
 
 /**

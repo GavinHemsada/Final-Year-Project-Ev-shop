@@ -266,7 +266,7 @@ export const ListingsTable: React.FC<{
             >
               <option value="all">All Types</option>
               <option value="sale">Sale</option>
-              <option value="rent">Rent</option>
+              <option value="lease">Lease</option>
             </select>
           </div>
 

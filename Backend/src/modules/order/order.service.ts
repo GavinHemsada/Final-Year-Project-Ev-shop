@@ -57,6 +57,13 @@ export interface IOrderService {
    * @returns A promise that resolves to an object indicating success or failure.
    */
   cancelOrder(id: string): Promise<{ success: boolean; error?: string }>;
+  
+  /**
+    * Deletes an order permanently.
+    * @param id - The ID of the order to delete.
+    * @returns A promise that resolves to an object indicating success or failure.
+    */
+  deleteOrder(id: string): Promise<{ success: boolean; error?: string }>;
 }
 
 /**
@@ -214,6 +221,32 @@ export function orderService(repo: IOrderRepository, userRepo: IUserRepository, 
         return { success: true };
       } catch (err) {
         return { success: false, error: "Failed to cancel order" };
+      }
+    },
+
+    /**
+     * Deletes an order permanently.
+     * Invalidates all related caches.
+     */
+    deleteOrder: async (id) => {
+      try {
+        const order = await repo.findById(id);
+        if (!order) return { success: false, error: "Order not found" };
+
+        const success = await repo.delete(id);
+        if (!success) return { success: false, error: "Failed to delete order" };
+
+        // Invalidate all relevant caches
+        await Promise.all([
+          CacheService.delete(`order_${id}`),
+          CacheService.deletePattern(`orders_*`),
+          CacheService.delete(`orders_user_${order.user_id}`),
+          CacheService.delete(`orders_seller_${order.seller_id}`),
+        ]);
+
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: "Failed to delete order" };
       }
     },
   };

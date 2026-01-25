@@ -25,30 +25,11 @@ type BatteryHealthInput = {
 
 type RepairCostInput = {
   age_years: number;
-  age_months: number;
   mileage_km: number;
-  mileage_miles: number;
-  battery_capacity_kwh: number;
-  current_capacity_kwh: number;
   battery_health_percent: number;
-  battery_cycles: number;
-  base_price_lkr: number;
-  fast_charge_ratio: number;
-  avg_temperature_c: number;
-  previous_repairs: number;
-  labor_hours: number;
-  labor_rate_lkr_per_hour: number;
-  labor_cost_lkr: number;
-  parts_cost_lkr: number;
-  diagnostic_fee_lkr: number;
+  battery_capacity_kwh: number;
   model_encoded: number;
   repair_type_encoded: number;
-  service_provider_encoded: number;
-  region_encoded: number;
-  charging_freq_encoded: number;
-  home_charging_encoded: number;
-  under_warranty_encoded: number;
-  region_cost_multiplier: number;
 };
 
 // Dropdown options for repair cost prediction
@@ -79,40 +60,6 @@ const REPAIR_TYPES = [
   "Other",
 ];
 
-const SERVICE_PROVIDERS = [
-  "Authorized Dealer",
-  "Independent Workshop",
-  "Specialized EV Service",
-  "Manufacturer Service Center",
-  "Local Mechanic",
-  "Other",
-];
-
-const REGIONS = [
-  "Colombo",
-  "Gampaha",
-  "Kalutara",
-  "Kandy",
-  "Galle",
-  "Matara",
-  "Kurunegala",
-  "Anuradhapura",
-  "Jaffna",
-  "Other",
-];
-
-const CHARGING_FREQUENCIES = ["Daily", "Weekly", "Monthly", "Rarely", "Never"];
-
-const REGION_MULTIPLIERS = [
-  { label: "Standard (1.0x)", value: 1.0 },
-  { label: "Low Cost (0.9x)", value: 0.9 },
-  { label: "Slightly Higher (1.05x)", value: 1.05 },
-  { label: "Moderate (1.1x)", value: 1.1 },
-  { label: "Higher (1.15x)", value: 1.15 },
-  { label: "High (1.2x)", value: 1.2 },
-  { label: "Very High (1.25x)", value: 1.25 },
-  { label: "Premium (1.3x)", value: 1.3 },
-];
 
 // Chatbot functional component definition
 export const Chatbot: React.FC<ChatbotProps> = ({ onClose, userName }) => {
@@ -148,30 +95,11 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose, userName }) => {
 
   const [repairInput, setRepairInput] = useState<Partial<RepairCostInput>>({
     age_years: undefined,
-    age_months: undefined,
     mileage_km: undefined,
-    mileage_miles: undefined,
-    battery_capacity_kwh: undefined,
-    current_capacity_kwh: undefined,
     battery_health_percent: undefined,
-    battery_cycles: undefined,
-    base_price_lkr: undefined,
-    fast_charge_ratio: undefined,
-    avg_temperature_c: undefined,
-    previous_repairs: undefined,
-    labor_hours: undefined,
-    labor_rate_lkr_per_hour: undefined,
-    labor_cost_lkr: undefined,
-    parts_cost_lkr: undefined,
-    diagnostic_fee_lkr: undefined,
+    battery_capacity_kwh: undefined,
     model_encoded: 0,
     repair_type_encoded: 0,
-    service_provider_encoded: 0,
-    region_encoded: 0,
-    charging_freq_encoded: 0,
-    home_charging_encoded: 1,
-    under_warranty_encoded: 0,
-    region_cost_multiplier: 1.0,
   });
 
   // Dropdown selections (for display)
@@ -179,17 +107,10 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose, userName }) => {
   const [selectedRepairType, setSelectedRepairType] = useState<string>(
     REPAIR_TYPES[0]
   );
-  const [selectedServiceProvider, setSelectedServiceProvider] =
-    useState<string>(SERVICE_PROVIDERS[0]);
-  const [selectedRegion, setSelectedRegion] = useState<string>(REGIONS[0]);
-  const [selectedChargingFreq, setSelectedChargingFreq] = useState<string>(
-    CHARGING_FREQUENCIES[1]
-  );
-  const [selectedRegionMultiplier, setSelectedRegionMultiplier] =
-    useState<number>(1.15);
-
+  
   const [predictionResult, setPredictionResult] = useState<number | null>(null);
   const [isPredicting, setIsPredicting] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Initialize with greeting
   useEffect(() => {
@@ -260,18 +181,54 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose, userName }) => {
 
   // Handler for form submission (sending a message)
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault(); // Prevent default form submission behavior (page reload)
-    // Check if the input value is not empty after trimming whitespace
+    e.preventDefault();
     if (inputValue.trim()) {
-      handleSendMessage(inputValue.trim()); // Call the onSendMessage prop with the trimmed input
+      handleSendMessage(inputValue.trim());
     }
   };
 
   // Handler for prediction submission
   const handlePredictionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsPredicting(true);
+    setValidationError(null);
     setPredictionResult(null);
+
+    // Validate inputs
+    if (predictionType === "battery") {
+      const requiredFields: (keyof BatteryHealthInput)[] = [
+        "age_years",
+        "mileage",
+        "battery_cycles",
+        "fast_charge_ratio",
+        "avg_temperature_c",
+        "avg_depth_of_discharge",
+        "voltage",
+        "internal_resistance_mohm",
+        "current_capacity_kwh",
+        "charging_efficiency",
+      ];
+      
+      const missingFields = requiredFields.filter(field => batteryInput[field] === undefined);
+      if (missingFields.length > 0) {
+        setValidationError("Please fill in all required fields.");
+        return;
+      }
+    } else {
+       const requiredFields: (keyof RepairCostInput)[] = [
+         "age_years",
+         "mileage_km",
+         "battery_health_percent",
+         "battery_capacity_kwh"
+       ];
+       
+       const missingFields = requiredFields.filter(field => repairInput[field] === undefined);
+       if (missingFields.length > 0) {
+           setValidationError("Please fill in all required fields.");
+           return;
+       }
+    }
+
+    setIsPredicting(true);
 
     try {
       let numericData: any;
@@ -280,47 +237,28 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose, userName }) => {
       if (predictionType === "battery") {
         // Battery Health Input (11 features)
         numericData = {
-          age_years: batteryInput.age_years ?? 3,
-          mileage: batteryInput.mileage ?? 50000,
-          battery_cycles: batteryInput.battery_cycles ?? 500,
-          fast_charge_ratio: batteryInput.fast_charge_ratio ?? 0.3,
-          avg_temperature_c: batteryInput.avg_temperature_c ?? 25,
-          avg_depth_of_discharge: batteryInput.avg_depth_of_discharge ?? 0.7,
-          voltage: batteryInput.voltage ?? 400,
-          internal_resistance_mohm: batteryInput.internal_resistance_mohm ?? 50,
-          current_capacity_kwh: batteryInput.current_capacity_kwh ?? 70,
-          charging_efficiency: batteryInput.charging_efficiency ?? 0.9,
+          age_years: batteryInput.age_years!,
+          mileage: batteryInput.mileage!,
+          battery_cycles: batteryInput.battery_cycles!,
+          fast_charge_ratio: batteryInput.fast_charge_ratio!,
+          avg_temperature_c: batteryInput.avg_temperature_c!,
+          avg_depth_of_discharge: batteryInput.avg_depth_of_discharge!,
+          voltage: batteryInput.voltage!,
+          internal_resistance_mohm: batteryInput.internal_resistance_mohm!,
+          current_capacity_kwh: batteryInput.current_capacity_kwh!,
+          charging_efficiency: batteryInput.charging_efficiency!,
           model_encoded: batteryInput.model_encoded ?? 1,
         } as BatteryHealthInput;
         result = await buyerService.predictBatteryHealth(numericData);
       } else {
-        // Repair Cost Input (25 features)
+        // Repair Cost Input (6 features)
         numericData = {
-          age_years: repairInput.age_years ?? 6,
-          age_months: repairInput.age_months ?? 72,
-          mileage_km: repairInput.mileage_km ?? 60000,
-          mileage_miles: repairInput.mileage_miles ?? 37282,
-          battery_capacity_kwh: repairInput.battery_capacity_kwh ?? 64,
-          current_capacity_kwh: repairInput.current_capacity_kwh ?? 54.4,
-          battery_health_percent: repairInput.battery_health_percent ?? 85,
-          battery_cycles: repairInput.battery_cycles ?? 300,
-          base_price_lkr: repairInput.base_price_lkr ?? 15000000,
-          fast_charge_ratio: repairInput.fast_charge_ratio ?? 0.4,
-          avg_temperature_c: repairInput.avg_temperature_c ?? 29,
-          previous_repairs: repairInput.previous_repairs ?? 2,
-          labor_hours: repairInput.labor_hours ?? 8,
-          labor_rate_lkr_per_hour: repairInput.labor_rate_lkr_per_hour ?? 3000,
-          labor_cost_lkr: repairInput.labor_cost_lkr ?? 24000,
-          parts_cost_lkr: repairInput.parts_cost_lkr ?? 500000,
-          diagnostic_fee_lkr: repairInput.diagnostic_fee_lkr ?? 7500,
+          age_years: repairInput.age_years!,
+          mileage_km: repairInput.mileage_km!,
+          battery_capacity_kwh: repairInput.battery_capacity_kwh ?? 64, // Default or input
+          battery_health_percent: repairInput.battery_health_percent!,
           model_encoded: repairInput.model_encoded ?? 0,
           repair_type_encoded: repairInput.repair_type_encoded ?? 0,
-          service_provider_encoded: repairInput.service_provider_encoded ?? 0,
-          region_encoded: repairInput.region_encoded ?? 0,
-          charging_freq_encoded: repairInput.charging_freq_encoded ?? 0,
-          home_charging_encoded: repairInput.home_charging_encoded ?? 1,
-          under_warranty_encoded: repairInput.under_warranty_encoded ?? 0,
-          region_cost_multiplier: selectedRegionMultiplier,
         } as RepairCostInput;
         result = await buyerService.predictRepairCost(numericData);
       }
@@ -397,42 +335,6 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose, userName }) => {
     setRepairInput((prev) => ({
       ...prev,
       repair_type_encoded: encoded >= 0 ? encoded : 0,
-    }));
-  };
-
-  const handleServiceProviderChange = (value: string) => {
-    setSelectedServiceProvider(value);
-    const encoded = SERVICE_PROVIDERS.indexOf(value);
-    setRepairInput((prev) => ({
-      ...prev,
-      service_provider_encoded: encoded >= 0 ? encoded : 0,
-    }));
-  };
-
-  const handleRegionChange = (value: string) => {
-    setSelectedRegion(value);
-    const encoded = REGIONS.indexOf(value);
-    setRepairInput((prev) => ({
-      ...prev,
-      region_encoded: encoded >= 0 ? encoded : 0,
-    }));
-  };
-
-  const handleChargingFreqChange = (value: string) => {
-    setSelectedChargingFreq(value);
-    const encoded = CHARGING_FREQUENCIES.indexOf(value);
-    setRepairInput((prev) => ({
-      ...prev,
-      charging_freq_encoded: encoded >= 0 ? encoded : 0,
-    }));
-  };
-
-  const handleRegionMultiplierChange = (value: string) => {
-    const multiplier = parseFloat(value);
-    setSelectedRegionMultiplier(multiplier);
-    setRepairInput((prev) => ({
-      ...prev,
-      region_cost_multiplier: multiplier,
     }));
   };
 
@@ -559,6 +461,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose, userName }) => {
                   onClick={() => {
                     setPredictionType("battery");
                     setPredictionResult(null);
+                    setValidationError(null);
                   }}
                   className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     predictionType === "battery"
@@ -572,13 +475,10 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose, userName }) => {
                   onClick={() => {
                     setPredictionType("repair");
                     setPredictionResult(null);
+                    setValidationError(null);
                     // Reset dropdown selections to defaults
                     setSelectedModel(EV_MODELS[0]);
                     setSelectedRepairType(REPAIR_TYPES[0]);
-                    setSelectedServiceProvider(SERVICE_PROVIDERS[0]);
-                    setSelectedRegion(REGIONS[0]);
-                    setSelectedChargingFreq(CHARGING_FREQUENCIES[1]);
-                    setSelectedRegionMultiplier(1.15);
                   }}
                   className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     predictionType === "repair"
@@ -589,6 +489,13 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose, userName }) => {
                   Repair Cost
                 </button>
               </div>
+
+              {/* Validation Error */}
+              {validationError && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4 border border-red-200">
+                  {validationError}
+                </div>
+              )}
 
               {/* Prediction form */}
               <form onSubmit={handlePredictionSubmit} className="space-y-3">
@@ -772,10 +679,10 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose, userName }) => {
                     </div>
                   </div>
                 ) : (
-                  // Repair Cost Form (25 features) - Compact layout
+                  // Repair Cost Form (6 features) - Simplified
                   <div className="space-y-3">
                     <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                      Vehicle Info
+                       Vehicle & Battery Info
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
@@ -795,88 +702,16 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose, userName }) => {
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Age (months)
-                        </label>
-                        <input
-                          type="number"
-                          value={repairInput.age_months ?? ""}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "age_months",
-                              e.target.value
-                            )
-                          }
-                          placeholder="72"
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Mileage (km)
                         </label>
                         <input
                           type="number"
+                          step="100"
                           value={repairInput.mileage_km ?? ""}
                           onChange={(e) =>
-                            handleRepairInputChange(
-                              "mileage_km",
-                              e.target.value
-                            )
+                            handleRepairInputChange("mileage_km", e.target.value)
                           }
                           placeholder="60000"
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Mileage (miles)
-                        </label>
-                        <input
-                          type="number"
-                          value={repairInput.mileage_miles ?? ""}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "mileage_miles",
-                              e.target.value
-                            )
-                          }
-                          placeholder="37282"
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Battery Cap (kWh)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={repairInput.battery_capacity_kwh ?? ""}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "battery_capacity_kwh",
-                              e.target.value
-                            )
-                          }
-                          placeholder="64"
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Current Cap (kWh)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={repairInput.current_capacity_kwh ?? ""}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "current_capacity_kwh",
-                              e.target.value
-                            )
-                          }
-                          placeholder="54.4"
                           className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         />
                       </div>
@@ -886,343 +721,86 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose, userName }) => {
                         </label>
                         <input
                           type="number"
-                          step="0.1"
+                          step="1"
                           value={repairInput.battery_health_percent ?? ""}
                           onChange={(e) =>
-                            handleRepairInputChange(
-                              "battery_health_percent",
-                              e.target.value
-                            )
+                            handleRepairInputChange("battery_health_percent", e.target.value)
                           }
                           placeholder="85"
                           className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         />
                       </div>
-                      <div>
+                       <div>
                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Battery Cycles
+                          Battery Capacity (kWh)
                         </label>
                         <input
                           type="number"
-                          value={repairInput.battery_cycles ?? ""}
+                          step="1"
+                          value={repairInput.battery_capacity_kwh ?? ""}
                           onChange={(e) =>
-                            handleRepairInputChange(
-                              "battery_cycles",
-                              e.target.value
-                            )
+                            handleRepairInputChange("battery_capacity_kwh", e.target.value)
                           }
-                          placeholder="300"
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Base Price (LKR)
-                        </label>
-                        <input
-                          type="number"
-                          value={repairInput.base_price_lkr ?? ""}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "base_price_lkr",
-                              e.target.value
-                            )
-                          }
-                          placeholder="15000000"
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Fast Charge Ratio
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={repairInput.fast_charge_ratio ?? ""}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "fast_charge_ratio",
-                              e.target.value
-                            )
-                          }
-                          placeholder="0.4"
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Avg Temp (°C)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={repairInput.avg_temperature_c ?? ""}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "avg_temperature_c",
-                              e.target.value
-                            )
-                          }
-                          placeholder="29"
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Prev Repairs
-                        </label>
-                        <input
-                          type="number"
-                          value={repairInput.previous_repairs ?? ""}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "previous_repairs",
-                              e.target.value
-                            )
-                          }
-                          placeholder="2"
+                          placeholder="64"
                           className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         />
                       </div>
                     </div>
 
-                    <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 mt-3">
-                      Repair Costs
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Labor Hours
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={repairInput.labor_hours ?? ""}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "labor_hours",
-                              e.target.value
-                            )
-                          }
-                          placeholder="8"
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Labor Rate (LKR/hr)
-                        </label>
-                        <input
-                          type="number"
-                          value={repairInput.labor_rate_lkr_per_hour ?? ""}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "labor_rate_lkr_per_hour",
-                              e.target.value
-                            )
-                          }
-                          placeholder="3000"
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Labor Cost (LKR)
-                        </label>
-                        <input
-                          type="number"
-                          value={repairInput.labor_cost_lkr ?? ""}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "labor_cost_lkr",
-                              e.target.value
-                            )
-                          }
-                          placeholder="24000"
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Parts Cost (LKR)
-                        </label>
-                        <input
-                          type="number"
-                          value={repairInput.parts_cost_lkr ?? ""}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "parts_cost_lkr",
-                              e.target.value
-                            )
-                          }
-                          placeholder="500000"
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Diagnostic Fee (LKR)
-                        </label>
-                        <input
-                          type="number"
-                          value={repairInput.diagnostic_fee_lkr ?? ""}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "diagnostic_fee_lkr",
-                              e.target.value
-                            )
-                          }
-                          placeholder="7500"
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Region Cost Multiplier
-                        </label>
-                        <select
-                          value={selectedRegionMultiplier}
-                          onChange={(e) =>
-                            handleRegionMultiplierChange(e.target.value)
-                          }
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        >
-                          {REGION_MULTIPLIERS.map((mult) => (
-                            <option key={mult.value} value={mult.value}>
-                              {mult.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 mt-3">
-                      Additional Information
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
+                     <div className="grid grid-cols-1 gap-3 mt-2">
+                       <div>
                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Vehicle Model
                         </label>
-                        <select
-                          value={selectedModel}
-                          onChange={(e) => handleModelChange(e.target.value)}
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        >
-                          {EV_MODELS.map((model) => (
-                            <option key={model} value={model}>
-                              {model}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="relative">
+                          <select
+                            value={selectedModel}
+                            onChange={(e) => handleModelChange(e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded appearance-none focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          >
+                            {EV_MODELS.map((model) => (
+                              <option key={model} value={model}>
+                                {model}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
+
                       <div>
                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Repair Type
                         </label>
-                        <select
-                          value={selectedRepairType}
-                          onChange={(e) =>
-                            handleRepairTypeChange(e.target.value)
-                          }
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        >
-                          {REPAIR_TYPES.map((type) => (
-                            <option key={type} value={type}>
-                              {type}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="relative">
+                          <select
+                            value={selectedRepairType}
+                            onChange={(e) => handleRepairTypeChange(e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded appearance-none focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          >
+                            {REPAIR_TYPES.map((type) => (
+                              <option key={type} value={type}>
+                                {type}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Service Provider
-                        </label>
-                        <select
-                          value={selectedServiceProvider}
-                          onChange={(e) =>
-                            handleServiceProviderChange(e.target.value)
-                          }
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        >
-                          {SERVICE_PROVIDERS.map((provider) => (
-                            <option key={provider} value={provider}>
-                              {provider}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Region
-                        </label>
-                        <select
-                          value={selectedRegion}
-                          onChange={(e) => handleRegionChange(e.target.value)}
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        >
-                          {REGIONS.map((region) => (
-                            <option key={region} value={region}>
-                              {region}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Public Charging Frequency
-                        </label>
-                        <select
-                          value={selectedChargingFreq}
-                          onChange={(e) =>
-                            handleChargingFreqChange(e.target.value)
-                          }
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        >
-                          {CHARGING_FREQUENCIES.map((freq) => (
-                            <option key={freq} value={freq}>
-                              {freq}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Home Charging Available
-                        </label>
-                        <select
-                          value={repairInput.home_charging_encoded ?? 1}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "home_charging_encoded",
-                              e.target.value
-                            )
-                          }
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        >
-                          <option value={1}>Yes</option>
-                          <option value={0}>No</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Under Warranty
-                        </label>
-                        <select
-                          value={repairInput.under_warranty_encoded ?? 0}
-                          onChange={(e) =>
-                            handleRepairInputChange(
-                              "under_warranty_encoded",
-                              e.target.value
-                            )
-                          }
-                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        >
-                          <option value={0}>No</option>
-                          <option value={1}>Yes</option>
-                        </select>
-                      </div>
+                    </div>
+
+                     <div className="flex justify-end pt-2">
+                       <button
+                        type="submit"
+                        disabled={isPredicting}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                         {isPredicting ? (
+                          <>
+                            Predicting...
+                          </>
+                        ) : (
+                          "Predict Repair Cost"
+                        )}
+                      </button>
                     </div>
                   </div>
                 )}

@@ -74,7 +74,14 @@ describe("FinancialController", () => {
 
   describe("createInstitution", () => {
     it("should call service.createInstitution and return result with 201 status", async () => {
-      const institutionData = { user_id: "user123", name: "Test Bank", type: "Bank", contact_email: "test@bank.com" };
+      const institutionData = { 
+        user_id: "user123", 
+        name: "Test Bank", 
+        type: "Bank", 
+        contact_email: "test@bank.com",
+        website: "https://bank.com",
+        contact_phone: "1234567890" 
+      };
       const mockResult = { success: true, institution: {} };
 
       mockRequest.body = institutionData;

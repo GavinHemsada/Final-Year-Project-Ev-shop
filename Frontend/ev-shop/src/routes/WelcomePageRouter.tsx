@@ -6,7 +6,6 @@ import AboutPage from "../pages/AboutPage";
 import ContactPage from "../pages/ContactPage";
 import Header from "@/pages/Header";
 import TermsPage from "@/pages/TermsPage";
-import {TestAlert} from "../test"
 
 
 const WelcomePageRouter = () => {
@@ -20,7 +19,6 @@ const WelcomePageRouter = () => {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/terms" element={<TermsPage />} />
-        <Route path="/test" element={<TestAlert />} />
       </Routes>
     </>
   );

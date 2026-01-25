@@ -27,6 +27,15 @@ jest.mock("../../../src/shared/utils/Email.util", () => ({
   sendEmail: jest.fn(() => Promise.resolve(true)),
 }));
 
+jest.mock("../../../src/shared/cache/CacheService", () => ({
+  __esModule: true,
+  default: {
+    getOrSet: jest.fn(),
+    delete: jest.fn(),
+    deletePattern: jest.fn(),
+  },
+}));
+
 // Import the mocked function
 import { sendEmail } from "../../../src/shared/utils/Email.util";
 

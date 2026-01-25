@@ -216,6 +216,36 @@ export const orderRouter = (): Router => {
    *         description: Internal server error.
    */
   router.patch("/:id/cancel", (req, res) => controller.cancelOrder(req, res));
+  
+  /**
+   * @swagger
+   * /order/{id}:
+   *   delete:
+   *     summary: Delete an order
+   *     description: Deletes an order permanently. Requires admin privileges.
+   *     tags: [Orders]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the order to delete.
+   *     responses:
+   *       '200':
+   *         description: Order deleted successfully.
+   *       '401':
+   *         description: Unauthorized.
+   *       '403':
+   *         description: Forbidden.
+   *       '404':
+   *         description: Order not found.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.delete("/:id", (req, res) => controller.deleteOrder(req, res));
 
   return router;
 };

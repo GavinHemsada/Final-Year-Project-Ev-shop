@@ -76,6 +76,7 @@ const App: React.FC = () => {
   const [priceMax, setPriceMax] = useState<number | "">("");
   const [selectedModel, setSelectedModel] = useState<string>("All");
   const [listingType, setListingType] = useState<ListingType | "All">("All");
+  const [minRating, setMinRating] = useState<number>(0);
   const [sellerSearch, setSellerSearch] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("default");
 
@@ -84,7 +85,7 @@ const App: React.FC = () => {
   const roles = useAppSelector(selectRoles);
   const userRole = useMemo(() => roles || [], [roles]);
   const itemsPerPage = 9;
-  console.log(userID);
+  
   const dispatch = useAppDispatch();
   // Page load state
   useEffect(() => {
@@ -160,6 +161,22 @@ const App: React.FC = () => {
     return ["All", ...Array.from(models)];
   }, [vehicles]);
 
+  // Helper to get average rating
+  const getAverageRating = useCallback(
+    (listingId: string) => {
+      if (!allReviews || allReviews.length === 0) return 0;
+      const reviews = allReviews.filter(
+        (r: any) =>
+          r.order_id?.listing_id?._id === listingId ||
+          r.order_id?.listing_id === listingId
+      );
+      if (reviews.length === 0) return 0;
+      const total = reviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0);
+      return total / reviews.length;
+    },
+    [allReviews]
+  );
+
   // Helper to get review count for sorting
   const getReviewCount = useCallback(
     (listingId: string) => {
@@ -207,6 +224,11 @@ const App: React.FC = () => {
       ) {
         return false;
       }
+      // Rating Filter
+      if (minRating > 0) {
+        const avgRating = getAverageRating(vehicle._id);
+        if (avgRating < minRating) return false;
+      }
       return true;
     });
 
@@ -230,9 +252,11 @@ const App: React.FC = () => {
     selectedModel,
     priceMin,
     priceMax,
+    minRating,
     sellerSearch,
     sortBy,
     getReviewCount,
+    getAverageRating
   ]);
 
   const paginatedVehicles = useMemo(() => {
@@ -388,6 +412,24 @@ const App: React.FC = () => {
                   </select>
                 </div>
 
+                {/* Rating Filter */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                    Rating
+                  </label>
+                  <select
+                    value={minRating}
+                    onChange={(e) => setMinRating(Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm dark:text-white"
+                  >
+                    <option value={0}>All Ratings</option>
+                    <option value={4}>4 Stars & Up</option>
+                    <option value={3}>3 Stars & Up</option>
+                    <option value={2}>2 Stars & Up</option>
+                    <option value={1}>1 Star & Up</option>
+                  </select>
+                </div>
+
                 {/* Price Range */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
@@ -510,7 +552,7 @@ const App: React.FC = () => {
   }, [dispatch, navigate]);
 
   if (loading || isLoading) return <PageLoader />;
-
+  
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
   return (

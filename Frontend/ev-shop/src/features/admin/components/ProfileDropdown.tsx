@@ -12,7 +12,7 @@ type ProfileDropdownProps = {
 export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
   admin,
   onLogout,
-  setActiveTab,
+  // setActiveTab,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);

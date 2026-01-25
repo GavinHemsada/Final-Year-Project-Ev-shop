@@ -61,4 +61,3 @@ const PaymentSuccessPage: React.FC = () => {
 };
 
 export default PaymentSuccessPage;
-

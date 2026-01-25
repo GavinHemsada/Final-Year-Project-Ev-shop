@@ -31,6 +31,7 @@ jest.mock("../../src/shared/cache/CacheService", () => {
   return {
     getOrSet: mockGetOrSet,
     delete: jest.fn(),
+    deletePattern: jest.fn(),
   };
 });
 

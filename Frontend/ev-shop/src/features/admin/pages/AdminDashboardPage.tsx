@@ -15,7 +15,7 @@ import {
   ShoppingCartIcon,
   DollarSignIcon,
   CarIcon,
-  StarIcon,
+  // StarIcon,
 } from "@/assets/icons/icons";
 import { PageLoader } from "@/components/Loader";
 

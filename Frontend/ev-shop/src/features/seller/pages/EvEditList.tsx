@@ -14,7 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Alert } from "@/components/MessageAlert";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { selectActiveRoleId } from "@/context/authSlice";
-import { Loader } from "@/components/Loader";
+import { Loader, PageLoader } from "@/components/Loader";
 import { queryKeys } from "@/config/queryKeys";
 
 // Schema is slightly modified for editing

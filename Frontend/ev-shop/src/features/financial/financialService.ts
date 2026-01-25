@@ -196,4 +196,10 @@ export const financialService = {
     });
     return response.data;
   },
+  
+  // Financial Product Types
+  getAllFinancialProductTypes: async () => {
+    const response = await axiosPrivate.get("/financial-product-types");
+    return response.data;
+  },
 };

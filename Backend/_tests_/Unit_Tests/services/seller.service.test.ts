@@ -149,6 +149,8 @@ describe("SellerService", () => {
         state: "Test State",
         postal_code: "12345",
         country: "Test Country",
+        license_number: "LIC123",
+        website: "https://example.com",
       };
       const mockUser: any = { _id: new Types.ObjectId(userId), role: [] };
       const updatedMockUser = { ...mockUser, role: [UserRole.SELLER] };
@@ -175,6 +177,8 @@ describe("SellerService", () => {
         state: "Test State",
         postal_code: "12345",
         country: "Test Country",
+        license_number: "LIC123",
+        website: "https://example.com",
       };
 
       mockUserRepo.findById.mockResolvedValue(null);

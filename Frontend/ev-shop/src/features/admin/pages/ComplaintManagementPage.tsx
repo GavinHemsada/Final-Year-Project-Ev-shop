@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "../adminService";
 import { PageLoader, Loader } from "@/components/Loader";
-import { TrashIcon, CheckCircleIcon } from "@/assets/icons/icons";
+import { TrashIcon, CheckIcon } from "@/assets/icons/icons";
 import { ReportGeneratorButton } from "@/features/admin/components/ReportGeneratorButton";
 import { TopMessageAlerts, ConfirmAlert } from "@/components/MessageAlert";
 import type { ConfirmAlertProps } from "@/types";
@@ -395,7 +395,7 @@ export const ComplaintManagementPage: React.FC = () => {
                               {resolveComplaintMutation.isPending ? (
                                 <Loader size={8} color="#16a34a" />
                               ) : (
-                                <CheckCircleIcon className="h-5 w-5" />
+                                <CheckIcon className="h-5 w-5" />
                               )}
                             </button>
                           )}

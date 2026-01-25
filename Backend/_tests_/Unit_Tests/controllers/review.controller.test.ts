@@ -43,7 +43,7 @@ describe("ReviewController", () => {
 
     controller = reviewController(mockReviewService);
 
-    mockRequest = { params: {}, body: {} };
+    mockRequest = { params: {}, body: {}, query: {} };
     mockResponse = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),

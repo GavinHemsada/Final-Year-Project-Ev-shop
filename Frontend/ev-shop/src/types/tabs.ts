@@ -93,6 +93,7 @@ export const AdminActiveTabs = {
   Reviews: "reviews",
   Payments: "payments",
   Community: "community",
+  Notifications: "notifications",
 } as const;
 
 export type AdminActiveTabs =

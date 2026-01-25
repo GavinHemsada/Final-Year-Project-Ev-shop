@@ -132,6 +132,8 @@ describe("FinancialService", () => {
         name: "Test Bank",
         type: "Bank",
         contact_email: "test@bank.com",
+        website: "https://bank.com",
+        contact_phone: "1234567890",
       };
       const mockUser: any = {
         _id: new Types.ObjectId(userId),
@@ -160,6 +162,8 @@ describe("FinancialService", () => {
         name: "Test Bank",
         type: "Bank",
         contact_email: "test@bank.com",
+        website: "https://bank.com",
+        contact_phone: "1234567890",
       };
 
       mockUserRepo.findById.mockResolvedValue(null);
@@ -177,6 +181,8 @@ describe("FinancialService", () => {
         name: "Test Bank",
         type: "Bank",
         contact_email: "test@bank.com",
+        website: "https://bank.com",
+        contact_phone: "1234567890",
       };
       const mockUser = { _id: new Types.ObjectId(userId) };
       const existingInstitution = { _id: new Types.ObjectId() };

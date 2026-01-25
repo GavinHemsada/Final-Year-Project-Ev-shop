@@ -32,8 +32,6 @@ import { StatCard } from "../components/StatsCards";
 import { financialService } from "../financialService";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import {
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
@@ -41,7 +39,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   Area,
   AreaChart,
@@ -336,7 +333,6 @@ const FinancialDashboardPage: React.FC<{
 
   // Process application data for trends chart
   const applicationTrendsData = useMemo(() => {
-    const months = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     

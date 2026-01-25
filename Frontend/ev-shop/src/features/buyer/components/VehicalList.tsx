@@ -52,9 +52,7 @@ export const VehicleList: React.FC<VehicleListProps> = ({
   }
 
   return (
-    <div className="flex flex-col w-full">
-      {/* Main title removed, handled in parent */}
-      
+    <div className="flex flex-col w-full">      
       {/* Vehicle Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 w-full">
         {vehicles.map((v, index) => (
