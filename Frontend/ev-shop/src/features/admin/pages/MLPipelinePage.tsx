@@ -24,10 +24,8 @@ const EV_MODELS = [
 const REPAIR_TYPES = [
   "Battery Replacement",
   "Battery Repair",
-  "Motor Repair",
   "Charging System",
   "Electrical System",
-  "Brake System",
   "Suspension",
   "Body Work",
   "General Maintenance",

@@ -380,16 +380,19 @@ export const TestDrivesPage: React.FC<{
     }
   }
 
-  // Handle location input change with validation
-  const handleLocationChange = async (value: string) => {
+  // Handle location input change
+  const handleLocationChange = (value: string) => {
     setFormData({ ...formData, location: value });
+    // Reset validation state on input change
+    setAddressValidation({
+      isValidating: false,
+      isValid: null,
+      message: "",
+    });
+  };
 
-    if (!value.trim()) {
-      setAddressValidation({
-        isValidating: false,
-        isValid: null,
-        message: "",
-      });
+  const handleCheckAddress = async () => {
+    if (!formData.location.trim()) {
       return;
     }
 
@@ -399,32 +402,28 @@ export const TestDrivesPage: React.FC<{
       message: "Validating address...",
     });
 
-    const timeoutId = setTimeout(async () => {
-      try {
-        const result = await validateAddress(value);
-        if (result.valid) {
-          setAddressValidation({
-            isValidating: false,
-            isValid: true,
-            message: `✓ Valid address: ${result.display_name}`,
-          });
-        } else {
-          setAddressValidation({
-            isValidating: false,
-            isValid: false,
-            message: "✗ Address not found. Please enter a valid address.",
-          });
-        }
-      } catch (error) {
+    try {
+      const result = await validateAddress(formData.location);
+      if (result.valid) {
+        setAddressValidation({
+          isValidating: false,
+          isValid: true,
+          message: `✓ Valid address: ${result.display_name}`,
+        });
+      } else {
         setAddressValidation({
           isValidating: false,
           isValid: false,
-          message: "✗ Failed to validate address. Please try again.",
+          message: "✗ Address not found. Please enter a valid address.",
         });
       }
-    }, 1000);
-
-    return () => clearTimeout(timeoutId);
+    } catch (error) {
+      setAddressValidation({
+        isValidating: false,
+        isValid: false,
+        message: "✗ Failed to validate address. Please try again.",
+      });
+    }
   };
 
   if (isLoading) {
@@ -583,14 +582,24 @@ export const TestDrivesPage: React.FC<{
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Location *
                   </label>
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) => handleLocationChange(e.target.value)}
-                    required
-                    placeholder="e.g., 123 Main Street, Colombo"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.location}
+                      onChange={(e) => handleLocationChange(e.target.value)}
+                      required
+                      placeholder="e.g., 123 Main Street, Colombo"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCheckAddress}
+                      disabled={!formData.location.trim() || addressValidation.isValidating}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    >
+                      {addressValidation.isValidating ? "Checking..." : "Check Address"}
+                    </button>
+                  </div>
                   {addressValidation.message && (
                     <div
                       className={`mt-2 p-1 rounded-lg border ${

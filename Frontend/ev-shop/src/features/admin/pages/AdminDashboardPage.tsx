@@ -179,7 +179,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = () => {
     if (!listingsData || !Array.isArray(listingsData)) return [];
     const brandCounts: { [key: string]: number } = {};
     listingsData.forEach((listing: any) => {
-      const brand = listing.make || listing.brand || "Unknown";
+      const brand = listing.model_id?.brand_id?.brand_name || listing.make || listing.brand || "Unknown";
       brandCounts[brand] = (brandCounts[brand] || 0) + 1;
     });
     return Object.entries(brandCounts)

@@ -53,33 +53,13 @@ export const PredictionHistory: React.FC = () => {
     { header: "Date", dataKey: "createdAt" },
     // Vehicle Info
     { header: "Age (Years)", dataKey: "user_inputs.age_years" },
-    { header: "Age (Months)", dataKey: "user_inputs.age_months" },
     { header: "Mileage (km)", dataKey: "user_inputs.mileage_km" },
-    { header: "Mileage (miles)", dataKey: "user_inputs.mileage_miles" },
     { header: "Battery Capacity", dataKey: "user_inputs.battery_capacity_kwh" },
-    { header: "Current Capacity", dataKey: "user_inputs.current_capacity_kwh" },
     { header: "Battery Health %", dataKey: "user_inputs.battery_health_percent" },
-    { header: "Cycles", dataKey: "user_inputs.battery_cycles" },
-    { header: "Base Price", dataKey: "user_inputs.base_price_lkr" },
-    // Usage Info
-    { header: "Fast Charge Ratio", dataKey: "user_inputs.fast_charge_ratio" },
-    { header: "Avg Temp", dataKey: "user_inputs.avg_temperature_c" },
-    { header: "Prev Repairs", dataKey: "user_inputs.previous_repairs" },
-    // Repair Specifics
-    { header: "Labor Hours", dataKey: "user_inputs.labor_hours" },
-    { header: "Labor Rate", dataKey: "user_inputs.labor_rate_lkr_per_hour" },
-    { header: "Labor Cost", dataKey: "user_inputs.labor_cost_lkr" },
-    { header: "Parts Cost", dataKey: "user_inputs.parts_cost_lkr" },
-    { header: "Diagnostic Fee", dataKey: "user_inputs.diagnostic_fee_lkr" },
-    // Categorical / Encoded
+    // Input Codes (useful context)
     { header: "Model Code", dataKey: "user_inputs.model_encoded" },
     { header: "Repair Type Code", dataKey: "user_inputs.repair_type_encoded" },
-    { header: "Provider Code", dataKey: "user_inputs.service_provider_encoded" },
-    { header: "Region Code", dataKey: "user_inputs.region_encoded" },
-    { header: "Charging Freq Code", dataKey: "user_inputs.charging_freq_encoded" },
-    { header: "Home Charging", dataKey: "user_inputs.home_charging_encoded" },
-    { header: "Warranty", dataKey: "user_inputs.under_warranty_encoded" },
-    { header: "Region Multiplier", dataKey: "user_inputs.region_cost_multiplier" },
+    // Result
     { header: "Prediction Result (LKR)", dataKey: "prediction_result.prediction" },
   ];
 

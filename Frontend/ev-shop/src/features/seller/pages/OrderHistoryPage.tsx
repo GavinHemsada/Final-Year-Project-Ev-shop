@@ -7,6 +7,7 @@ import { useToast } from "@/context/ToastContext";
 import { useState, useMemo, useEffect } from "react";
 import { Loader } from "@/components/Loader";
 import { BanknoteIcon } from "@/assets/icons/icons";
+import { ReportGeneratorButton } from "../../admin/components/ReportGeneratorButton";
 
 const getStatusChip = (status: Order["order_status"]): string => {
   switch (status?.toLowerCase()) {
@@ -174,6 +175,39 @@ export const OrderHistory: React.FC<{
     setCurrentPage(1);
   };
 
+  // Prepare data for report
+  const reportData = useMemo(() => {
+    if (!filteredOrders) return [];
+    return filteredOrders.map((order: Order) => {
+      const modelName = order.listing_id?.model_id?.model_name || "N/A";
+      const listingPrice = order.listing_id?.price || order.total_amount;
+      const buyerName =
+        typeof order.user_id === "object"
+          ? (order.user_id as any)?.name || "N/A"
+          : "N/A";
+
+      return {
+        orderId: order._id?.slice(-8).toUpperCase() || "N/A",
+        date: order.order_date
+          ? new Date(order.order_date).toLocaleDateString()
+          : "N/A",
+        vehicle: modelName,
+        buyer: buyerName,
+        status: order.order_status || "Pending",
+        price: listingPrice ? `LKR ${listingPrice.toLocaleString()}` : "N/A",
+      };
+    });
+  }, [filteredOrders]);
+
+  const reportColumns = [
+    { header: "Order ID", dataKey: "orderId" },
+    { header: "Date", dataKey: "date" },
+    { header: "Vehicle", dataKey: "vehicle" },
+    { header: "Buyer", dataKey: "buyer" },
+    { header: "Status", dataKey: "status" },
+    { header: "Price", dataKey: "price" },
+  ];
+
   console.log(orders);
 
   if (error) {
@@ -192,6 +226,12 @@ export const OrderHistory: React.FC<{
     <div className="bg-white p-8 rounded-xl shadow-md dark:bg-gray-800 dark:shadow-none dark:border dark:border-gray-700">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold dark:text-white">Order History</h1>
+        <ReportGeneratorButton
+          data={reportData}
+          columns={reportColumns}
+          title="Order History Report"
+          filename={`order_history_${activeTab}_${new Date().toISOString().split('T')[0]}`}
+        />
       </div>
 
       {/* Tabs */}

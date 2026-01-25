@@ -141,7 +141,7 @@ export const AnalyticsChart: React.FC = () => {
         </div>
       </div>
 
-      {chartData.length === 0 || totalRevenue === 0 ? (
+      {chartData.length === 0 || (totalRevenue === 0 && totalOrders === 0) ? (
         <div className="bg-gray-100 dark:bg-gray-700 p-8 rounded-lg text-center">
           <p className="text-gray-600 dark:text-gray-300">
             No sales data available yet. Sales will appear here once you receive orders.

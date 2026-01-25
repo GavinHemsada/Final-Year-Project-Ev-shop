@@ -185,13 +185,47 @@ export const RepairLocationsPage: React.FC<{
   // Geocoding mutation
   const geocodeMutation = useMutation({
     mutationFn: async (address: string) => {
-      const response = await fetch(
+      // First attempt: specific search
+      let searchAddress = address;
+      if (!address.toLowerCase().includes("sri lanka")) {
+        searchAddress += ", Sri Lanka";
+      }
+      
+      let response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          address + ", Sri Lanka"
+          searchAddress
         )}&limit=1`
       );
+      
       if (!response.ok) throw new Error("Failed to fetch geocoding data");
-      return response.json();
+      let data = await response.json();
+
+      // Second attempt: if no results, try without "Sri Lanka" suffix (if added) or just the address
+      if (data.length === 0) {
+        response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+            address
+          )}&limit=1`
+        );
+        if (!response.ok) throw new Error("Failed to fetch geocoding data");
+        data = await response.json();
+      }
+      
+      // Third attempt: Clean up address (remove "No", "No.", etc.)
+      if (data.length === 0) {
+         const cleanAddress = address.replace(/^(no\.?\s*\d+,?)/i, "").trim();
+         if (cleanAddress !== address) {
+            response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+                cleanAddress + ", Sri Lanka"
+            )}&limit=1`
+            );
+            if (!response.ok) throw new Error("Failed to fetch geocoding data");
+            data = await response.json();
+         }
+      }
+
+      return data;
     },
     onSuccess: (data) => {
       if (data && data.length > 0) {
@@ -202,8 +236,8 @@ export const RepairLocationsPage: React.FC<{
         showToast?.({ text: "Location found on map!", type: "success" });
       } else {
         showToast?.({
-          text: "Could not find location. Please click on the map to set coordinates.",
-          type: "error",
+          text: "Could not find specific location. Please click on the map to set coordinates manually.",
+          type: "warning",
         });
       }
     },

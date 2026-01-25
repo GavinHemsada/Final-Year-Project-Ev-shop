@@ -305,6 +305,9 @@ const ApplicationModal: React.FC<{
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Supporting Documents (Optional, Max 2 files)
             </label>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+              Upload NIC/Passport and one income proof document (salary slip or bank statement). Max 2 files. PDF or image formats only.
+            </p>
             <input
               ref={fileInputRef}
               type="file"
