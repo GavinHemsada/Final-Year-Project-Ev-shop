@@ -63,6 +63,40 @@ EV Shop is designed as a multi-role ecosystem:
 
 ---
 
+## Screenshots
+
+### General & Access
+
+| Welcome Page | Login Page |
+| :---: | :---: |
+| ![Welcome Page](Screenshots/welcome_page.png) | ![Login Page](Screenshots/login_page.png) |
+
+**Register Page**
+![Register Page](Screenshots/register_page.png)
+
+### Dashboards
+
+| Admin Dashboard | User Dashboard |
+| :---: | :---: |
+| ![Admin Dashboard](Screenshots/admin_dashbord.png) | ![User Dashboard](Screenshots/user_dashbord.png) |
+
+| Seller Dashboard | Financial Dashboard |
+| :---: | :---: |
+| ![Seller Dashboard](Screenshots/seller_dashbord.png) | ![Financial Dashboard](Screenshots/financail_dashboard.png) |
+
+### Key Features
+
+**Map Based Services**
+![Map Services](Screenshots/map_base_services.png)
+
+**Community Posts**
+![Community Posts](Screenshots/comunity_posts.png)
+
+**Orders Management**
+![Orders Page](Screenshots/orders_page.png)
+
+---
+
 ## Technology Stack
 
 ### Frontend (Client-Side)
