@@ -101,6 +101,7 @@ app.use(
   })
 );
 
+app.set("trust proxy", 1);
 // Helmet for security headers
 app.use(
   helmet({
