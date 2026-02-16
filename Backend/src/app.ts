@@ -66,6 +66,7 @@ startCronJobs();
 // Initialize the Express application
 const app: Express = express();
 
+app.set("trust proxy", 1);
 // Configure CORS (Cross-Origin Resource Sharing)
 // Allows requests from specified origins (frontend applications)
 app.use(
@@ -75,6 +76,8 @@ app.use(
       "http://127.0.0.1:5500",
       "http://localhost:5173",
       "http://localhost:5000",
+      "https://final-year-project-ev-shop-production.up.railway.app",
+      "https://final-year-project-ev-shop.vercel.app/"
     ],
     credentials: true,
   })
@@ -101,7 +104,6 @@ app.use(
   })
 );
 
-app.set("trust proxy", 1);
 // Helmet for security headers
 app.use(
   helmet({
