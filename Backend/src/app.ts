@@ -77,11 +77,13 @@ app.use(
       "http://localhost:5173",
       "http://localhost:5000",
       "https://final-year-project-ev-shop-production.up.railway.app",
-      "https://final-year-project-ev-shop.vercel.app/"
+      "https://final-year-project-ev-shop.vercel.app"
     ],
     credentials: true,
   })
 );
+
+app.options("*", cors());
 
 app.use(express.json());
 app.use(bodyParser.json());
@@ -99,7 +101,8 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+      secure: true,        // REQUIRED on https (Railway + Vercel)
+      sameSite: "none",
     },
   })
 );
